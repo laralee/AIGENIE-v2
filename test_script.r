@@ -1,0 +1,48 @@
+# basic functionality of AIGENIE
+
+openai_API <- "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"
+
+item_attributes <- list(
+
+  openness = c("curious", "artistic", "philisophical", "willing to change"),
+  agreeableness = c("friendly", "humble", "team player", "outgoing")
+
+)
+
+# get_embeddings <- AIGENIE.v2::AIGENIE_v2(item.attributes = item_attributes,
+#                        openai.API = openai_API,
+#                        embeddings_only = TRUE)
+
+get_embeddings <- readRDS("embeddings_testing.RDS")
+
+embeds <- get_embeddings$embeddings
+items <- get_embeddings$items
+
+
+openness_items <- items[items$type == "openness",]
+openness_embeds <- embeds[,colnames(embeds) %in% openness_items$ID]
+
+test_one_type <- AIGENIE.v2:::run_pipeline_for_item_type(openness_embeds,
+                                        openness_items,
+                                        "openness",
+                                        silently = FALSE)
+
+
+out <- AIGENIE.v2:::run_item_reduction_pipeline(
+    embeds,
+    items,
+    EGA_model = NULL,
+    EGA_algorithm = "walktrap",
+    EGA_uni_method = "louvain",
+    keep_org = FALSE,
+    silently = FALSE,
+    verbose = FALSE
+  )
+
+
+
+
+
+
+
+

@@ -66,36 +66,36 @@ validate_strings <- function(...) {
 }
 
 
-# Validate `item_attributes` ----
+# Validate `items.attributes` ----
 
-#' Validate `item_attributes`
+#' Validate `items.attributes`
 #'
-#' Validates that `item_attributes` is a **named list** whose names are
+#' Validates that `items.attributes` is a **named list** whose names are
 #' truly unique after trimming whitespace and ignoring case, and that each
 #' element is itself a list **containing only strings**, with **at least two**
 #' truly unique strings (same trimming + case-insensitive rule).
 #'
-#' @param item_attributes A named list. Each element must be a list containing
+#' @param items.attributes A named list. Each element must be a list containing
 #'   only character scalars (strings). Each of those inner lists must contain
 #'   at least two truly unique strings after trimming and case-folding.
-#' @return A cleaned version of `item_attributes` with normalized names and
+#' @return A cleaned version of `items.attributes` with normalized names and
 #'   values. Errors are thrown if validation fails.
 #'
-item_attributes_validate <- function(item_attributes) {
+items.attributes_validate <- function(items.attributes) {
   norm_str <- function(x) trimws(tolower(x))
 
   # ---- Top-level: must be a named list ----
-  if (!is.list(item_attributes)) {
+  if (!is.list(items.attributes)) {
     stop(
-      "AI-GENIE expects item_attributes to be a named list.",
+      "AI-GENIE expects items.attributes to be a named list.",
       call. = FALSE
     )
   }
 
-  nm <- names(item_attributes)
+  nm <- names(items.attributes)
   if (is.null(nm) || any(is.na(nm)) || any(nm == "")) {
     stop(
-      "AI-GENIE expects item_attributes to be a named list with non-empty names.",
+      "AI-GENIE expects items.attributes to be a named list with non-empty names.",
       call. = FALSE
     )
   }
@@ -112,7 +112,7 @@ item_attributes_validate <- function(item_attributes) {
     })
     stop(
       paste0(
-        "AI-GENIE expects item_attributes to have unique names after trimming and case-folding.\n",
+        "AI-GENIE expects items.attributes to have unique names after trimming and case-folding.\n",
         "The following names collide:\n",
         paste(unlist(msg_lines), collapse = "\n")
       ),
@@ -120,14 +120,14 @@ item_attributes_validate <- function(item_attributes) {
     )
   }
 
-  names(item_attributes) <- nm_norm
+  names(items.attributes) <- nm_norm
 
   # ---- Validate + Clean each element ----
   cleaned <- list()
 
-  for (i in seq_along(item_attributes)) {
-    top_name <- names(item_attributes)[i]
-    value <- item_attributes[[i]]
+  for (i in seq_along(items.attributes)) {
+    top_name <- names(items.attributes)[i]
+    value <- items.attributes[[i]]
 
     # Normalize into a character vector
     vals_char <- NULL
@@ -137,7 +137,7 @@ item_attributes_validate <- function(item_attributes) {
         if (!is.character(x) || length(x) != 1L || is.na(x)) {
           stop(
             paste0(
-              "AI-GENIE expects item_attributes$", top_name,
+              "AI-GENIE expects items.attributes$", top_name,
               " to contain only strings."
             ),
             call. = FALSE
@@ -149,7 +149,7 @@ item_attributes_validate <- function(item_attributes) {
       if (!is.character(value)) {
         stop(
           paste0(
-            "AI-GENIE expects item_attributes$", top_name,
+            "AI-GENIE expects items.attributes$", top_name,
             " to be either a list of strings or a character vector."
           ),
           call. = FALSE
@@ -158,7 +158,7 @@ item_attributes_validate <- function(item_attributes) {
       if (any(is.na(value))) {
         stop(
           paste0(
-            "AI-GENIE expects item_attributes$", top_name,
+            "AI-GENIE expects items.attributes$", top_name,
             " to contain no NA strings."
           ),
           call. = FALSE
@@ -168,7 +168,7 @@ item_attributes_validate <- function(item_attributes) {
     } else {
       stop(
         paste0(
-          "AI-GENIE expects item_attributes$", top_name,
+          "AI-GENIE expects items.attributes$", top_name,
           " to be either a list of strings or a character vector."
         ),
         call. = FALSE
@@ -181,7 +181,7 @@ item_attributes_validate <- function(item_attributes) {
     if (any(vals_clean == "")) {
       stop(
         paste0(
-          "AI-GENIE expects item_attributes$", top_name,
+          "AI-GENIE expects items.attributes$", top_name,
           " to contain no empty strings (after trimming)."
         ),
         call. = FALSE
@@ -193,7 +193,7 @@ item_attributes_validate <- function(item_attributes) {
     if (length(vals_unique) < 2L) {
       stop(
         paste0(
-          "AI-GENIE expects item_attributes$", top_name,
+          "AI-GENIE expects items.attributes$", top_name,
           " to contain at least two truly unique strings (after trim + case-fold)."
         ),
         call. = FALSE
@@ -218,22 +218,22 @@ item_attributes_validate <- function(item_attributes) {
 
 
 # Validate `item_examples` ----
-#' Validate and Clean `item_examples` Against Cleaned `item_attributes`
+#' Validate and Clean `item_examples` Against Cleaned `items.attributes`
 #'
 #' Ensures `item_examples` is a data frame with required string columns and that the values
-#' in `type` and `attribute` align with the cleaned structure of `item_attributes`.
+#' in `type` and `attribute` align with the cleaned structure of `items.attributes`.
 #' Returns a cleaned version of the data frame with normalized values:
 #'   - `type` and `attribute` are trimmed and lowercased
 #'   - `statement` is trimmed (case preserved)
 #'
 #' @param item_examples A data frame with columns `type`, `attribute`, `statement`.
 #'   All values must be non-empty strings.
-#' @param item_attributes A cleaned list from `validate_item_attributes()`.
+#' @param items.attributes A cleaned list from `validate_items.attributes()`.
 #'   All names and values must be normalized (lowercased and trimmed).
 #'
 #' @return A cleaned version of `item_examples` with normalized values.
 #'
-item_examples_validate <- function(item_examples, item_attributes) {
+item_examples_validate <- function(item_examples, items.attributes) {
   norm_str <- function(x) trimws(tolower(x))
   trim_str <- function(x) trimws(x)
 
@@ -289,13 +289,13 @@ item_examples_validate <- function(item_examples, item_attributes) {
   )
 
   # ---- Validate type exists ----
-  known_types <- names(item_attributes)
+  known_types <- names(items.attributes)
   unknown_types <- setdiff(unique(cleaned$type), known_types)
   if (length(unknown_types) > 0) {
     offending <- unique(item_examples$type[cleaned$type %in% unknown_types])
     stop(
       paste0(
-        "AI-GENIE expects each value in item_examples$type to match a name in item_attributes ",
+        "AI-GENIE expects each value in item_examples$type to match a name in items.attributes ",
         "(after trimming and case-folding). Invalid types: ",
         paste(sprintf("`%s`", offending), collapse = ", ")
       ),
@@ -308,7 +308,7 @@ item_examples_validate <- function(item_examples, item_attributes) {
   for (i in seq_len(nrow(cleaned))) {
     t <- cleaned$type[i]
     a <- cleaned$attribute[i]
-    allowed <- item_attributes[[t]]
+    allowed <- items.attributes[[t]]
 
     if (!(a %in% allowed)) {
       bad_rows <- c(bad_rows, i)
@@ -329,7 +329,7 @@ item_examples_validate <- function(item_examples, item_attributes) {
     stop(
       paste0(
         "AI-GENIE expects each item_examples$attribute to belong to its corresponding item_examples$type, ",
-        "using cleaned item_attributes as reference.\nInvalid rows:\n",
+        "using cleaned items.attributes as reference.\nInvalid rows:\n",
         paste(preview, collapse = "\n"),
         extra
       ),
@@ -349,7 +349,7 @@ item_examples_validate <- function(item_examples, item_attributes) {
 #'
 #' Validates that `item_type_definitions` is a named list where:
 #'   - Names are unique (after trim + case-fold)
-#'   - Names exist in `item_attributes`
+#'   - Names exist in `items.attributes`
 #'   - Values are non-empty strings
 #'
 #' Returns a cleaned version with:
@@ -357,12 +357,12 @@ item_examples_validate <- function(item_examples, item_attributes) {
 #'   - Trimmed values (case preserved)
 #'
 #' @param item_type_definitions A named list of strings, where each name must
-#'   correspond to a name in `item_attributes` and each value must be a
+#'   correspond to a name in `items.attributes` and each value must be a
 #'   non-empty string.
-#' @param item_attributes A cleaned list from `validate_item_attributes()`.
+#' @param items.attributes A cleaned list from `validate_items.attributes()`.
 #'
 #' @return A cleaned version of `item_type_definitions`.
-item_type_definitions_validate <- function(item_type_definitions, item_attributes) {
+item_type_definitions_validate <- function(item_type_definitions, items.attributes) {
   norm_str <- function(x) trimws(tolower(x))
   trim_str <- function(x) trimws(x)
 
@@ -402,14 +402,14 @@ item_type_definitions_validate <- function(item_type_definitions, item_attribute
     )
   }
 
-  # ---- Check names match item_attributes ----
-  attr_names <- names(item_attributes)
+  # ---- Check names match items.attributes ----
+  attr_names <- names(items.attributes)
   unknown_names <- setdiff(names_norm, attr_names)
   if (length(unknown_names) > 0) {
     offending <- names_raw[names_norm %in% unknown_names]
     stop(
       paste0(
-        "AI-GENIE expects every name in item_type_definitions to match a name in item_attributes ",
+        "AI-GENIE expects every name in item_type_definitions to match a name in items.attributes ",
         "(after trimming and case-folding). Invalid name(s): ",
         paste(sprintf("`%s`", offending), collapse = ", ")
       ),
@@ -664,15 +664,15 @@ validate_ega_params <- function(EGA_algorithm, EGA_uni_method, EGA_model) {
 #'   - A list/vector of integers → must match number of attributes
 #'
 #' @param target_N An integer, list/vector of integers, or NULL.
-#' @param item_attributes A cleaned list returned from `validate_item_attributes()`.
+#' @param items.attributes A cleaned list returned from `validate_items.attributes()`.
 #' @param items_only A flag used to determine if only items need to be generated
 #' @param embeddings_only A flag used to determine if only embeddings need to be generated
 #' @param silently A flag used to determine if warnings should be printed
 #'
 #' @return A list of integers, one per attribute (named).
-target_N_validate <- function(target_N, item_attributes, items_only, embeddings_only, silently) {
-  n_attr <- length(item_attributes)
-  attr_names <- names(item_attributes)
+target_N_validate <- function(target_N, items.attributes, items_only, embeddings_only, silently) {
+  n_attr <- length(items.attributes)
+  attr_names <- names(items.attributes)
   norm_str <- function(x) trimws(tolower(x))
 
   # --- Case: NULL → default to 60s ---
@@ -733,7 +733,7 @@ target_N_validate <- function(target_N, item_attributes, items_only, embeddings_
   low_ratio <- c()
   for (name in attr_names) {
     n <- target_N[[name]]
-    k <- length(item_attributes[[name]])
+    k <- length(items.attributes[[name]])
     if ((n / k) < 15) {
       low_ratio <- c(low_ratio, name)
     }
@@ -778,20 +778,20 @@ temperature_validate <- function(temperature) {
   }
 }
 
-#' Validate `top_p` for Text Generation
+#' Validate `top.p` for Text Generation
 #'
-#' Ensures `top_p` is a numeric value between 0 and 1, or NULL.
+#' Ensures `top.p` is a numeric value between 0 and 1, or NULL.
 #'
-#' @param top_p A numeric value
+#' @param top.p A numeric value
 #'
-top_p_validate <- function(top_p) {
+top.p_validate <- function(top.p) {
 
-  if (!is.numeric(top_p) || length(top_p) != 1 || is.na(top_p)) {
-    stop("AI-GENIE expects top_p to be a numeric value or NULL.", call. = FALSE)
+  if (!is.numeric(top.p) || length(top.p) != 1 || is.na(top.p)) {
+    stop("AI-GENIE expects top.p to be a numeric value or NULL.", call. = FALSE)
   }
 
-  if (top_p < 0 || top_p > 1) {
-    stop("AI-GENIE expects top_p to be between 0 and 1.", call. = FALSE)
+  if (top.p < 0 || top.p > 1) {
+    stop("AI-GENIE expects top.p to be between 0 and 1.", call. = FALSE)
   }
 
 }
@@ -840,14 +840,14 @@ response_options_validate <- function(response_options) {
 #' Validate and Normalize `prompt_notes`
 #'
 #' Accepts a string, NULL, or a named list of strings/NULLs. Ensures one entry
-#' per attribute in `item_attributes`, returning a fully named and cleaned list.
+#' per attribute in `items.attributes`, returning a fully named and cleaned list.
 #'
 #' @param prompt_notes A single string, NULL, or named list of strings/NULLs.
-#' @param item_attributes A cleaned list from `validate_item_attributes()`.
+#' @param items.attributes A cleaned list from `validate_items.attributes()`.
 #'
 #' @return A named list of strings, one per attribute, with NULLs replaced by "".
-validate_prompt_notes <- function(prompt_notes, item_attributes) {
-  attr_names <- names(item_attributes)
+validate_prompt_notes <- function(prompt_notes, items.attributes) {
+  attr_names <- names(items.attributes)
   attr_names_norm <- trimws(tolower(attr_names))
   n_attr <- length(attr_names)
   norm_str <- function(x) trimws(tolower(x))
@@ -872,7 +872,7 @@ validate_prompt_notes <- function(prompt_notes, item_attributes) {
 
     note_names_norm <- norm_str(note_names)
 
-    # Check for full alignment with item_attributes
+    # Check for full alignment with items.attributes
     if (!setequal(note_names_norm, attr_names_norm)) {
       missing <- setdiff(attr_names_norm, note_names_norm)
       extra   <- setdiff(note_names_norm, attr_names_norm)
@@ -917,30 +917,30 @@ validate_prompt_notes <- function(prompt_notes, item_attributes) {
 }
 
 # Validate 'Custom Mode' Settings ----
-#' Validate and Normalize `main_prompts`
+#' Validate and Normalize `main.prompts`
 #'
-#' Validates that `main_prompts` is a named list of non-empty strings,
-#' one for each attribute in `item_attributes`, matched by normalized name.
+#' Validates that `main.prompts` is a named list of non-empty strings,
+#' one for each attribute in `items.attributes`, matched by normalized name.
 #'
-#' @param main_prompts A named list of prompt strings, one per attribute.
-#' @param item_attributes A cleaned list from `validate_item_attributes()`.
+#' @param main.prompts A named list of prompt strings, one per attribute.
+#' @param items.attributes A cleaned list from `validate_items.attributes()`.
 #' @param silently A flag determining wheter a warning message should be printed
 #'
 #' @return A cleaned and ordered named list of trimmed prompt strings.
 #'    Also returns the appropriate 'custom' flag (TRUE if custom ok, FALSE if not)
-main_prompts_validate <- function(main_prompts, item_attributes, silently) {
-  attr_names <- names(item_attributes)
+main.prompts_validate <- function(main.prompts, items.attributes, silently) {
+  attr_names <- names(items.attributes)
   attr_names_norm <- trimws(tolower(attr_names))
   norm_str <- function(x) trimws(tolower(x))
 
   custom <- TRUE # assumes that the prompts are adequate for custom use
 
   # --- Type and name check ---
-  if (!is.list(main_prompts) || is.null(names(main_prompts))) {
-    stop("AI-GENIE expects `main_prompts` to be a named list.", call. = FALSE)
+  if (!is.list(main.prompts) || is.null(names(main.prompts))) {
+    stop("AI-GENIE expects `main.prompts` to be a named list.", call. = FALSE)
   }
 
-  prompt_names_raw <- names(main_prompts)
+  prompt_names_raw <- names(main.prompts)
   prompt_names_norm <- norm_str(prompt_names_raw)
 
   # --- Name alignment check ---
@@ -948,7 +948,7 @@ main_prompts_validate <- function(main_prompts, item_attributes, silently) {
     missing <- setdiff(attr_names_norm, prompt_names_norm)
     extra   <- setdiff(prompt_names_norm, attr_names_norm)
 
-    msg <- "AI-GENIE expects `main_prompts` to include exactly one non-empty prompt per `item_attributes` key."
+    msg <- "AI-GENIE expects `main.prompts` to include exactly one non-empty prompt per `items.attributes` key."
     if (length(missing) > 0) {
       msg <- paste0(msg, "\nMissing prompts for attributes: ", paste(sprintf("`%s`", missing), collapse = ", "))
     }
@@ -963,12 +963,12 @@ main_prompts_validate <- function(main_prompts, item_attributes, silently) {
   out <- list()
   for (attr in attr_names) {
     key <- which(prompt_names_norm == norm_str(attr))
-    val <- main_prompts[[key]]
+    val <- main.prompts[[key]]
     raw_key <- prompt_names_raw[key]
 
     if (!is.character(val) || length(val) != 1 || is.na(val)) {
       stop(
-        paste0("AI-GENIE expects `main_prompts$", raw_key, "` to be a non-empty string."),
+        paste0("AI-GENIE expects `main.prompts$", raw_key, "` to be a non-empty string."),
         call. = FALSE
       )
     }
@@ -977,13 +977,13 @@ main_prompts_validate <- function(main_prompts, item_attributes, silently) {
 
     if (val_trimmed == "") {
       stop(
-        paste0("AI-GENIE expects `main_prompts$", raw_key, "` to be a non-empty string (after trimming)."),
+        paste0("AI-GENIE expects `main.prompts$", raw_key, "` to be a non-empty string (after trimming)."),
         call. = FALSE
       )
     }
 
     # --- Attribute presence check within the prompt text ---
-    declared_attributes <- item_attributes[[attr]]
+    declared_attributes <- items.attributes[[attr]]
     declared_attributes_norm <- norm_str(declared_attributes)
     prompt_norm <- norm_str(val_trimmed)
 
@@ -1009,6 +1009,7 @@ main_prompts_validate <- function(main_prompts, item_attributes, silently) {
   return(list(out = out,
               custom = custom))
 }
+
 
 
 

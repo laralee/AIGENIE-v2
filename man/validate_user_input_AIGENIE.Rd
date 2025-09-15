@@ -5,13 +5,13 @@
 \title{Validate All User Inputs for AI-GENIE}
 \usage{
 validate_user_input_AIGENIE(
-  item_attributes,
-  openai_API,
-  main_prompts,
-  groq_API,
+  item.attributes,
+  openai.API,
+  main.prompts,
+  groq.API,
   model,
   temperature,
-  top_p,
+  top.p,
   embedding_model,
   target_N,
   domain,
@@ -34,21 +34,21 @@ validate_user_input_AIGENIE(
 )
 }
 \arguments{
-\item{item_attributes}{A named list of attributes and item types. Must be validated via
-\code{item_attributes_validate()}.}
+\item{item.attributes}{A named list of attributes and item types. Must be validated via
+\code{item.attributes_validate()}.}
 
-\item{openai_API}{A string. OpenAI API key.}
+\item{openai.API}{A string. OpenAI API key.}
 
-\item{main_prompts}{A named list of custom prompts that the user specifies (if desired)}
+\item{main.prompts}{A named list of custom prompts that the user specifies (if desired)}
 
-\item{groq_API}{A string or NULL. Groq API key.}
+\item{groq.API}{A string or NULL. Groq API key.}
 
 \item{model}{A string. The user-specified language model. Will be resolved to a
 canonical model name using \code{resolve_model_name()}.}
 
 \item{temperature}{A numeric value between 0 and 2.}
 
-\item{top_p}{A numeric value between 0 and 1.}
+\item{top.p}{A numeric value between 0 and 1.}
 
 \item{embedding_model}{A string or NULL. Must be one of the accepted OpenAI embedding models.}
 
@@ -96,16 +96,16 @@ Optional.}
 \value{
 A named list containing:
 \describe{
-  \item{target_N}{A named list of integers, aligned with `item_attributes`}
+  \item{target_N}{A named list of integers, aligned with `item.attributes`}
   \item{EGA_model}{Canonical model string or NULL}
   \item{EGA_uni_method}{Canonical unidimensionality method}
   \item{EGA_algorithm}{Canonical community detection algorithm}
   \item{model}{Resolved model string for text generation}
   \item{item_type_definitions}{Cleaned item type definitions (if provided)}
   \item{item_examples}{Cleaned item examples (if provided)}
-  \item{item_attributes}{Cleaned and normalized item attributes}
+  \item{item.attributes}{Cleaned and normalized item attributes}
   \item{prompt_notes}{Cleaned and normalized prompt notes (if provided)}
-  \item{main_prompts}{Cleaned and normalized main prompts (if provided)}
+  \item{main.prompts}{Cleaned and normalized main prompts (if provided)}
   \item{custom}{A flag signaling whether we are in custom mode or not}
 }
 }

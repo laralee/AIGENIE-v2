@@ -2,15 +2,15 @@
 % Please edit documentation in R/user_validation_helpers.R
 \name{item_examples_validate}
 \alias{item_examples_validate}
-\title{Validate and Clean `item_examples` Against Cleaned `item_attributes`}
+\title{Validate and Clean `item_examples` Against Cleaned `items.attributes`}
 \usage{
-item_examples_validate(item_examples, item_attributes)
+item_examples_validate(item_examples, items.attributes)
 }
 \arguments{
 \item{item_examples}{A data frame with columns `type`, `attribute`, `statement`.
 All values must be non-empty strings.}
 
-\item{item_attributes}{A cleaned list from `validate_item_attributes()`.
+\item{items.attributes}{A cleaned list from `validate_items.attributes()`.
 All names and values must be normalized (lowercased and trimmed).}
 }
 \value{
@@ -18,7 +18,7 @@ A cleaned version of `item_examples` with normalized values.
 }
 \description{
 Ensures `item_examples` is a data frame with required string columns and that the values
-in `type` and `attribute` align with the cleaned structure of `item_attributes`.
+in `type` and `attribute` align with the cleaned structure of `items.attributes`.
 Returns a cleaned version of the data frame with normalized values:
   - `type` and `attribute` are trimmed and lowercased
   - `statement` is trimmed (case preserved)

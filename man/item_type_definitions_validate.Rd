@@ -4,14 +4,14 @@
 \alias{item_type_definitions_validate}
 \title{Validate and Clean `item_type_definitions`}
 \usage{
-item_type_definitions_validate(item_type_definitions, item_attributes)
+item_type_definitions_validate(item_type_definitions, items.attributes)
 }
 \arguments{
 \item{item_type_definitions}{A named list of strings, where each name must
-correspond to a name in `item_attributes` and each value must be a
+correspond to a name in `items.attributes` and each value must be a
 non-empty string.}
 
-\item{item_attributes}{A cleaned list from `validate_item_attributes()`.}
+\item{items.attributes}{A cleaned list from `validate_items.attributes()`.}
 }
 \value{
 A cleaned version of `item_type_definitions`.
@@ -19,7 +19,7 @@ A cleaned version of `item_type_definitions`.
 \description{
 Validates that `item_type_definitions` is a named list where:
   - Names are unique (after trim + case-fold)
-  - Names exist in `item_attributes`
+  - Names exist in `items.attributes`
   - Values are non-empty strings
 }
 \details{

@@ -4,17 +4,17 @@
 \alias{validate_prompt_notes}
 \title{Validate and Normalize `prompt_notes`}
 \usage{
-validate_prompt_notes(prompt_notes, item_attributes)
+validate_prompt_notes(prompt_notes, items.attributes)
 }
 \arguments{
 \item{prompt_notes}{A single string, NULL, or named list of strings/NULLs.}
 
-\item{item_attributes}{A cleaned list from `validate_item_attributes()`.}
+\item{items.attributes}{A cleaned list from `validate_items.attributes()`.}
 }
 \value{
 A named list of strings, one per attribute, with NULLs replaced by "".
 }
 \description{
 Accepts a string, NULL, or a named list of strings/NULLs. Ensures one entry
-per attribute in `item_attributes`, returning a fully named and cleaned list.
+per attribute in `items.attributes`, returning a fully named and cleaned list.
 }

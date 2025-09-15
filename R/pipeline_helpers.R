@@ -183,7 +183,8 @@ reduce_redundancy_uva <- function(embedding_matrix, items, silently = TRUE) {
     EGAnet::UVA(
       data = embedding_matrix,
       cut.off = 0.2,
-      reduce.method = "remove"
+      reduce.method = "remove",
+      plot = FALSE
     )
   }, error = function(e) {
     warning(paste("Initial UVA failed:", conditionMessage(e)))
@@ -250,7 +251,8 @@ reduce_redundancy_uva <- function(embedding_matrix, items, silently = TRUE) {
       EGAnet::UVA(
         data = previous_uva$reduced_data,
         cut.off = 0.2,
-        reduce.method = "remove"
+        reduce.method = "remove",
+        plot = FALSE
       )
     }, error = function(e) {
       success <<- FALSE
@@ -609,9 +611,9 @@ iterative_stability_check <- function(embedding_matrix,
         algorithm = algorithm,
         uni.method = uni.method,
         EGA.type = EGA.type,
-        plot.itemStability = FALSE,
         plot.typicalStructure = FALSE,
-        verbose = FALSE,
+        plot.itemStability = FALSE,
+        verbose = !silently,
         seed = 123
       )
     }, error = function(e) {

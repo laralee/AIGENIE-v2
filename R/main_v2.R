@@ -1,14 +1,14 @@
 #' @export
-AIGENIE_v2 <- function(item_attributes, openai_API, # required parameters
+AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
 
                        # optional parameters --
 
                        # if using AIGENIE in custom mode, this should be set:
-                       main_prompts = NULL,
+                       main.prompts = NULL,
 
                        # LLM parameters
-                       groq_API = NULL, model = "gpt4o", temperature = 1,
-                       top_p = 1, embedding_model = "text-embedding-3-small",
+                       groq.API = NULL, model = "gpt4o", temperature = 1,
+                       top.p = 1, embedding_model = "text-embedding-3-small",
                        target_N = NULL,
 
                        # Prompt parameters
@@ -26,9 +26,9 @@ AIGENIE_v2 <- function(item_attributes, openai_API, # required parameters
 
 
   # Validate all params and reassign params
-  validation <- validate_user_input_AIGENIE(item_attributes, openai_API, main_prompts,
-                                            groq_API, model, temperature,
-                                            top_p, embedding_model, target_N,
+  validation <- validate_user_input_AIGENIE(item.attributes, openai.API, main.prompts,
+                                            groq.API, model, temperature,
+                                            top.p, embedding_model, target_N,
                                             domain, scale_title, item_examples,
                                             audience, item_type_definitions,
                                             response_options, prompt_notes,
@@ -44,9 +44,9 @@ AIGENIE_v2 <- function(item_attributes, openai_API, # required parameters
   model <- validation$model
   item_type_definitions <- validation$item_type_definitions
   item_examples <- validation$item_examples
-  item_attributes <- validation$item_attributes
+  item.attributes <- validation$item.attributes
   prompt_notes <- validation$prompt_notes
-  main_prompts <- validation$main_prompts
+  main.prompts <- validation$main.prompts
   custom <- validation$custom
 
   # Begin constructing the prompts
@@ -57,11 +57,11 @@ AIGENIE_v2 <- function(item_attributes, openai_API, # required parameters
 
   # Create/Modify the prompts
   if(!custom){
-    main_prompts <- create_main_prompts(item_attributes, item_type_definitions,
+    main.prompts <- create_main.prompts(item.attributes, item_type_definitions,
                                       domain, scale_title, prompt_notes,
                                       audience, item_examples)
   } else {
-    main_prompts <- modify_main_prompts(main_prompts, item_attributes,
+    main.prompts <- modify_main.prompts(main.prompts, item.attributes,
                                         item_type_definitions,
                                         domain, scale_title, prompt_notes,
                                         audience, item_examples)
@@ -70,8 +70,8 @@ AIGENIE_v2 <- function(item_attributes, openai_API, # required parameters
 
 
   # Generate the items for reduction analysis
-  items_gen <- generate_items_via_llm(main_prompts, system_role, model, top_p, temperature,
-                                  adaptive, silently, groq_API, openai_API, target_N)
+  items_gen <- generate_items_via_llm(main.prompts, system_role, model, top.p, temperature,
+                                  adaptive, silently, groq.API, openai.API, target_N)
   items <- items_gen$items
   success <- items_gen$successful
 
@@ -91,7 +91,7 @@ AIGENIE_v2 <- function(item_attributes, openai_API, # required parameters
 
 
   # Now, generate item embeddings
-  attempt_to_embed <- embed_items(embedding_model, openai_API, items, silently)
+  attempt_to_embed <- embed_items(embedding_model, openai.API, items, silently)
   success <- attempt_to_embed$success
   embeddings <- attempt_to_embed$embeddings
 
@@ -107,6 +107,22 @@ AIGENIE_v2 <- function(item_attributes, openai_API, # required parameters
 
      return(list(embeddings = embeddings, items = items))
   }
+
+  results <- run_item_reduction_pipeline(embeddings,
+                                         items,
+                                         EGA_model,
+                                         EGA_algorithm,
+                                         EGA_uni_method,
+                                         keep_org,
+                                         silently,
+                                         verbose = FALSE)
+
+
+
+
+  return( results )
+
+
 
 }
 

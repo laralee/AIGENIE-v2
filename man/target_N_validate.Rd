@@ -6,7 +6,7 @@
 \usage{
 target_N_validate(
   target_N,
-  item_attributes,
+  items.attributes,
   items_only,
   embeddings_only,
   silently
@@ -15,7 +15,7 @@ target_N_validate(
 \arguments{
 \item{target_N}{An integer, list/vector of integers, or NULL.}
 
-\item{item_attributes}{A cleaned list returned from `validate_item_attributes()`.}
+\item{items.attributes}{A cleaned list returned from `validate_items.attributes()`.}
 
 \item{items_only}{A flag used to determine if only items need to be generated}
 

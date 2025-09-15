@@ -72,7 +72,7 @@ create_system_role <- function(domain, scale_title, audience,
 #' optional item type definitions, audience and domain context, and example items. Each resulting prompt
 #' includes strict formatting requirements, attribute listings, and item-generation instructions.
 #'
-#' @param item_attributes A named list where each element is a character vector of attribute names for an item type.
+#' @param item.attributes A named list where each element is a character vector of attribute names for an item type.
 #' @param item_type_definitions (Optional) A named list of textual definitions for each item type, used to provide conceptual clarity in the prompt.
 #' @param domain (Optional) A string specifying the domain (e.g., "psychological", "clinical") the items belong to.
 #' @param scale_title (Optional) The title of the scale (e.g., "Emotion Regulation Inventory").
@@ -83,19 +83,19 @@ create_system_role <- function(domain, scale_title, audience,
 #' @return A named list of character strings. Each entry corresponds to one item type and contains a complete prompt
 #' to guide an LLM in generating two distinct items per attribute, formatted as a JSON array.
 #'
-create_main_prompts <- function(item_attributes, item_type_definitions,
+create_main.prompts <- function(item.attributes, item_type_definitions,
                                 domain, scale_title, prompt_notes,
                                 audience, item_examples){
-  item_types <- names(item_attributes)
+  item_types <- names(item.attributes)
 
 
-  main_prompts <- list()
+  main.prompts <- list()
 
   # Create user prompts
 
   for (i in seq_along(item_types)) {
     current_type <- item_types[[i]]
-    attributes <- item_attributes[[current_type]]
+    attributes <- item.attributes[[current_type]]
 
     # Build attributes string
     n <- length(attributes)
@@ -127,7 +127,7 @@ create_main_prompts <- function(item_attributes, item_type_definitions,
     }
 
     # Construct the main prompt for all prompts
-    main_prompts[[current_type]] <- paste0(
+    main.prompts[[current_type]] <- paste0(
       "Generate a grand total of ", length(attributes) * 2, " novel, UNIQUE, reliable, and valid ",
       ifelse(!is.null(domain), paste0(domain, " "), ""),
       "items",ifelse(is.null(scale_title), " for a scale. ", paste0(" for a scale called '", scale_title, ".' ")),
@@ -137,7 +137,7 @@ create_main_prompts <- function(item_attributes, item_type_definitions,
       ". Generate EXACTLY TWO items PER attribute. Use the ",length(attributes)," attributes EXACTLY as provided; do NOT add your own or leave any out." ,
       "\nEACH item should be ROBUST, NOVEL, and UNIQUE. These items must be top-quality.\n",
       "Return output STRICTLY as a JSON array of objects, each with keys `attribute` and `statement`, e.g.:\n",
-      "[{\"attribute\":\"", item_attributes[[current_type]][1], "\",\"statement\":\"Your item here.\"}, …]\n",
+      "[{\"attribute\":\"", item.attributes[[current_type]][1], "\",\"statement\":\"Your item here.\"}, …]\n",
       "This JSON formatting is EXTREMELY important. ONLY output the items in this formatting; DO NOT include any other text in your response.",
       ifelse(is.null(examples_str), "", paste0("\n\nTo better help you understand how EXACTLY to phrase/constuct your items,",
                " here are some EXAMPLE high-quality items that already exist on the scale that you MUST",
@@ -153,7 +153,7 @@ create_main_prompts <- function(item_attributes, item_type_definitions,
     )
   }
 
-  return(main_prompts)
+  return(main.prompts)
 }
 
 
@@ -203,8 +203,8 @@ construct_item_examples_string <- function(item_examples, current_type) {
 #' critical author notes — but only if these elements are not already present in the prompt
 #' (checked case-insensitively and with whitespace trimmed).
 #'
-#' @param main_prompts A named list of character strings, where each element is a prompt associated with an item type.
-#' @param item_attributes A named list where each element is a character vector of attribute names for an item type.
+#' @param main.prompts A named list of character strings, where each element is a prompt associated with an item type.
+#' @param item.attributes A named list where each element is a character vector of attribute names for an item type.
 #' @param item_type_definitions (Optional) A named list of definitions corresponding to each item type. Used to append conceptual clarity.
 #' @param domain (Optional) A string describing the content domain (e.g., "psychological", "clinical"). Included in the prompt if not already present.
 #' @param scale_title (Optional) The name of the scale (e.g., "Social Anxiety Scale") for which items are being generated.
@@ -214,12 +214,12 @@ construct_item_examples_string <- function(item_examples, current_type) {
 #'
 #' @return A modified list of character strings, with each prompt updated to include relevant metadata, instructions, and formatting examples as needed.
 #'
-modify_main_prompts <- function(main_prompts, item_attributes,
+modify_main.prompts <- function(main.prompts, item.attributes,
                                 item_type_definitions,
                                 domain, scale_title, prompt_notes,
                                 audience, item_examples) {
 
-  item_types <- names(item_attributes)
+  item_types <- names(item.attributes)
 
   # Helper to do case-insensitive, trimmed presence check
   already_present <- function(haystack, needle) {
@@ -230,7 +230,7 @@ modify_main_prompts <- function(main_prompts, item_attributes,
 
   for (i in seq_along(item_types)) {
     current_type <- item_types[[i]]
-    prompt <- main_prompts[[current_type]]
+    prompt <- main.prompts[[current_type]]
 
     # Start building the additional statement
     additions <- character()
@@ -301,7 +301,7 @@ modify_main_prompts <- function(main_prompts, item_attributes,
     # JSON format instruction (always added unless already present)
     json_format_str <- paste0(
       "\n\nReturn output STRICTLY as a JSON array of objects, each with keys `attribute` and `statement`, e.g.:\n",
-      "[{\"attribute\":\"", item_attributes[[current_type]][1], "\",\"statement\":\"Your item here.\"}, …]\n",
+      "[{\"attribute\":\"", item.attributes[[current_type]][1], "\",\"statement\":\"Your item here.\"}, …]\n",
       "This JSON formatting is EXTREMELY important. ONLY output the items in this formatting; DO NOT include any other text in your response."
     )
     if (already_present(prompt, "`attribute`") || already_present(prompt, "Return output STRICTLY")) {
@@ -318,10 +318,10 @@ modify_main_prompts <- function(main_prompts, item_attributes,
     )
 
     # Append to prompt
-    main_prompts[[current_type]] <- paste0(prompt, additional_statement)
+    main.prompts[[current_type]] <- paste0(prompt, additional_statement)
   }
 
-  return(main_prompts)
+  return(main.prompts)
 }
 
 
@@ -333,8 +333,8 @@ modify_main_prompts <- function(main_prompts, item_attributes,
 
 #### Generating Items #### ----
 
-generate_items_via_llm <- function(main_prompts, system_role, model, top_p, temperature,
-                                   adaptive, silently, groq_API, openai_API, target_N) {
+generate_items_via_llm <- function(main.prompts, system_role, model, top.p, temperature,
+                                   adaptive, silently, groq.API, openai.API, target_N) {
 
   # Initialize results dataframe
   all_items_df <- data.frame(type = character(),
@@ -355,7 +355,7 @@ generate_items_via_llm <- function(main_prompts, system_role, model, top_p, temp
   }
 
   # Check for missing Groq API key if needed
-  if (use_groq && is.null(groq_API)) {
+  if (use_groq && is.null(groq.API)) {
     if (!silently) {
       cat("Groq API key missing. Switching to GPT-4o for generation.\n")
     }
@@ -367,11 +367,11 @@ generate_items_via_llm <- function(main_prompts, system_role, model, top_p, temp
   tryCatch({
     if (use_groq) {
       groq <- reticulate::import("groq")
-      groq_client <- groq$Groq(api_key = groq_API)
+      groq_client <- groq$Groq(api_key = groq.API)
       generate_FUN <- groq_client$chat$completions$create
     } else {
       openai <- reticulate::import("openai")
-      openai$api_key <- openai_API
+      openai$api_key <- openai.API
       generate_FUN <- openai$ChatCompletion$create
     }
   }, error = function(e) {
@@ -384,13 +384,13 @@ generate_items_via_llm <- function(main_prompts, system_role, model, top_p, temp
       model = model,
       messages = messages_list,
       temperature = temperature,
-      top_p = top_p
+      top_p = top.p
     )
     do.call(generate_FUN, call_params)
   }
 
   # Iterate through each item type
-  for (item_type in names(main_prompts)) {
+  for (item_type in names(main.prompts)) {
 
     if (!silently) {
       cat(paste("Generating items for", item_type, "...\n"))
@@ -414,7 +414,7 @@ generate_items_via_llm <- function(main_prompts, system_role, model, top_p, temp
       total_iterations <- total_iterations + 1
 
       # Construct prompt with adaptive mode if needed
-      current_prompt <- main_prompts[[item_type]]
+      current_prompt <- main.prompts[[item_type]]
 
       if (adaptive && nrow(all_items_df) > 0) {
         # Get previous items to append
@@ -659,7 +659,7 @@ cleaning_function <- function(raw_text, item_type) {
 #' an embedding dimension.
 #'
 #' @param embedding_model A string indicating which OpenAI embedding model to use
-#' @param openai_API A string containing the user's OpenAI API key
+#' @param openai.API A string containing the user's OpenAI API key
 #' @param items A data frame with 'ID' and 'statement' columns containing items to embed
 #' @param silently A flag that describes whether to issue progress statements
 #'
@@ -667,7 +667,7 @@ cleaning_function <- function(raw_text, item_type) {
 #'   \item{embeddings}{A matrix where columns are items (named by ID) and rows are embedding dimensions}
 #'   \item{success}{A logical indicating whether the embedding process was successful}
 #'
-embed_items <- function(embedding_model, openai_API, items, silently) {
+embed_items <- function(embedding_model, openai.API, items, silently) {
 
   if(!silently){
     cat("\n")
@@ -684,7 +684,7 @@ embed_items <- function(embedding_model, openai_API, items, silently) {
   # Initialize OpenAI API
   tryCatch({
     openai <- reticulate::import("openai")
-    openai$api_key <- openai_API
+    openai$api_key <- openai.API
 
     # Extract statements to embed
     statements <- items$statement
