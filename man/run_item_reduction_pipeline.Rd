@@ -7,10 +7,10 @@
 run_item_reduction_pipeline(
   embedding_matrix,
   items,
-  EGA_model = NULL,
-  EGA_algorithm = "walktrap",
-  EGA_uni_method = "louvain",
-  keep_org,
+  EGA.model = NULL,
+  EGA.algorithm = "walktrap",
+  EGA.uni.method = "louvain",
+  keep.org,
   silently,
   verbose = FALSE
 )
@@ -20,11 +20,11 @@ run_item_reduction_pipeline(
 
 \item{items}{Data frame of all item metadata (must include ID, type, statement, attribute)}
 
-\item{EGA_model}{NULL, "glasso", or "TMFG"}
+\item{EGA.model}{NULL, "glasso", or "TMFG"}
 
-\item{EGA_algorithm}{Character. EGA algorithm to use (default = "walktrap")}
+\item{EGA.algorithm}{Character. EGA algorithm to use (default = "walktrap")}
 
-\item{EGA_uni_method}{Character. Unidimensionality method (default = "louvain")}
+\item{EGA.uni.method}{Character. Unidimensionality method (default = "louvain")}
 
 \item{verbose}{Logical. Print progress?}
 }

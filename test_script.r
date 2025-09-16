@@ -9,9 +9,9 @@ item_attributes <- list(
 
 )
 
-# get_embeddings <- AIGENIE.v2::AIGENIE_v2(item.attributes = item_attributes,
-#                        openai.API = openai_API,
-#                        embeddings_only = TRUE)
+get_embeddings <- AIGENIE.v2::AIGENIE_v2(item.attributes = item_attributes,
+                       openai.API = openai_API,
+                       embeddings.only = TRUE)
 
 get_embeddings <- readRDS("embeddings_testing.RDS")
 
@@ -25,20 +25,15 @@ openness_embeds <- embeds[,colnames(embeds) %in% openness_items$ID]
 test_one_type <- AIGENIE.v2:::run_pipeline_for_item_type(openness_embeds,
                                         openness_items,
                                         "openness",
-                                        silently = FALSE)
+                                        silently = FALSE,
+                                        keep.org = TRUE,
+                                        model = "tmfg")
 
 
-out <- AIGENIE.v2:::run_item_reduction_pipeline(
-    embeds,
-    items,
-    EGA_model = NULL,
-    EGA_algorithm = "walktrap",
-    EGA_uni_method = "louvain",
-    keep_org = FALSE,
-    silently = FALSE,
-    verbose = FALSE
-  )
 
+test2 <- AIGENIE.v2::AIGENIE_v2(item.attributes = item_attributes,
+                                openai.API = openai_API,
+                                keep.org = TRUE)
 
 
 

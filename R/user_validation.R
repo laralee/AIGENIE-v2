@@ -20,92 +20,92 @@
 #'   canonical model name using \code{resolve_model_name()}.
 #' @param temperature A numeric value between 0 and 2.
 #' @param top.p A numeric value between 0 and 1.
-#' @param embedding_model A string or NULL. Must be one of the accepted OpenAI embedding models.
-#' @param target_N Either a scalar integer, NULL, or a named list/vector of integers
+#' @param embedding.model A string or NULL. Must be one of the accepted OpenAI embedding models.
+#' @param target.N Either a scalar integer, NULL, or a named list/vector of integers
 #'   corresponding to each attribute. Used for synthetic item generation.
 #' @param domain A string describing the domain of the assessment.
-#' @param scale_title A string naming the scale.
-#' @param item_examples A data frame containing `type`, `attribute`, and `statement` columns.
+#' @param scale.title A string naming the scale.
+#' @param item.examples A data frame containing `type`, `attribute`, and `statement` columns.
 #'   All values must be strings. Optional.
 #' @param audience A string or NULL. The intended audience of the assessment.
-#' @param item_type_definitions A named list mapping item types to their descriptions.
+#' @param item.type.definitions A named list mapping item types to their descriptions.
 #'   Optional.
-#' @param response_options An atomic vector of strings listing the response options users will have.
+#' @param response.options An atomic vector of strings listing the response options users will have.
 #'   Optional.
-#' @param prompt_notes A named list or string that gives the LLM additional instructions to be appended to the prompt.
+#' @param prompt.notes A named list or string that gives the LLM additional instructions to be appended to the prompt.
 #'   Optional.
-#' @param system_role A string or NULL. Used to customize the system prompt.
-#' @param EGA_model A string or NULL. One of `"BGGM"`, `"glasso"`, or `"TMFG"`.
-#' @param EGA_algorithm A string. One of `"leiden"`, `"louvain"`, or `"walktrap"`.
-#' @param EGA_uni_method A string. One of `"expand"`, `"LE"`, or `"louvain"`.
-#' @param keep_org A boolean. If TRUE, preserve original inputs in the output.
-#' @param items_only A boolean. Whether to generate only items.
-#' @param embeddings_only A boolean. Whether to run in embedding-only mode.
+#' @param system.role A string or NULL. Used to customize the system prompt.
+#' @param EGA.model A string or NULL. One of `"BGGM"`, `"glasso"`, or `"TMFG"`.
+#' @param EGA.algorithm A string. One of `"leiden"`, `"louvain"`, or `"walktrap"`.
+#' @param EGA.uni.method A string. One of `"expand"`, `"LE"`, or `"louvain"`.
+#' @param keep.org A boolean. If TRUE, preserve original inputs in the output.
+#' @param items.only A boolean. Whether to generate only items.
+#' @param embeddings.only A boolean. Whether to run in embedding-only mode.
 #' @param adaptive A boolean. Whether adaptive design logic should be applied.
 #' @param plot A boolean. Whether to display plots for visual diagnostics.
 #' @param silently A boolean. If TRUE, suppresses warning messages.
 #'
 #' @return A named list containing:
 #' \describe{
-#'   \item{target_N}{A named list of integers, aligned with `item.attributes`}
-#'   \item{EGA_model}{Canonical model string or NULL}
-#'   \item{EGA_uni_method}{Canonical unidimensionality method}
-#'   \item{EGA_algorithm}{Canonical community detection algorithm}
+#'   \item{target.N}{A named list of integers, aligned with `item.attributes`}
+#'   \item{EGA.model}{Canonical model string or NULL}
+#'   \item{EGA.uni.method}{Canonical unidimensionality method}
+#'   \item{EGA.algorithm}{Canonical community detection algorithm}
 #'   \item{model}{Resolved model string for text generation}
-#'   \item{item_type_definitions}{Cleaned item type definitions (if provided)}
-#'   \item{item_examples}{Cleaned item examples (if provided)}
+#'   \item{item.type.definitions}{Cleaned item type definitions (if provided)}
+#'   \item{item.examples}{Cleaned item examples (if provided)}
 #'   \item{item.attributes}{Cleaned and normalized item attributes}
-#'   \item{prompt_notes}{Cleaned and normalized prompt notes (if provided)}
+#'   \item{prompt.notes}{Cleaned and normalized prompt notes (if provided)}
 #'   \item{main.prompts}{Cleaned and normalized main prompts (if provided)}
 #'   \item{custom}{A flag signaling whether we are in custom mode or not}
 #' }
 #'
 validate_user_input_AIGENIE <- function(item.attributes, openai.API, main.prompts,
                                         groq.API, model, temperature,
-                                        top.p, embedding_model, target_N,
-                                        domain, scale_title, item_examples,
-                                        audience, item_type_definitions, response_options,
-                                        prompt_notes,
-                                        system_role, EGA_model, EGA_algorithm,
-                                        EGA_uni_method, keep_org, items_only,
-                                        embeddings_only, adaptive, plot, silently) {
+                                        top.p, embedding.model, target.N,
+                                        domain, scale.title, item.examples,
+                                        audience, item.type.definitions, response.options,
+                                        prompt.notes,
+                                        system.role, EGA.model, EGA.algorithm,
+                                        EGA.uni.method, keep.org, items.only,
+                                        embeddings.only, adaptive, plot, silently) {
 
   # Ensure all "TRUEs and FALSEs" are specified accordingly
-  validate_booleans(items_only, adaptive, plot, keep_org, silently, embeddings_only)
+  validate_booleans(items.only, adaptive, plot, keep.org, silently, embeddings.only)
 
   # Ensure all string objects are actually strings (or set to NULL)
-  validate_strings(openai.API, groq.API, audience, scale_title,
-                   system_role, domain, model, EGA_model, EGA_algorithm,
-                   embedding_model, EGA_uni_method)
+  validate_strings(openai.API, groq.API, audience, scale.title,
+                   system.role, domain, model, EGA.model, EGA.algorithm,
+                   embedding.model, EGA.uni.method)
 
   # Validate the `item.attributes` object
   item.attributes <- items.attributes_validate(item.attributes)
 
-  # Validate the `item_examples` object based on `item.attributes`
-  if(!is.null(item_examples)){ # only run the check if user provided
-    item_examples <- item_examples_validate(item_examples, item.attributes)
+  # Validate the `item.examples` object based on `item.attributes`
+  if(!is.null(item.examples)){ # only run the check if user provided
+    item.examples <- item.examples_validate(item.examples, item.attributes)
   }
 
-  # Validate the `item_type_definitions` object based on `item.attributes`
-  if(!is.null(item_type_definitions)){ # only run the check if user provided
-    item_type_definitions <- item_type_definitions_validate(item_type_definitions, item.attributes)
+  # Validate the `item.type.definitions` object based on `item.attributes`
+  if(!is.null(item.type.definitions)){ # only run the check if user provided
+    item.type.definitions <- item.type.definitions_validate(item.type.definitions, item.attributes)
   }
 
   # Validate the `model` string and replace it with a valid model string if necessary
   model <- resolve_model_name(model, silently)
 
   # Validate the embedding model
-  embedding_model_validate(embedding_model)
+  embedding.model_validate(embedding.model)
 
   # Validate the parameters to be passed to EGA
-  EGA_params <- validate_ega_params(EGA_algorithm, EGA_uni_method, EGA_model)
-  EGA_algorithm <- EGA_params$EGA_algorithm
-  EGA_uni_method <- EGA_params$EGA_uni_method
-  EGA_model <- EGA_params$EGA_model
+  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
+  EGA.algorithm <- EGA_params$EGA.algorithm
+  EGA.uni.method <- EGA_params$EGA.uni.method
+  EGA.model <- EGA_params$EGA.model
 
 
   # Validate target N
-  target_N <- target_N_validate(target_N, item.attributes, items_only, embeddings_only, silently)
+  target.N <- target.N_validate(target.N, item.attributes, items.only, embeddings.only, silently)
 
 
   # Validate LLM parameters
@@ -113,8 +113,8 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, main.prompt
   temperature_validate(temperature)
 
   # Validate prompt components
-  response_options_validate(response_options)
-  prompt_notes <- validate_prompt_notes(prompt_notes, item.attributes)
+  response.options_validate(response.options)
+  prompt.notes <- validate_prompt.notes(prompt.notes, item.attributes)
 
   # Check to see if the user is in custom mode
   if(!is.null(main.prompts)){
@@ -128,15 +128,15 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, main.prompt
 
   # Return
   return(list(
-    target_N = target_N,
-    EGA_model = EGA_model,
-    EGA_uni_method = EGA_uni_method,
-    EGA_algorithm = EGA_algorithm,
+    target.N = target.N,
+    EGA.model = EGA.model,
+    EGA.uni.method = EGA.uni.method,
+    EGA.algorithm = EGA.algorithm,
     model = model,
-    item_type_definitions = item_type_definitions,
-    item_examples = item_examples,
+    item.type.definitions = item.type.definitions,
+    item.examples = item.examples,
     item.attributes = item.attributes,
-    prompt_notes = prompt_notes,
+    prompt.notes = prompt.notes,
     main.prompts = main.prompts,
     custom = custom
   ))

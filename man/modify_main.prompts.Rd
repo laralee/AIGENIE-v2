@@ -7,12 +7,12 @@
 modify_main.prompts(
   main.prompts,
   item.attributes,
-  item_type_definitions,
+  item.type.definitions,
   domain,
-  scale_title,
-  prompt_notes,
+  scale.title,
+  prompt.notes,
   audience,
-  item_examples
+  item.examples
 )
 }
 \arguments{
@@ -20,17 +20,17 @@ modify_main.prompts(
 
 \item{item.attributes}{A named list where each element is a character vector of attribute names for an item type.}
 
-\item{item_type_definitions}{(Optional) A named list of definitions corresponding to each item type. Used to append conceptual clarity.}
+\item{item.type.definitions}{(Optional) A named list of definitions corresponding to each item type. Used to append conceptual clarity.}
 
 \item{domain}{(Optional) A string describing the content domain (e.g., "psychological", "clinical"). Included in the prompt if not already present.}
 
-\item{scale_title}{(Optional) The name of the scale (e.g., "Social Anxiety Scale") for which items are being generated.}
+\item{scale.title}{(Optional) The name of the scale (e.g., "Social Anxiety Scale") for which items are being generated.}
 
-\item{prompt_notes}{(Optional) A named list of author-supplied notes for each item type that should be emphasized in the prompt.}
+\item{prompt.notes}{(Optional) A named list of author-supplied notes for each item type that should be emphasized in the prompt.}
 
 \item{audience}{(Optional) A string describing the target population (e.g., "adults", "high school students").}
 
-\item{item_examples}{(Optional) A data frame of example items. Must contain a column matching each item type to extract examples.}
+\item{item.examples}{(Optional) A data frame of example items. Must contain a column matching each item type to extract examples.}
 }
 \value{
 A modified list of character strings, with each prompt updated to include relevant metadata, instructions, and formatting examples as needed.

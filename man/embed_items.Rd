@@ -4,10 +4,10 @@
 \alias{embed_items}
 \title{Embed Items Using OpenAI's Embedding API}
 \usage{
-embed_items(embedding_model, openai.API, items, silently)
+embed_items(embedding.model, openai.API, items, silently)
 }
 \arguments{
-\item{embedding_model}{A string indicating which OpenAI embedding model to use}
+\item{embedding.model}{A string indicating which OpenAI embedding model to use}
 
 \item{openai.API}{A string containing the user's OpenAI API key}
 

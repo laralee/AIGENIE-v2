@@ -6,7 +6,7 @@
 #' @param model NULL, "glasso", or "TMFG"
 #' @param algorithm EGA algorithm
 #' @param uni.method EGA uni.method
-#' @param keep_org Logical. Whether to include original items and embeddings
+#' @param keep.org Logical. Whether to include original items and embeddings
 #' @param verbose Logical
 #'
 #' @return A named list containing pipeline results for this type
@@ -16,20 +16,20 @@ run_pipeline_for_item_type <- function(embedding_matrix,
                                        model = NULL,
                                        algorithm = "walktrap",
                                        uni.method = "louvain",
-                                       keep_org = FALSE,
+                                       keep.org = FALSE,
                                        verbose = FALSE,
                                        silently) {
 
   log_msg <- function(...) if (verbose) message("[", type_name, "] ", ...)
 
 
-  if(keep_org){
+  if(keep.org){
     result <- list(
       final_NMI = NULL,
       embeddings = list(),
       UVA = list(),
       bootEGA = list(),
-      EGA_model_selected = NULL,
+      EGA.model_selected = NULL,
       final_items = NULL,
       initial_items = items
     )} else {
@@ -38,7 +38,7 @@ run_pipeline_for_item_type <- function(embedding_matrix,
         embeddings = list(),
         UVA = list(),
         bootEGA = list(),
-        EGA_model_selected = NULL,
+        EGA.model_selected = NULL,
         final_items = NULL
       )
   }
@@ -52,10 +52,6 @@ run_pipeline_for_item_type <- function(embedding_matrix,
   # 1. Convert attribute to numeric factor for true communities
   true_communities <- as.factor(as.integer(factor(items$attribute)))
   names(true_communities) <- items$ID
-
-  # Store full + sparse embeddings
-  result$embeddings$full <- embedding_matrix
-  result$embeddings$sparse <- sparsify_embeddings(embedding_matrix, silently = TRUE)
 
   # 2. Redundancy reduction (UVA)
 
@@ -78,9 +74,9 @@ run_pipeline_for_item_type <- function(embedding_matrix,
   reduced_matrix <- uva_res$embedding_matrix
   reduced_items <- items[items$ID %in% colnames(reduced_matrix), , drop = FALSE]
 
-  if (keep_org) {
+  if (keep.org) {
     result$embeddings$full_org <- embedding_matrix
-    result$embeddings$sparse_org <- result$embeddings$sparse
+    result$embeddings$sparse_org <- sparsify_embeddings(embedding_matrix)
   }
 
   # 3. Optimal embedding/model selection
@@ -110,8 +106,8 @@ run_pipeline_for_item_type <- function(embedding_matrix,
 
 
   selected_embedding <- select_res$best_embedding_matrix
-  result$embeddings$selected <- selected_embedding
-  result$EGA_model_selected <- select_res$model
+  result$embeddings$selected <- select_res$embedding_type
+  result$EGA.model_selected <- select_res$model
   initial_nmi <- select_res$nmi
 
   # 4. BootEGA filtering
@@ -163,6 +159,12 @@ run_pipeline_for_item_type <- function(embedding_matrix,
   result$final_items <- merge(stable_items, com_df, by = "ID")
   result$final_NMI <- final_res$final_nmi
 
+  # Store full + sparse embeddings
+  full_embeds_final <- embedding_matrix[,colnames(embedding_matrix) %in% result$final_items$ID]
+  result$embeddings$full <- full_embeds_final
+  result$embeddings$sparse <- sparsify_embeddings(full_embeds_final, silently = TRUE)
+
+
   return(result)
 }
 
@@ -172,18 +174,18 @@ run_pipeline_for_item_type <- function(embedding_matrix,
 #'
 #' @param embedding_matrix Numeric matrix of all items (columns = items)
 #' @param items Data frame of all item metadata (must include ID, type, statement, attribute)
-#' @param EGA_model NULL, "glasso", or "TMFG"
-#' @param EGA_algorithm Character. EGA algorithm to use (default = "walktrap")
-#' @param EGA_uni_method Character. Unidimensionality method (default = "louvain")
+#' @param EGA.model NULL, "glasso", or "TMFG"
+#' @param EGA.algorithm Character. EGA algorithm to use (default = "walktrap")
+#' @param EGA.uni.method Character. Unidimensionality method (default = "louvain")
 #' @param verbose Logical. Print progress?
 #'
 #' @return A named list of pipeline results, one per item type
 run_item_reduction_pipeline <- function(embedding_matrix,
                                         items,
-                                        EGA_model = NULL,
-                                        EGA_algorithm = "walktrap",
-                                        EGA_uni_method = "louvain",
-                                        keep_org,
+                                        EGA.model = NULL,
+                                        EGA.algorithm = "walktrap",
+                                        EGA.uni.method = "louvain",
+                                        keep.org,
                                         silently,
                                         verbose = FALSE) {
 
@@ -206,10 +208,10 @@ run_item_reduction_pipeline <- function(embedding_matrix,
         embedding_matrix = embedding_split[[tname]],
         items = items_split[[tname]],
         type_name = tname,
-        model = EGA_model,
-        algorithm = EGA_algorithm,
-        uni.method = EGA_uni_method,
-        keep_org = keep_org,
+        model = EGA.model,
+        algorithm = EGA.algorithm,
+        uni.method = EGA.uni.method,
+        keep.org = keep.org,
         verbose = verbose,
         silently = silently
       )

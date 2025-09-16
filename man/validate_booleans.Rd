@@ -7,7 +7,7 @@
 validate_booleans(...)
 }
 \arguments{
-\item{...}{One or more variables to check. We are expecting each to be a logical scalar (`TRUE` or `FALSE`). In `AIGENIE`, these variables would be `items_only`, `adaptive`, `plot`, `keep_org`, `silently`, and `embeddings_only`.}
+\item{...}{One or more variables to check. We are expecting each to be a logical scalar (`TRUE` or `FALSE`). In `AIGENIE`, these variables would be `items.only`, `adaptive`, `plot`, `keep.org`, `silently`, and `embeddings.only`.}
 }
 \description{
 Validates that all arguments passed to the function are scalar boolean values (`TRUE` or `FALSE`).

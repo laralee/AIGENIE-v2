@@ -4,12 +4,12 @@
 \alias{validate_ega_params}
 \title{Validate EGA Parameters}
 \usage{
-validate_ega_params(EGA_algorithm, EGA_uni_method, EGA_model)
+validate_ega_params(EGA.algorithm, EGA.uni.method, EGA_model)
 }
 \arguments{
-\item{EGA_algorithm}{A string: one of "leiden", "louvain", "walktrap"}
+\item{EGA.algorithm}{A string: one of "leiden", "louvain", "walktrap"}
 
-\item{EGA_uni_method}{A string: one of "expand", "LE", "louvain"}
+\item{EGA.uni.method}{A string: one of "expand", "LE", "louvain"}
 
 \item{EGA_model}{A string or NULL: one of "glasso", "TMFG"}
 }

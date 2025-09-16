@@ -11,7 +11,7 @@ run_pipeline_for_item_type(
   model = NULL,
   algorithm = "walktrap",
   uni.method = "louvain",
-  keep_org = FALSE,
+  keep.org = FALSE,
   verbose = FALSE,
   silently
 )
@@ -29,7 +29,7 @@ run_pipeline_for_item_type(
 
 \item{uni.method}{EGA uni.method}
 
-\item{keep_org}{Logical. Whether to include original items and embeddings}
+\item{keep.org}{Logical. Whether to include original items and embeddings}
 
 \item{verbose}{Logical}
 }

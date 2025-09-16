@@ -8,19 +8,19 @@ AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
 
                        # LLM parameters
                        groq.API = NULL, model = "gpt4o", temperature = 1,
-                       top.p = 1, embedding_model = "text-embedding-3-small",
-                       target_N = NULL,
+                       top.p = 1, embedding.model = "text-embedding-3-small",
+                       target.N = NULL,
 
                        # Prompt parameters
-                       domain = NULL, scale_title = NULL, item_examples = NULL,
-                       audience = NULL, item_type_definitions = NULL,
-                       response_options = NULL, prompt_notes = NULL, system_role = NULL,
+                       domain = NULL, scale.title = NULL, item.examples = NULL,
+                       audience = NULL, item.type.definitions = NULL,
+                       response.options = NULL, prompt.notes = NULL, system.role = NULL,
 
                        # EGA parameters
-                       EGA_model = NULL, EGA_algorithm = "walktrap", EGA_uni_method = "louvain",
+                       EGA.model = NULL, EGA.algorithm = "walktrap", EGA.uni.method = "louvain",
 
                        # Flags
-                       keep_org = FALSE, items_only = FALSE, embeddings_only = FALSE,
+                       keep.org = FALSE, items.only = FALSE, embeddings.only = FALSE,
                        adaptive = TRUE, plot = TRUE, silently = FALSE
                        ){
 
@@ -28,50 +28,50 @@ AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
   # Validate all params and reassign params
   validation <- validate_user_input_AIGENIE(item.attributes, openai.API, main.prompts,
                                             groq.API, model, temperature,
-                                            top.p, embedding_model, target_N,
-                                            domain, scale_title, item_examples,
-                                            audience, item_type_definitions,
-                                            response_options, prompt_notes,
-                                            system_role, EGA_model, EGA_algorithm,
-                                            EGA_uni_method, keep_org, items_only,
-                                            embeddings_only, adaptive, plot, silently)
+                                            top.p, embedding.model, target.N,
+                                            domain, scale.title, item.examples,
+                                            audience, item.type.definitions,
+                                            response.options, prompt.notes,
+                                            system.role, EGA.model, EGA.algorithm,
+                                            EGA.uni.method, keep.org, items.only,
+                                            embeddings.only, adaptive, plot, silently)
 
 
-  target_N <- validation$target_N
-  EGA_model <- validation$EGA_model
-  EGA_uni_method <- validation$EGA_uni_method
-  EGA_algorithm <- validation$EGA_algorithm
+  target.N <- validation$target.N
+  EGA.model <- validation$EGA.model
+  EGA.uni.method <- validation$EGA.uni.method
+  EGA.algorithm <- validation$EGA.algorithm
   model <- validation$model
-  item_type_definitions <- validation$item_type_definitions
-  item_examples <- validation$item_examples
+  item.type.definitions <- validation$item.type.definitions
+  item.examples <- validation$item.examples
   item.attributes <- validation$item.attributes
-  prompt_notes <- validation$prompt_notes
+  prompt.notes <- validation$prompt.notes
   main.prompts <- validation$main.prompts
   custom <- validation$custom
 
   # Begin constructing the prompts
   # first, the system role if one was not provided
-  system_role <- create_system_role(domain, scale_title, audience,
-                                    response_options, system_role)
+  system.role <- create_system.role(domain, scale.title, audience,
+                                    response.options, system.role)
 
 
   # Create/Modify the prompts
   if(!custom){
-    main.prompts <- create_main.prompts(item.attributes, item_type_definitions,
-                                      domain, scale_title, prompt_notes,
-                                      audience, item_examples)
+    main.prompts <- create_main.prompts(item.attributes, item.type.definitions,
+                                      domain, scale.title, prompt.notes,
+                                      audience, item.examples)
   } else {
     main.prompts <- modify_main.prompts(main.prompts, item.attributes,
-                                        item_type_definitions,
-                                        domain, scale_title, prompt_notes,
-                                        audience, item_examples)
+                                        item.type.definitions,
+                                        domain, scale.title, prompt.notes,
+                                        audience, item.examples)
 
   }
 
 
   # Generate the items for reduction analysis
-  items_gen <- generate_items_via_llm(main.prompts, system_role, model, top.p, temperature,
-                                  adaptive, silently, groq.API, openai.API, target_N)
+  items_gen <- generate_items_via_llm(main.prompts, system.role, model, top.p, temperature,
+                                  adaptive, silently, groq.API, openai.API, target.N)
   items <- items_gen$items
   success <- items_gen$successful
 
@@ -80,7 +80,7 @@ AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
   }
 
   # return items if requested OR if the run was not a success
-  if(items_only || !success){
+  if(items.only || !success){
 
     if(!success && !silently){
       message("Item generation failed before completion. Returning a data frame of items generated thus far.")
@@ -91,12 +91,12 @@ AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
 
 
   # Now, generate item embeddings
-  attempt_to_embed <- embed_items(embedding_model, openai.API, items, silently)
+  attempt_to_embed <- embed_items(embedding.model, openai.API, items, silently)
   success <- attempt_to_embed$success
   embeddings <- attempt_to_embed$embeddings
 
   # Return partial results if failure or just the embeddings if requested
-  if(!success || embeddings_only){
+  if(!success || embeddings.only){
     if(!success && !silently){
       message("Embedding step has failed. Returning a data frame of items generated instead.")
     }
@@ -110,10 +110,10 @@ AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
 
   results <- run_item_reduction_pipeline(embeddings,
                                          items,
-                                         EGA_model,
-                                         EGA_algorithm,
-                                         EGA_uni_method,
-                                         keep_org,
+                                         EGA.model,
+                                         EGA.algorithm,
+                                         EGA.uni.method,
+                                         keep.org,
                                          silently,
                                          verbose = FALSE)
 

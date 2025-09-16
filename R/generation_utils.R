@@ -1,7 +1,7 @@
 
 #### Building Prompts for AIGENIE #### ----
 
-## Construct system_role ----
+## Construct system.role ----
 #' Create a System Role Prompt for an LLM Item Writer
 #'
 #' Constructs a system-level prompt to guide an LLM in behaving like an expert scale developer.
@@ -10,35 +10,35 @@
 #'
 #' @param domain (Optional) A string indicating the scale's conceptual or applied domain
 #'   (e.g., "clinical psychology", "behavioral economics").
-#' @param scale_title (Optional) A string providing the title of the scale (e.g., "Emotion Regulation Index").
+#' @param scale.title (Optional) A string providing the title of the scale (e.g., "Emotion Regulation Index").
 #' @param audience (Optional) A string specifying the target respondent group (e.g., "adolescents", "working adults").
-#' @param response_options (Optional) A character vector of response choices that the LLM should consider when phrasing items
+#' @param response.options (Optional) A character vector of response choices that the LLM should consider when phrasing items
 #'   (e.g., \code{c("Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree")}).
-#' @param system_role (Optional) A custom system prompt provided directly by the user. If supplied, it will be used as-is.
+#' @param system.role (Optional) A custom system prompt provided directly by the user. If supplied, it will be used as-is.
 #'
 #' @return A single character string representing the full system prompt to be passed to an LLM interface (e.g., OpenAI Chat API).
-#' If \code{system_role} is not provided, the function dynamically constructs one based on the other parameters.
+#' If \code{system.role} is not provided, the function dynamically constructs one based on the other parameters.
 #'
-create_system_role <- function(domain, scale_title, audience,
-                               response_options, system_role){
+create_system.role <- function(domain, scale.title, audience,
+                               response.options, system.role){
 
-  if(is.null(system_role)){
+  if(is.null(system.role)){
     ### Build System role prompt if one was not already specified by the user.
-    system_role <- paste0(
+    system.role <- paste0(
       "You are an expert measurement methodologist; more specifically, you are an accomplished,",
       " well-trained, and knowledgeable scale-developer",
       ifelse(!is.null(domain), paste0(" specializing in ", domain, "."),"."),
       " Your task is to create novel, high-quality, and robust items for a new inventory",
-      ifelse(!is.null(scale_title), paste0(" called '", scale_title, ".'"), "."),
+      ifelse(!is.null(scale.title), paste0(" called '", scale.title, ".'"), "."),
       ifelse(!is.null(audience), paste0(" Ensure the items are appropriate for an audience of ", audience, "."), "")
       )
   }
 
   # add the response options here, if provided
-  if(!is.null(response_options)){
+  if(!is.null(response.options)){
 
-    n <- length(response_options)
-    numbered <- paste0("(", seq_len(n), ") ", response_options)
+    n <- length(response.options)
+    numbered <- paste0("(", seq_len(n), ") ", response.options)
 
     if (n == 1) {
       numbered <- numbered[1]
@@ -51,7 +51,7 @@ create_system_role <- function(domain, scale_title, audience,
       )
     }
 
-    system_role <- paste0(system_role,
+    system.role <- paste0(system.role,
                           "\n",
                           "For your reference, the response options for the items ",
                           "you are authoring will be as follows: ", numbered,
@@ -61,7 +61,7 @@ create_system_role <- function(domain, scale_title, audience,
                           " ensure the items are appropriately phrased given these options.")
   }
 
-  return(system_role)
+  return(system.role)
 }
 
 ### Create/Modify Main Prompts ----
@@ -73,19 +73,19 @@ create_system_role <- function(domain, scale_title, audience,
 #' includes strict formatting requirements, attribute listings, and item-generation instructions.
 #'
 #' @param item.attributes A named list where each element is a character vector of attribute names for an item type.
-#' @param item_type_definitions (Optional) A named list of textual definitions for each item type, used to provide conceptual clarity in the prompt.
+#' @param item.type.definitions (Optional) A named list of textual definitions for each item type, used to provide conceptual clarity in the prompt.
 #' @param domain (Optional) A string specifying the domain (e.g., "psychological", "clinical") the items belong to.
-#' @param scale_title (Optional) The title of the scale (e.g., "Emotion Regulation Inventory").
-#' @param prompt_notes (Optional) A named list of additional instructions or warnings to include per item type.
+#' @param scale.title (Optional) The title of the scale (e.g., "Emotion Regulation Inventory").
+#' @param prompt.notes (Optional) A named list of additional instructions or warnings to include per item type.
 #' @param audience (Optional) A string describing the target audience or population (e.g., "adolescents", "working adults").
-#' @param item_examples (Optional) A data frame of existing high-quality example items. Used to guide item phrasing and structure. Must be compatible with the helper `construct_item_examples_string()`.
+#' @param item.examples (Optional) A data frame of existing high-quality example items. Used to guide item phrasing and structure. Must be compatible with the helper `construct_item.examples_string()`.
 #'
 #' @return A named list of character strings. Each entry corresponds to one item type and contains a complete prompt
 #' to guide an LLM in generating two distinct items per attribute, formatted as a JSON array.
 #'
-create_main.prompts <- function(item.attributes, item_type_definitions,
-                                domain, scale_title, prompt_notes,
-                                audience, item_examples){
+create_main.prompts <- function(item.attributes, item.type.definitions,
+                                domain, scale.title, prompt.notes,
+                                audience, item.examples){
   item_types <- names(item.attributes)
 
 
@@ -115,13 +115,13 @@ create_main.prompts <- function(item.attributes, item_type_definitions,
 
     # Retrieve definition if provided
     definition <- ""
-    if (!is.null(item_type_definitions) && !is.null(item_type_definitions[[current_type]])) {
-      definition <- item_type_definitions[[current_type]]
+    if (!is.null(item.type.definitions) && !is.null(item.type.definitions[[current_type]])) {
+      definition <- item.type.definitions[[current_type]]
       definition <- paste0("The precise definition of '", current_type, "' in this context is as follows: ", definition, "\n")
     }
 
-    if(is.data.frame(item_examples)){
-      examples_str <- construct_item_examples_string(item_examples, current_type)
+    if(is.data.frame(item.examples)){
+      examples_str <- construct_item.examples_string(item.examples, current_type)
     } else {
       examples_str <- NULL
     }
@@ -130,7 +130,7 @@ create_main.prompts <- function(item.attributes, item_type_definitions,
     main.prompts[[current_type]] <- paste0(
       "Generate a grand total of ", length(attributes) * 2, " novel, UNIQUE, reliable, and valid ",
       ifelse(!is.null(domain), paste0(domain, " "), ""),
-      "items",ifelse(is.null(scale_title), " for a scale. ", paste0(" for a scale called '", scale_title, ".' ")),
+      "items",ifelse(is.null(scale.title), " for a scale. ", paste0(" for a scale called '", scale.title, ".' ")),
       ifelse(is.null(audience), "", paste0("This inventory will be administered to an audience of ", audience, ". ")),
       "Write items related to the attributes of the item type '", current_type, ".' ", definition,
       "Here are the attributes of the item type '", current_type, "': ", numbered,
@@ -145,9 +145,9 @@ create_main.prompts <- function(item.attributes, item_type_definitions,
             " Remember that we want each item to be NOVEL and DISTINCT on this scale to best capture as much variance as possible,",
             " so do NOT recycle any of these examples' core content. Here are the examples:\n", examples_str
         )),
-      ifelse(prompt_notes[[current_type]] == "", "", paste0(
+      ifelse(prompt.notes[[current_type]] == "", "", paste0(
         "\n\nFinally, I have an EXTREMELY critical note that you MUST keep in mind:\n",
-        prompt_notes[[current_type]])
+        prompt.notes[[current_type]])
 
       )
     )
@@ -162,22 +162,22 @@ create_main.prompts <- function(item.attributes, item_type_definitions,
 #' Given a validated item examples data frame, this function constructs
 #' a string of well-formatted example items grouped by `attribute`, for a given `type`.
 #'
-#' @param item_examples A validated data frame of item examples.
+#' @param item.examples A validated data frame of item examples.
 #' @param current_type A character scalar indicating the type of items to include in the string.
 #'
 #' @return A character string with grouped and formatted item examples.
 #' Construct JSON String of Item Examples (Filtered by Type)
 #'
-#' Converts a filtered set of item_examples into a JSON array of
+#' Converts a filtered set of item.examples into a JSON array of
 #' attribute/statement objects, ready for prompt usage or LLM API calls.
 #'
-#' @param item_examples A validated data frame with `type`, `attribute`, `statement`.
+#' @param item.examples A validated data frame with `type`, `attribute`, `statement`.
 #' @param current_type A string specifying which type to filter for.
 #'
 #' @return A single JSON-formatted string (or NULL if no matches).
-construct_item_examples_string <- function(item_examples, current_type) {
+construct_item.examples_string <- function(item.examples, current_type) {
   # Filter by exact match (already normalized during validation)
-  filtered <- item_examples[item_examples$type == current_type, , drop = FALSE]
+  filtered <- item.examples[item.examples$type == current_type, , drop = FALSE]
 
   if (nrow(filtered) == 0) return(NULL)
 
@@ -205,19 +205,19 @@ construct_item_examples_string <- function(item_examples, current_type) {
 #'
 #' @param main.prompts A named list of character strings, where each element is a prompt associated with an item type.
 #' @param item.attributes A named list where each element is a character vector of attribute names for an item type.
-#' @param item_type_definitions (Optional) A named list of definitions corresponding to each item type. Used to append conceptual clarity.
+#' @param item.type.definitions (Optional) A named list of definitions corresponding to each item type. Used to append conceptual clarity.
 #' @param domain (Optional) A string describing the content domain (e.g., "psychological", "clinical"). Included in the prompt if not already present.
-#' @param scale_title (Optional) The name of the scale (e.g., "Social Anxiety Scale") for which items are being generated.
-#' @param prompt_notes (Optional) A named list of author-supplied notes for each item type that should be emphasized in the prompt.
+#' @param scale.title (Optional) The name of the scale (e.g., "Social Anxiety Scale") for which items are being generated.
+#' @param prompt.notes (Optional) A named list of author-supplied notes for each item type that should be emphasized in the prompt.
 #' @param audience (Optional) A string describing the target population (e.g., "adults", "high school students").
-#' @param item_examples (Optional) A data frame of example items. Must contain a column matching each item type to extract examples.
+#' @param item.examples (Optional) A data frame of example items. Must contain a column matching each item type to extract examples.
 #'
 #' @return A modified list of character strings, with each prompt updated to include relevant metadata, instructions, and formatting examples as needed.
 #'
 modify_main.prompts <- function(main.prompts, item.attributes,
-                                item_type_definitions,
-                                domain, scale_title, prompt_notes,
-                                audience, item_examples) {
+                                item.type.definitions,
+                                domain, scale.title, prompt.notes,
+                                audience, item.examples) {
 
   item_types <- names(item.attributes)
 
@@ -244,8 +244,8 @@ modify_main.prompts <- function(main.prompts, item.attributes,
     }
 
     # SCALE TITLE
-    if (!is.null(scale_title)) {
-      scale_text <- paste0(" These items are for a scale called '", scale_title, ".'")
+    if (!is.null(scale.title)) {
+      scale_text <- paste0(" These items are for a scale called '", scale.title, ".'")
       if (!already_present(prompt, scale_text)) {
         additions <- c(additions, scale_text)
       }
@@ -261,9 +261,9 @@ modify_main.prompts <- function(main.prompts, item.attributes,
 
     # DEFINITION
     definition <- ""
-    if (!is.null(item_type_definitions) && !is.null(item_type_definitions[[current_type]])) {
+    if (!is.null(item.type.definitions) && !is.null(item.type.definitions[[current_type]])) {
       def_text <- paste0(" The precise definition of '", current_type,
-                         "' in this context is as follows: ", item_type_definitions[[current_type]], "\n")
+                         "' in this context is as follows: ", item.type.definitions[[current_type]], "\n")
       if (!already_present(prompt, def_text)) {
         definition <- def_text
       }
@@ -271,8 +271,8 @@ modify_main.prompts <- function(main.prompts, item.attributes,
 
     # EXAMPLES
     examples_str <- NULL
-    if (is.data.frame(item_examples)) {
-      examples_str <- construct_item_examples_string(item_examples, current_type)
+    if (is.data.frame(item.examples)) {
+      examples_str <- construct_item.examples_string(item.examples, current_type)
     }
 
     examples_section <- ""
@@ -291,10 +291,10 @@ modify_main.prompts <- function(main.prompts, item.attributes,
 
     # PROMPT NOTES
     notes_section <- ""
-    if (!is.null(prompt_notes[[current_type]]) && nzchar(prompt_notes[[current_type]])) {
+    if (!is.null(prompt.notes[[current_type]]) && nzchar(prompt.notes[[current_type]])) {
       notes_intro <- "Finally, I have an EXTREMELY critical note that you MUST keep in mind:"
       if (!already_present(prompt, notes_intro)) {
-        notes_section <- paste0("\n\n", notes_intro, "\n", prompt_notes[[current_type]])
+        notes_section <- paste0("\n\n", notes_intro, "\n", prompt.notes[[current_type]])
       }
     }
 
@@ -333,8 +333,8 @@ modify_main.prompts <- function(main.prompts, item.attributes,
 
 #### Generating Items #### ----
 
-generate_items_via_llm <- function(main.prompts, system_role, model, top.p, temperature,
-                                   adaptive, silently, groq.API, openai.API, target_N) {
+generate_items_via_llm <- function(main.prompts, system.role, model, top.p, temperature,
+                                   adaptive, silently, groq.API, openai.API, target.N) {
 
   # Initialize results dataframe
   all_items_df <- data.frame(type = character(),
@@ -408,8 +408,8 @@ generate_items_via_llm <- function(main.prompts, system_role, model, top.p, temp
     rate_limit_truncate <- FALSE
     max_previous_items <- Inf
 
-    # Continue until target_N reached or stalled
-    while (nrow(type_items_df) < target_N[[item_type]]) {
+    # Continue until target.N reached or stalled
+    while (nrow(type_items_df) < target.N[[item_type]]) {
 
       total_iterations <- total_iterations + 1
 
@@ -425,7 +425,7 @@ generate_items_via_llm <- function(main.prompts, system_role, model, top.p, temp
           previous_items_to_use <- tail(previous_items_to_use, max_previous_items)
         }
 
-        examples_string <- construct_item_examples_string(previous_items_to_use, item_type)
+        examples_string <- construct_item.examples_string(previous_items_to_use, item_type)
         current_prompt <- paste0(current_prompt,
                                  "\n\nDo NOT repeat, rephrase, or reuse the content of ANY items from this list of items you've already generated:\n",
                                  examples_string)
@@ -433,7 +433,7 @@ generate_items_via_llm <- function(main.prompts, system_role, model, top.p, temp
 
       # Prepare messages list
       messages_list <- list(
-        list("role" = "system", "content" = system_role),
+        list("role" = "system", "content" = system.role),
         list("role" = "user", "content" = current_prompt)
       )
 
@@ -518,7 +518,7 @@ generate_items_via_llm <- function(main.prompts, system_role, model, top.p, temp
           warning(paste0("\nWarning: Unable to generate new unique items for ", item_type,
                          " after 10 iterations. Moving to next item type.\n",
                          "Generated ", nrow(type_items_df), " out of ",
-                         target_N[[item_type]], " requested items."))
+                         target.N[[item_type]], " requested items."))
         }
         break
       }
@@ -658,7 +658,7 @@ cleaning_function <- function(raw_text, item_type) {
 #' It returns a matrix where each column represents an item and each row represents
 #' an embedding dimension.
 #'
-#' @param embedding_model A string indicating which OpenAI embedding model to use
+#' @param embedding.model A string indicating which OpenAI embedding model to use
 #' @param openai.API A string containing the user's OpenAI API key
 #' @param items A data frame with 'ID' and 'statement' columns containing items to embed
 #' @param silently A flag that describes whether to issue progress statements
@@ -667,7 +667,7 @@ cleaning_function <- function(raw_text, item_type) {
 #'   \item{embeddings}{A matrix where columns are items (named by ID) and rows are embedding dimensions}
 #'   \item{success}{A logical indicating whether the embedding process was successful}
 #'
-embed_items <- function(embedding_model, openai.API, items, silently) {
+embed_items <- function(embedding.model, openai.API, items, silently) {
 
   if(!silently){
     cat("\n")
@@ -699,7 +699,7 @@ embed_items <- function(embedding_model, openai.API, items, silently) {
       # Create embedding for current statement
       response <- openai$Embedding$create(
         input = statements[i],
-        model = embedding_model
+        model = embedding.model
       )
 
       # Extract embedding vector

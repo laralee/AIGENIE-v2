@@ -12,22 +12,22 @@ validate_user_input_AIGENIE(
   model,
   temperature,
   top.p,
-  embedding_model,
-  target_N,
+  embedding.model,
+  target.N,
   domain,
-  scale_title,
-  item_examples,
+  scale.title,
+  item.examples,
   audience,
-  item_type_definitions,
-  response_options,
-  prompt_notes,
-  system_role,
-  EGA_model,
-  EGA_algorithm,
-  EGA_uni_method,
-  keep_org,
-  items_only,
-  embeddings_only,
+  item.type.definitions,
+  response.options,
+  prompt.notes,
+  system.role,
+  EGA.model,
+  EGA.algorithm,
+  EGA.uni.method,
+  keep.org,
+  items.only,
+  embeddings.only,
   adaptive,
   plot,
   silently
@@ -50,42 +50,42 @@ canonical model name using \code{resolve_model_name()}.}
 
 \item{top.p}{A numeric value between 0 and 1.}
 
-\item{embedding_model}{A string or NULL. Must be one of the accepted OpenAI embedding models.}
+\item{embedding.model}{A string or NULL. Must be one of the accepted OpenAI embedding models.}
 
-\item{target_N}{Either a scalar integer, NULL, or a named list/vector of integers
+\item{target.N}{Either a scalar integer, NULL, or a named list/vector of integers
 corresponding to each attribute. Used for synthetic item generation.}
 
 \item{domain}{A string describing the domain of the assessment.}
 
-\item{scale_title}{A string naming the scale.}
+\item{scale.title}{A string naming the scale.}
 
-\item{item_examples}{A data frame containing `type`, `attribute`, and `statement` columns.
+\item{item.examples}{A data frame containing `type`, `attribute`, and `statement` columns.
 All values must be strings. Optional.}
 
 \item{audience}{A string or NULL. The intended audience of the assessment.}
 
-\item{item_type_definitions}{A named list mapping item types to their descriptions.
+\item{item.type.definitions}{A named list mapping item types to their descriptions.
 Optional.}
 
-\item{response_options}{An atomic vector of strings listing the response options users will have.
+\item{response.options}{An atomic vector of strings listing the response options users will have.
 Optional.}
 
-\item{prompt_notes}{A named list or string that gives the LLM additional instructions to be appended to the prompt.
+\item{prompt.notes}{A named list or string that gives the LLM additional instructions to be appended to the prompt.
 Optional.}
 
-\item{system_role}{A string or NULL. Used to customize the system prompt.}
+\item{system.role}{A string or NULL. Used to customize the system prompt.}
 
-\item{EGA_model}{A string or NULL. One of `"BGGM"`, `"glasso"`, or `"TMFG"`.}
+\item{EGA.model}{A string or NULL. One of `"BGGM"`, `"glasso"`, or `"TMFG"`.}
 
-\item{EGA_algorithm}{A string. One of `"leiden"`, `"louvain"`, or `"walktrap"`.}
+\item{EGA.algorithm}{A string. One of `"leiden"`, `"louvain"`, or `"walktrap"`.}
 
-\item{EGA_uni_method}{A string. One of `"expand"`, `"LE"`, or `"louvain"`.}
+\item{EGA.uni.method}{A string. One of `"expand"`, `"LE"`, or `"louvain"`.}
 
-\item{keep_org}{A boolean. If TRUE, preserve original inputs in the output.}
+\item{keep.org}{A boolean. If TRUE, preserve original inputs in the output.}
 
-\item{items_only}{A boolean. Whether to generate only items.}
+\item{items.only}{A boolean. Whether to generate only items.}
 
-\item{embeddings_only}{A boolean. Whether to run in embedding-only mode.}
+\item{embeddings.only}{A boolean. Whether to run in embedding-only mode.}
 
 \item{adaptive}{A boolean. Whether adaptive design logic should be applied.}
 
@@ -96,15 +96,15 @@ Optional.}
 \value{
 A named list containing:
 \describe{
-  \item{target_N}{A named list of integers, aligned with `item.attributes`}
-  \item{EGA_model}{Canonical model string or NULL}
-  \item{EGA_uni_method}{Canonical unidimensionality method}
-  \item{EGA_algorithm}{Canonical community detection algorithm}
+  \item{target.N}{A named list of integers, aligned with `item.attributes`}
+  \item{EGA.model}{Canonical model string or NULL}
+  \item{EGA.uni.method}{Canonical unidimensionality method}
+  \item{EGA.algorithm}{Canonical community detection algorithm}
   \item{model}{Resolved model string for text generation}
-  \item{item_type_definitions}{Cleaned item type definitions (if provided)}
-  \item{item_examples}{Cleaned item examples (if provided)}
+  \item{item.type.definitions}{Cleaned item type definitions (if provided)}
+  \item{item.examples}{Cleaned item examples (if provided)}
   \item{item.attributes}{Cleaned and normalized item attributes}
-  \item{prompt_notes}{Cleaned and normalized prompt notes (if provided)}
+  \item{prompt.notes}{Cleaned and normalized prompt notes (if provided)}
   \item{main.prompts}{Cleaned and normalized main prompts (if provided)}
   \item{custom}{A flag signaling whether we are in custom mode or not}
 }

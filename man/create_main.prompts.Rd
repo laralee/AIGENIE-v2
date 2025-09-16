@@ -6,28 +6,28 @@
 \usage{
 create_main.prompts(
   item.attributes,
-  item_type_definitions,
+  item.type.definitions,
   domain,
-  scale_title,
-  prompt_notes,
+  scale.title,
+  prompt.notes,
   audience,
-  item_examples
+  item.examples
 )
 }
 \arguments{
 \item{item.attributes}{A named list where each element is a character vector of attribute names for an item type.}
 
-\item{item_type_definitions}{(Optional) A named list of textual definitions for each item type, used to provide conceptual clarity in the prompt.}
+\item{item.type.definitions}{(Optional) A named list of textual definitions for each item type, used to provide conceptual clarity in the prompt.}
 
 \item{domain}{(Optional) A string specifying the domain (e.g., "psychological", "clinical") the items belong to.}
 
-\item{scale_title}{(Optional) The title of the scale (e.g., "Emotion Regulation Inventory").}
+\item{scale.title}{(Optional) The title of the scale (e.g., "Emotion Regulation Inventory").}
 
-\item{prompt_notes}{(Optional) A named list of additional instructions or warnings to include per item type.}
+\item{prompt.notes}{(Optional) A named list of additional instructions or warnings to include per item type.}
 
 \item{audience}{(Optional) A string describing the target audience or population (e.g., "adolescents", "working adults").}
 
-\item{item_examples}{(Optional) A data frame of existing high-quality example items. Used to guide item phrasing and structure. Must be compatible with the helper `construct_item_examples_string()`.}
+\item{item.examples}{(Optional) A data frame of existing high-quality example items. Used to guide item phrasing and structure. Must be compatible with the helper `construct_item.examples_string()`.}
 }
 \value{
 A named list of character strings. Each entry corresponds to one item type and contains a complete prompt
