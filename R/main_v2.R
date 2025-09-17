@@ -108,19 +108,40 @@ AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
      return(list(embeddings = embeddings, items = items))
   }
 
-  results <- run_item_reduction_pipeline(embeddings,
+  # Generate item level results
+  try_item_level <- run_item_reduction_pipeline(embeddings,
                                          items,
                                          EGA.model,
                                          EGA.algorithm,
                                          EGA.uni.method,
                                          keep.org,
-                                         silently,
-                                         verbose = FALSE)
+                                         silently)
+
+  if(!try_item_level$success){
+    return(try_item_level$item_level)
+  }
+
+  item_level <- try_item_level$item_level
 
 
+  # If successful, generate results for items overall
+  try_overall_result <- run_pipeline_for_all(item_level,
+                                         items,
+                                         embeddings,
+                                         EGA.model,
+                                         EGA.algorithm,
+                                         EGA.uni.method,
+                                         keep.org,
+                                         silently)
 
+  if(!try_overall_result$success){
+    return(item_level)
+  }
 
-  return( results )
+  overall_result <- try_overall_result$overall_result
+
+  return( list(overall = overall_result,
+               item_type_level = item_level))
 
 
 

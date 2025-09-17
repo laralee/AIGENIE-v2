@@ -4,14 +4,12 @@
 \alias{reduce_redundancy_uva}
 \title{Reduce Redundancy via Iterative UVA (with Redundant Pair Logging)}
 \usage{
-reduce_redundancy_uva(embedding_matrix, items, silently = TRUE)
+reduce_redundancy_uva(embedding_matrix, items)
 }
 \arguments{
 \item{embedding_matrix}{A numeric matrix of embeddings (columns = items).}
 
 \item{items}{Data frame with `ID` and `statement` columns.}
-
-\item{silently}{Logical. If FALSE, progress messages will be printed.}
 }
 \value{
 A list with the reduced matrix, sweep metadata, and redundancy log.

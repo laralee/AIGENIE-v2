@@ -9,8 +9,7 @@ sparsify_embeddings(
   lower_quantile = 0.025,
   upper_quantile = 0.975,
   fallback_lower = 0.1,
-  fallback_upper = 0.9,
-  silently = TRUE
+  fallback_upper = 0.9
 )
 }
 \arguments{
@@ -23,8 +22,6 @@ sparsify_embeddings(
 \item{fallback_lower}{Fallback lower quantile if first attempt fails (default 0.10)}
 
 \item{fallback_upper}{Fallback upper quantile if first attempt fails (default 0.90)}
-
-\item{silently}{Logical; if FALSE, displays progress messages}
 }
 \value{
 Sparsified embedding matrix with same dimensions as input

@@ -10,8 +10,7 @@ select_optimal_embedding(
   model = NULL,
   algorithm = "walktrap",
   uni.method = "louvain",
-  sparsify_function = sparsify_embeddings,
-  verbose = FALSE
+  sparsify_function = sparsify_embeddings
 )
 }
 \arguments{
@@ -26,8 +25,6 @@ select_optimal_embedding(
 \item{uni.method}{Unidimensionality method (e.g., "louvain").}
 
 \item{sparsify_function}{Function to sparsify the embedding.}
-
-\item{verbose}{Logical. Whether to print progress.}
 }
 \value{
 A list with best embedding, model, communities, NMI, and comparison log.

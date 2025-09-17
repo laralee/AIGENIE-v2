@@ -9,8 +9,7 @@ final_community_detection(
   true_communities,
   model = "glasso",
   algorithm = "walktrap",
-  uni.method = "louvain",
-  verbose = FALSE
+  uni.method = "louvain"
 )
 }
 \arguments{
@@ -23,11 +22,9 @@ final_community_detection(
 \item{algorithm}{Community detection algorithm (e.g., "walktrap").}
 
 \item{uni.method}{Unidimensionality method passed to EGA.}
-
-\item{verbose}{If TRUE, prints messages.}
 }
 \value{
-A list with final communities, final NMI, dropped items, and success flag.
+A list with final communities, final NMI, dropped items, EGA object, and success flag.
 }
 \description{
 Run Final Community Detection with EGA

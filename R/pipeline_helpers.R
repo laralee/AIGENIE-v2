@@ -9,7 +9,6 @@
 #' @param upper_quantile Upper quantile threshold (default 0.975)
 #' @param fallback_lower Fallback lower quantile if first attempt fails (default 0.10)
 #' @param fallback_upper Fallback upper quantile if first attempt fails (default 0.90)
-#' @param silently Logical; if FALSE, displays progress messages
 #'
 #' @return Sparsified embedding matrix with same dimensions as input
 #' @details
@@ -25,8 +24,7 @@ sparsify_embeddings <- function(embedding_matrix,
                                 lower_quantile = 0.025,
                                 upper_quantile = 0.975,
                                 fallback_lower = 0.10,
-                                fallback_upper = 0.90,
-                                silently = TRUE) {
+                                fallback_upper = 0.90) {
 
   # Validate input
   if (!is.matrix(embedding_matrix) || !is.numeric(embedding_matrix)) {
@@ -44,18 +42,10 @@ sparsify_embeddings <- function(embedding_matrix,
   }
 
   # First attempt with primary quantiles
-  if (!silently) {
-    cat("Applying sparsification (", lower_quantile, "-", upper_quantile, " quantiles)...\n", sep = "")
-  }
-
   embedding_sparse <- apply_sparsification(embedding_matrix, lower_quantile, upper_quantile)
 
   # Check if all values are zero
   if (all(embedding_sparse == 0, na.rm = TRUE)) {
-
-    if (!silently) {
-      cat("Initial sparsification resulted in all zeros. Trying fallback quantiles...\n")
-    }
 
     # Try with fallback quantiles
     embedding_sparse <- apply_sparsification(embedding_matrix, fallback_lower, fallback_upper)
@@ -72,21 +62,11 @@ sparsify_embeddings <- function(embedding_matrix,
 
     } else {
 
-      if (!silently) {
-        percent_zero <- sum(embedding_sparse == 0, na.rm = TRUE) / length(embedding_sparse) * 100
-        cat(sprintf("Sparsification successful with fallback quantiles. %.1f%% of values zeroed.\n", percent_zero))
-      }
-
       attr(embedding_sparse, "sparsification_applied") <- TRUE
       attr(embedding_sparse, "quantiles_used") <- c(lower = fallback_lower, upper = fallback_upper)
     }
 
   } else {
-
-    if (!silently) {
-      percent_zero <- sum(embedding_sparse == 0, na.rm = TRUE) / length(embedding_sparse) * 100
-      cat(sprintf("Sparsification successful. %.1f%% of values zeroed.\n", percent_zero))
-    }
 
     attr(embedding_sparse, "sparsification_applied") <- TRUE
     attr(embedding_sparse, "quantiles_used") <- c(lower = lower_quantile, upper = upper_quantile)
@@ -105,12 +85,10 @@ sparsify_embeddings <- function(embedding_matrix,
 #'
 #' @param embedding_matrix A numeric matrix of embeddings (columns = items).
 #' @param items Data frame with `ID` and `statement` columns.
-#' @param silently Logical. If FALSE, progress messages will be printed.
 #'
 #' @return A list with the reduced matrix, sweep metadata, and redundancy log.
-reduce_redundancy_uva <- function(embedding_matrix, items, silently = TRUE) {
+reduce_redundancy_uva <- function(embedding_matrix, items) {
 
-  log_msg <- function(...) if (!silently) message(...)
 
   original_embedding <- embedding_matrix
   count   <- 1
@@ -313,19 +291,13 @@ reduce_redundancy_uva <- function(embedding_matrix, items, silently = TRUE) {
 #' @param model Network estimation model (e.g., "glasso", "TMFG").
 #' @param algorithm Community detection algorithm (e.g., "walktrap").
 #' @param uni.method Unidimensionality method passed to EGA.
-#' @param verbose If TRUE, prints messages.
 #'
-#' @return A list with final communities, final NMI, dropped items, and success flag.
+#' @return A list with final communities, final NMI, dropped items, EGA object, and success flag.
 final_community_detection <- function(embedding_matrix,
                                       true_communities,
                                       model = "glasso",
                                       algorithm = "walktrap",
-                                      uni.method = "louvain",
-                                      verbose = FALSE) {
-
-  if (verbose) {
-    message("Running final EGA on remaining items...")
-  }
+                                      uni.method = "louvain") {
 
   result <- tryCatch({
 
@@ -347,10 +319,6 @@ final_community_detection <- function(embedding_matrix,
     if (anyNA(wc)) {
       items_dropped <- names(wc)[is.na(wc)]
       wc <- wc[!is.na(wc)]
-
-      if (verbose) {
-        message(length(items_dropped), " items dropped due to missing community assignment.")
-      }
     } else {
       items_dropped <- character(0)
     }
@@ -363,28 +331,27 @@ final_community_detection <- function(embedding_matrix,
     )
 
     list(
-      communities = wc,
-      final_nmi = final_nmi,
+      communities   = wc,
+      final_nmi     = final_nmi,
       items_dropped = items_dropped,
-      success = TRUE
+      ega           = ega,
+      success       = TRUE
     )
 
   }, error = function(e) {
 
-    if (verbose) {
-      message("Final community detection failed: ", e$message)
-    }
-
     list(
-      communities = NULL,
-      final_nmi = NA_real_,
+      communities   = NULL,
+      final_nmi     = NA_real_,
       items_dropped = colnames(embedding_matrix),
-      success = FALSE
+      ega           = NULL,
+      success       = FALSE
     )
   })
 
   return(result)
 }
+
 
 
 
@@ -397,7 +364,6 @@ final_community_detection <- function(embedding_matrix,
 #' @param algorithm Community detection algorithm (e.g., "walktrap").
 #' @param uni.method Unidimensionality method (e.g., "louvain").
 #' @param sparsify_function Function to sparsify the embedding.
-#' @param verbose Logical. Whether to print progress.
 #'
 #' @return A list with best embedding, model, communities, NMI, and comparison log.
 select_optimal_embedding <- function(embedding_matrix,
@@ -405,12 +371,11 @@ select_optimal_embedding <- function(embedding_matrix,
                                      model = NULL,
                                      algorithm = "walktrap",
                                      uni.method = "louvain",
-                                     sparsify_function = sparsify_embeddings,
-                                     verbose = FALSE) {
+                                     sparsify_function = sparsify_embeddings) {
 
   # Prepare embeddings
   full <- embedding_matrix
-  sparse <- sparsify_function(embedding_matrix, silently = TRUE)
+  sparse <- sparsify_function(embedding_matrix)
 
   embeddings <- list(full = full, sparse = sparse)
 
@@ -432,9 +397,6 @@ select_optimal_embedding <- function(embedding_matrix,
     emb <- embeddings[[etype]]
 
     for (m in models) {
-      if (verbose) {
-        message("Testing model = ", m, ", embedding = ", etype)
-      }
 
       result <- tryCatch({
         ega <- EGAnet::EGA.fit(
@@ -480,21 +442,21 @@ select_optimal_embedding <- function(embedding_matrix,
           best_nmi <- this_nmi
           best_result <- list(
             best_embedding_matrix = emb[, names(wc), drop = FALSE],
-            embedding_type = etype,
-            model = m,
-            algorithm = algorithm,
-            uni.method = uni.method,
-            communities = wc,
-            nmi = this_nmi,
-            dropped_items = setdiff(colnames(emb), names(wc))
+            embedding_type        = etype,
+            model                 = m,
+            algorithm             = algorithm,
+            uni.method            = uni.method,
+            communities           = wc,
+            found.communities     = ega$EGA$wc,
+            nmi                   = this_nmi,
+            dropped_items         = setdiff(colnames(emb), names(wc)),
+            ega                   = ega
           )
+
         }
 
         NULL
       }, error = function(e) {
-        if (verbose) {
-          message("Failed: model = ", m, ", embedding = ", etype, " → ", e$message)
-        }
         NULL
       })
     }
@@ -640,7 +602,6 @@ iterative_stability_check <- function(embedding_matrix,
 
   if(!silently){
     cat("Done.")
-    cat("\n")
   }
 
   return(list(

@@ -7,7 +7,7 @@
 #' @param algorithm EGA algorithm
 #' @param uni.method EGA uni.method
 #' @param keep.org Logical. Whether to include original items and embeddings
-#' @param verbose Logical
+#' @param silently Logical. Whether to print progress statements
 #'
 #' @return A named list containing pipeline results for this type
 run_pipeline_for_item_type <- function(embedding_matrix,
@@ -17,29 +17,32 @@ run_pipeline_for_item_type <- function(embedding_matrix,
                                        algorithm = "walktrap",
                                        uni.method = "louvain",
                                        keep.org = FALSE,
-                                       verbose = FALSE,
                                        silently) {
-
-  log_msg <- function(...) if (verbose) message("[", type_name, "] ", ...)
 
 
   if(keep.org){
     result <- list(
       final_NMI = NULL,
+      initial_NMI = NULL,
       embeddings = list(),
       UVA = list(),
       bootEGA = list(),
       EGA.model_selected = NULL,
       final_items = NULL,
-      initial_items = items
+      initial_items = items,
+      final_EGA = NULL,
+      initial_EGA = NULL
     )} else {
       result <- list(
         final_NMI = NULL,
+        initial_NMI = NULL,
         embeddings = list(),
         UVA = list(),
         bootEGA = list(),
         EGA.model_selected = NULL,
-        final_items = NULL
+        final_items = NULL,
+        final_EGA = NULL,
+        initial_EGA = NULL
       )
   }
 
@@ -55,7 +58,7 @@ run_pipeline_for_item_type <- function(embedding_matrix,
 
   # 2. Redundancy reduction (UVA)
 
-  uva_res <- reduce_redundancy_uva(embedding_matrix, items, silently = !verbose)
+  uva_res <- reduce_redundancy_uva(embedding_matrix, items)
 
   if (!uva_res$success) {
     warning("[", type_name, "] UVA failed — returning partial result.")
@@ -79,15 +82,14 @@ run_pipeline_for_item_type <- function(embedding_matrix,
     result$embeddings$sparse_org <- sparsify_embeddings(embedding_matrix)
   }
 
+
   # 3. Optimal embedding/model selection
-  log_msg("Selecting optimal model/embedding...")
   select_res <- select_optimal_embedding(
     embedding_matrix = reduced_matrix,
     true_communities = true_communities,
     model = model,
     algorithm = algorithm,
-    uni.method = uni.method,
-    verbose = verbose
+    uni.method = uni.method
   )
 
   if (!isTRUE(select_res$success)) {
@@ -111,7 +113,6 @@ run_pipeline_for_item_type <- function(embedding_matrix,
   initial_nmi <- select_res$nmi
 
   # 4. BootEGA filtering
-  log_msg("Running bootEGA...")
   boot_res <- iterative_stability_check(
     embedding_matrix = selected_embedding,
     items = items,
@@ -136,14 +137,12 @@ run_pipeline_for_item_type <- function(embedding_matrix,
   stable_items <- items[items$ID %in% colnames(stable_embedding), , drop = FALSE]
 
   # 5. Final EGA + NMI
-  log_msg("Final EGA...")
   final_res <- final_community_detection(
     embedding_matrix = stable_embedding,
     true_communities = true_communities,
     model = select_res$model,
     algorithm = select_res$algorithm,
-    uni.method = select_res$uni.method,
-    verbose = verbose
+    uni.method = select_res$uni.method
   )
 
   if (!isTRUE(final_res$success)) {
@@ -159,11 +158,50 @@ run_pipeline_for_item_type <- function(embedding_matrix,
   result$final_items <- merge(stable_items, com_df, by = "ID")
   result$final_NMI <- final_res$final_nmi
 
+  result$final_EGA <- final_res$ega
+
   # Store full + sparse embeddings
   full_embeds_final <- embedding_matrix[,colnames(embedding_matrix) %in% result$final_items$ID]
   result$embeddings$full <- full_embeds_final
-  result$embeddings$sparse <- sparsify_embeddings(full_embeds_final, silently = TRUE)
+  result$embeddings$sparse <- sparsify_embeddings(full_embeds_final)
 
+  # 6. Build initial network
+  if(!silently){
+    cat("\nBuilding initial network based on optimal settings...")
+  }
+
+
+  true_communities <- as.factor(as.integer(factor(items$attribute)))
+  names(true_communities) <- items$ID
+
+  initial_res <- final_community_detection(
+    embedding_matrix = embedding_matrix,
+    true_communities = true_communities,
+    model = select_res$model,
+    algorithm = select_res$algorithm,
+    uni.method = select_res$uni.method
+  )
+
+  if (!isTRUE(initial_res$success)) {
+    warning("[", type_name, "] Initial EGA failed — returning partial result.")
+    return(result)
+  }
+
+  # add the communities to the initial items (if retained)
+  if(keep.org){
+    com_df <- data.frame(ID = names(initial_res$communities),
+                         EGA_com = initial_res$communities,
+                         stringsAsFactors = FALSE)
+
+    result$initial_items <- merge(items, com_df, by = "ID")
+  }
+
+  result$initial_EGA <- initial_res$ega
+  result$initial_NMI <- initial_res$final_nmi
+
+  if(!silently){
+    cat(paste0(" done.\nReduction for ",type_name," items complete."))
+  }
 
   return(result)
 }
@@ -177,7 +215,7 @@ run_pipeline_for_item_type <- function(embedding_matrix,
 #' @param EGA.model NULL, "glasso", or "TMFG"
 #' @param EGA.algorithm Character. EGA algorithm to use (default = "walktrap")
 #' @param EGA.uni.method Character. Unidimensionality method (default = "louvain")
-#' @param verbose Logical. Print progress?
+#' @param silently Logical. Print progress?
 #'
 #' @return A named list of pipeline results, one per item type
 run_item_reduction_pipeline <- function(embedding_matrix,
@@ -186,11 +224,11 @@ run_item_reduction_pipeline <- function(embedding_matrix,
                                         EGA.algorithm = "walktrap",
                                         EGA.uni.method = "louvain",
                                         keep.org,
-                                        silently,
-                                        verbose = FALSE) {
+                                        silently) {
 
   # --- Prepare ---
   unique_types <- unique(items$type)
+  success <- TRUE
 
   # Split by type
   embedding_split <- lapply(unique_types, function(t) {
@@ -212,11 +250,11 @@ run_item_reduction_pipeline <- function(embedding_matrix,
         algorithm = EGA.algorithm,
         uni.method = EGA.uni.method,
         keep.org = keep.org,
-        verbose = verbose,
         silently = silently
       )
     }, error = function(e) {
       warning("Pipeline failed for type: ", tname, " — ", e$message)
+      success <- FALSE
       return(NULL)
     })
   })
@@ -224,9 +262,186 @@ run_item_reduction_pipeline <- function(embedding_matrix,
 
   names(results) <- unique_types
 
-  return(results)
+  return(list(item_level = results,
+              success = success))
 }
 
 
 
 
+#' Run full pipeline for all items in the sample
+#'
+#' @param item_level AIGENIE results on the item level
+#' @param items all items generated for the initial item pool
+#' @param embeddings all embeddings created for the initial item pool
+#' @param model NULL, "glasso", or "TMFG"
+#' @param algorithm EGA algorithm
+#' @param uni.method EGA uni.method
+#' @param keep.org Logical. Whether to include original items and embeddings
+#' @param silently Logical. Whether to print progress statements
+#'
+#' @return A named list containing pipeline results for this type
+run_pipeline_for_all <- function(item_level,
+                                 items,
+                                 embeddings,
+                                       model = NULL,
+                                       algorithm = "walktrap",
+                                       uni.method = "louvain",
+                                       keep.org = FALSE,
+                                       silently) {
+
+
+  if(keep.org){
+    overall_result <- list(
+      final_NMI = NULL,
+      initial_NMI = NULL,
+      embeddings = list(),
+      EGA.model_selected = NULL,
+      final_items = NULL,
+      initial_items = items,
+      final_EGA = NULL,
+      initial_EGA = NULL
+    )} else {
+      overall_result <- list(
+        final_NMI = NULL,
+        initial_NMI = NULL,
+        embeddings = list(),
+        EGA.model_selected = NULL,
+        final_items = NULL,
+        final_EGA = NULL,
+        initial_EGA = NULL
+      )
+    }
+
+  success <- TRUE
+
+  # Build overall data frame and embedding matrix
+  if (keep.org) {
+    overall_result$embeddings$full_org <- embeddings
+    overall_result$embeddings$sparse_org <- sparsify_embeddings(embeddings)
+  }
+
+  df_list <- lapply(item_level, function(x) x$final_items)
+  final_items <- do.call(rbind, df_list)
+
+  overall_result$final_items <- final_items
+
+  df_list <- lapply(item_level, function(x) x$embeddings$full)
+  final_embeddings <- do.call(cbind, df_list)
+
+  overall_result$embeddings$full <- final_embeddings
+  overall_result$embeddings$sparse <- sparsify_embeddings(final_embeddings)
+
+  # Find the final true communities label
+  communities <- paste(final_items$type, final_items$attribute, sep = "_")
+  communities <- as.numeric(as.factor(communities))
+  communities <- as.list(communities)
+  names(communities) <- final_items$ID
+
+
+  if(!silently){
+    cat("\n\n")
+    cat(paste("Starting analysis on all items.\n"))
+    cat("-------------------\n")
+  }
+
+  # 1. Get communities... already done
+  true_communities <- communities
+
+  # 2. Optimal embedding/model selection
+  select_res <- select_optimal_embedding(
+    embedding_matrix = final_embeddings,
+    true_communities = true_communities,
+    model = model,
+    algorithm = algorithm,
+    uni.method = uni.method
+  )
+
+  if (!isTRUE(select_res$success)) {
+    warning("Building the final overall EGA network has failed — returning partial result.")
+    success <- FALSE
+    return(list(overall_result = overall_result,
+                success = success))
+  }
+
+  if(!silently){
+    if(is.null(model)){
+      cat("Optimal EGA model and embedding type found.\n")
+    } else {
+      cat("Optimal embedding type found.\n")
+    }
+
+  }
+
+
+  overall_result$embeddings$selected <- select_res$embedding_type
+  overall_result$EGA.model_selected <- select_res$model
+  overall_result$final_NMI <- select_res$nmi
+  overall_result$final_EGA <- select_res$ega
+
+
+  # 5. Find the initial NMI given optimal settings EGA + NMI
+  if(select_res$embedding_type == "sparse"){
+    selected_embedding <- sparsify_embeddings(embeddings)
+  } else {
+    selected_embedding <- embeddings
+  }
+
+
+  # Find the final true communities label
+  initial_communities <- paste(items$type, items$attribute, sep = "_")
+  initial_communities <- as.numeric(as.factor(initial_communities))
+  initial_communities <- as.list(initial_communities)
+  names(initial_communities) <- items$ID
+
+
+  # Run EGA on all items in the item pool
+
+  if(!silently){
+  cat("Building initial EGA network based on optimal settings...")
+  }
+
+
+  initial_res <- final_community_detection(
+    embedding_matrix = selected_embedding,
+    true_communities = initial_communities,
+    model = select_res$model,
+    algorithm = select_res$algorithm,
+    uni.method = select_res$uni.method
+  )
+
+  if (!isTRUE(initial_res$success)) {
+    warning("EGA failed on all items in the initial item pool — returning partial result.")
+    success <- FALSE
+    return(list(overall_result = overall_result,
+                success = success))
+  }
+
+  # Add the initial community detection stats
+  overall_result$initial_NMI <- initial_res$final_nmi
+  overall_result$initial_EGA <- initial_res$ega
+
+  # Add community labels
+  final_items$EGA_com <- NULL # clear the communities found in previous steps
+  com_df <- data.frame(ID = names(select_res$found.communities),
+                       EGA_com = select_res$found.communities,
+                       stringsAsFactors = FALSE)
+
+  overall_result$final_items <- merge(final_items, com_df, by = "ID")
+
+  # add the communities to the initial items (if retained)
+  if(keep.org){
+    com_df <- data.frame(ID = names(initial_res$communities),
+                         EGA_com = initial_res$communities,
+                         stringsAsFactors = FALSE)
+
+    overall_result$initial_items <- merge(items, com_df, by = "ID")
+  }
+
+  if(!silently){
+    cat("Done.")
+  }
+
+  return(list(overall_result = overall_result,
+              success = success))
+}
