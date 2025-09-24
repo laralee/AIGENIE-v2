@@ -614,3 +614,64 @@ iterative_stability_check <- function(embedding_matrix,
   ))
 }
 
+
+
+
+
+
+
+
+
+calc_final_stability <- function(result,
+                                 data,
+                                 EGA.algorithm,
+                                 EGA.uni.method,
+                                 silently,
+                                 EGA.type = "EGA.fit"){
+  if(!silently){
+    cat("\n")
+    cat(paste0("Finding network stability of the original item pool...\n"))
+  }
+
+  successful <- TRUE
+
+  x <- result
+
+  try_stab <- tryCatch({
+      EGAnet::bootEGA(
+        data = data,
+        model = x$EGA.model_selected,
+        algorithm = EGA.algorithm,
+        uni.method = EGA.uni.method,
+        EGA.type = EGA.type,
+        plot.itemStability = FALSE,
+        plot.typicalStructure = FALSE,
+        verbose = !silently,
+        seed = 123
+      )
+    }, error = function(e) {
+      warning("Stability check failed. Returning partial results.")
+      return(list(successful=FALSE))
+    })
+
+
+  # Add the initial stability
+  x$bootEGA$initial_boot_with_redundancies <- try_stab
+
+
+  if(!silently){
+    cat("Done.")
+  }
+
+
+  return(list(successful = successful,
+              result = x))
+}
+
+
+
+
+
+
+
+

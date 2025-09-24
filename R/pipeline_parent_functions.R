@@ -199,8 +199,25 @@ run_pipeline_for_item_type <- function(embedding_matrix,
   result$initial_EGA <- initial_res$ega
   result$initial_NMI <- initial_res$final_nmi
 
+
+  if(result$embeddings$selected == "full"){
+    data <- embedding_matrix}
+  else {
+    data <- sparsify_embeddings(embedding_matrix)}
+
+  try_stab <- calc_final_stability(result,
+                                   data,
+                                   algorithm,
+                                   uni.method,
+                                   silently)
+
+  if(try_stab$successful){
+    result <- try_stab$result
+  }
+
+
   if(!silently){
-    cat(paste0(" done.\nReduction for ",type_name," items complete."))
+    cat(paste0("\nReduction for ",type_name," items complete."))
   }
 
   return(result)

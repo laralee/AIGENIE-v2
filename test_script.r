@@ -63,21 +63,6 @@ test2 <- AIGENIE.v2::AIGENIE_v2(item.attributes = item_attributes,
 
 
 
-items <- rbind(test2$openness$initial_items, test2$agreeableness$initial_items)
-items$EGA_com <- NULL
-
-embeds <- cbind(test2$openness$embeddings$full_org, test2$agreeableness$embeddings$full_org)
-
-
-overall_result <- AIGENIE.v2:::run_pipeline_for_all(test2,
-                                                    items,
-                                                    embeds,
-                                                    model = NULL,
-                                                    algorithm = "walktrap",
-                                                    uni.method = "louvain",
-                                                    keep.org = TRUE,
-                                                    silently = FALSE)
-
 
 
 

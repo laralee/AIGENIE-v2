@@ -68,7 +68,8 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, main.prompt
                                         prompt.notes,
                                         system.role, EGA.model, EGA.algorithm,
                                         EGA.uni.method, keep.org, items.only,
-                                        embeddings.only, adaptive, plot, silently) {
+                                        embeddings.only, adaptive, plot,
+                                        silently) {
 
   # Ensure all "TRUEs and FALSEs" are specified accordingly
   validate_booleans(items.only, adaptive, plot, keep.org, silently, embeddings.only)

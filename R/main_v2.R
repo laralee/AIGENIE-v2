@@ -34,7 +34,8 @@ AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
                                             response.options, prompt.notes,
                                             system.role, EGA.model, EGA.algorithm,
                                             EGA.uni.method, keep.org, items.only,
-                                            embeddings.only, adaptive, plot, silently)
+                                            embeddings.only, adaptive, plot,
+                                            silently)
 
 
   target.N <- validation$target.N
@@ -107,6 +108,7 @@ AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
 
      return(list(embeddings = embeddings, items = items))
   }
+
 
   # Generate item level results
   try_item_level <- run_item_reduction_pipeline(embeddings,
