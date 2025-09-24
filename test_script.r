@@ -42,7 +42,8 @@ test_item_reduction <- AIGENIE.v2:::run_item_reduction_pipeline(embeds,
                                         EGA.algorithm = "walktrap",
                                         EGA.uni.method = "louvain",
                                         keep.org = TRUE,
-                                        silently = FALSE)
+                                        silently = FALSE,
+                                        plot = TRUE)
 
 overall_result <- AIGENIE.v2:::run_pipeline_for_all(test_item_reduction$item_level,
                                        items,
@@ -58,7 +59,6 @@ overall_result <- AIGENIE.v2:::run_pipeline_for_all(test_item_reduction$item_lev
 test2 <- AIGENIE.v2::AIGENIE_v2(item.attributes = item_attributes,
                                 openai.API = openai_API,
                                 keep.org = TRUE)
-
 
 
 

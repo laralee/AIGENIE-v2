@@ -8,6 +8,7 @@
 #' @param uni.method EGA uni.method
 #' @param keep.org Logical. Whether to include original items and embeddings
 #' @param silently Logical. Whether to print progress statements
+#' @param plot Logicial. Whether to plot the network plots at the end
 #'
 #' @return A named list containing pipeline results for this type
 run_pipeline_for_item_type <- function(embedding_matrix,
@@ -17,7 +18,8 @@ run_pipeline_for_item_type <- function(embedding_matrix,
                                        algorithm = "walktrap",
                                        uni.method = "louvain",
                                        keep.org = FALSE,
-                                       silently) {
+                                       silently,
+                                       plot) {
 
 
   if(keep.org){
@@ -31,7 +33,11 @@ run_pipeline_for_item_type <- function(embedding_matrix,
       final_items = NULL,
       initial_items = items,
       final_EGA = NULL,
-      initial_EGA = NULL
+      initial_EGA = NULL,
+      start_N = nrow(items),
+      final_N = NULL,
+      network_plot = NULL,
+      stability_plot = NULL
     )} else {
       result <- list(
         final_NMI = NULL,
@@ -42,7 +48,11 @@ run_pipeline_for_item_type <- function(embedding_matrix,
         EGA.model_selected = NULL,
         final_items = NULL,
         final_EGA = NULL,
-        initial_EGA = NULL
+        initial_EGA = NULL,
+        start_N = nrow(items),
+        final_N = NULL,
+        network_plot = NULL,
+        stability_plot = NULL
       )
   }
 
@@ -215,9 +225,50 @@ run_pipeline_for_item_type <- function(embedding_matrix,
     result <- try_stab$result
   }
 
+  # add the final number of items
+  result$final_N <- nrow(result$final_items)
+
 
   if(!silently){
     cat(paste0("\nReduction for ",type_name," items complete."))
+  }
+
+ tryCatch({network_plot <- plot_comparison(
+    p1 = result$initial_EGA,
+    p2 = result$final_EGA,
+    caption1 = "Network Plot for Items Pre-Reduction",
+    caption2 = "Network Plot for Items Post-Reduction",
+    nmi1 = result$initial_NMI,
+    nmi2 = result$final_NMI,
+    title = paste("Network Plots for", type_name, "Items Before vs After AIGENIE Reduction")
+  )
+  result$network_plot <- network_plot },
+  error = function(e) {
+    warning(paste("Failed to create network plots for", type_name, "items."))
+  })
+
+
+
+
+
+  tryCatch({stability_plot <- plot_comparison(
+    p1 = result$bootEGA$initial_boot_with_redundancies,
+    p2 = result$bootEGA$final_boot,
+    caption1 = "Stability Plot for Items Pre-Reduction",
+    caption2 = "Stability Plot for Items Post-Reduction",
+    nmi1 = result$initial_NMI,
+    nmi2 = result$final_NMI,
+    title = paste("Bootstrapped Item Stability for", type_name, "Items Before vs After AIGENIE Reduction")
+  )
+  result$stability_plot <- stability_plot
+  }, error = function(e) {
+    warning(paste("Failed to create stability plots for", type_name, "items."))
+  })
+
+
+
+  if(plot && !is.null(result$network_plot)){
+    plot(network_plot)
   }
 
   return(result)
@@ -233,6 +284,7 @@ run_pipeline_for_item_type <- function(embedding_matrix,
 #' @param EGA.algorithm Character. EGA algorithm to use (default = "walktrap")
 #' @param EGA.uni.method Character. Unidimensionality method (default = "louvain")
 #' @param silently Logical. Print progress?
+#' @param plot logical. Should the network plot be printed
 #'
 #' @return A named list of pipeline results, one per item type
 run_item_reduction_pipeline <- function(embedding_matrix,
@@ -241,7 +293,8 @@ run_item_reduction_pipeline <- function(embedding_matrix,
                                         EGA.algorithm = "walktrap",
                                         EGA.uni.method = "louvain",
                                         keep.org,
-                                        silently) {
+                                        silently,
+                                        plot) {
 
   # --- Prepare ---
   unique_types <- unique(items$type)
@@ -267,7 +320,8 @@ run_item_reduction_pipeline <- function(embedding_matrix,
         algorithm = EGA.algorithm,
         uni.method = EGA.uni.method,
         keep.org = keep.org,
-        silently = silently
+        silently = silently,
+        plot = plot
       )
     }, error = function(e) {
       warning("Pipeline failed for type: ", tname, " — ", e$message)
@@ -296,16 +350,18 @@ run_item_reduction_pipeline <- function(embedding_matrix,
 #' @param uni.method EGA uni.method
 #' @param keep.org Logical. Whether to include original items and embeddings
 #' @param silently Logical. Whether to print progress statements
+#' @param plot logical. Whether to plot the network plot
 #'
 #' @return A named list containing pipeline results for this type
 run_pipeline_for_all <- function(item_level,
                                  items,
                                  embeddings,
-                                       model = NULL,
-                                       algorithm = "walktrap",
-                                       uni.method = "louvain",
-                                       keep.org = FALSE,
-                                       silently) {
+                                 model = NULL,
+                                 algorithm = "walktrap",
+                                 uni.method = "louvain",
+                                 keep.org = FALSE,
+                                 silently,
+                                 plot) {
 
 
   if(keep.org){
@@ -317,7 +373,10 @@ run_pipeline_for_all <- function(item_level,
       final_items = NULL,
       initial_items = items,
       final_EGA = NULL,
-      initial_EGA = NULL
+      initial_EGA = NULL,
+      start_N = nrow(items),
+      final_N = NULL,
+      network_plot = NULL
     )} else {
       overall_result <- list(
         final_NMI = NULL,
@@ -326,7 +385,10 @@ run_pipeline_for_all <- function(item_level,
         EGA.model_selected = NULL,
         final_items = NULL,
         final_EGA = NULL,
-        initial_EGA = NULL
+        initial_EGA = NULL,
+        start_N = nrow(items),
+        final_N = NULL,
+        network_plot = NULL
       )
     }
 
@@ -455,9 +517,32 @@ run_pipeline_for_all <- function(item_level,
     overall_result$initial_items <- merge(items, com_df, by = "ID")
   }
 
+  # add the final number of items
+  overall_result$final_N <- nrow(overall_result$final_items)
+
   if(!silently){
     cat("Done.")
   }
+
+
+  tryCatch({network_plot <- plot_comparison(
+    p1 = overall_result$initial_EGA,
+    p2 = overall_result$final_EGA,
+    caption1 = "Network Plot for Items Pre-Reduction",
+    caption2 = "Network Plot for Items Post-Reduction",
+    nmi1 = overall_result$initial_NMI,
+    nmi2 = overall_result$final_NMI,
+    title = "Network Plots for All Items Before vs After AIGENIE Reduction"
+  )
+  overall_result$network_plot <- network_plot },
+  error = function(e) {
+    warning(paste("Failed to create network plots for the items overall."))
+  })
+
+  if(plot && !is.null(overall_result$network_plot)){
+    plot(network_plot)
+  }
+
 
   return(list(overall_result = overall_result,
               success = success))

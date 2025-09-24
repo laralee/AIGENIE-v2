@@ -59,7 +59,7 @@ corresponding to each attribute. Used for synthetic item generation.}
 
 \item{scale.title}{A string naming the scale.}
 
-\item{item.examples}{A data frame containing `type`, `attribute`, and `statement` columns.
+\item{item.examples}{A data frame containing \code{type}, \code{attribute}, and \code{statement} columns.
 All values must be strings. Optional.}
 
 \item{audience}{A string or NULL. The intended audience of the assessment.}
@@ -75,11 +75,11 @@ Optional.}
 
 \item{system.role}{A string or NULL. Used to customize the system prompt.}
 
-\item{EGA.model}{A string or NULL. One of `"BGGM"`, `"glasso"`, or `"TMFG"`.}
+\item{EGA.model}{A string or NULL. One of \code{"BGGM"}, \code{"glasso"}, or \code{"TMFG"}.}
 
-\item{EGA.algorithm}{A string. One of `"leiden"`, `"louvain"`, or `"walktrap"`.}
+\item{EGA.algorithm}{A string. One of \code{"leiden"}, \code{"louvain"}, or \code{"walktrap"}.}
 
-\item{EGA.uni.method}{A string. One of `"expand"`, `"LE"`, or `"louvain"`.}
+\item{EGA.uni.method}{A string. One of \code{"expand"}, \code{"LE"}, or \code{"louvain"}.}
 
 \item{keep.org}{A boolean. If TRUE, preserve original inputs in the output.}
 
@@ -96,17 +96,17 @@ Optional.}
 \value{
 A named list containing:
 \describe{
-  \item{target.N}{A named list of integers, aligned with `item.attributes`}
-  \item{EGA.model}{Canonical model string or NULL}
-  \item{EGA.uni.method}{Canonical unidimensionality method}
-  \item{EGA.algorithm}{Canonical community detection algorithm}
-  \item{model}{Resolved model string for text generation}
-  \item{item.type.definitions}{Cleaned item type definitions (if provided)}
-  \item{item.examples}{Cleaned item examples (if provided)}
-  \item{item.attributes}{Cleaned and normalized item attributes}
-  \item{prompt.notes}{Cleaned and normalized prompt notes (if provided)}
-  \item{main.prompts}{Cleaned and normalized main prompts (if provided)}
-  \item{custom}{A flag signaling whether we are in custom mode or not}
+\item{target.N}{A named list of integers, aligned with \code{item.attributes}}
+\item{EGA.model}{Canonical model string or NULL}
+\item{EGA.uni.method}{Canonical unidimensionality method}
+\item{EGA.algorithm}{Canonical community detection algorithm}
+\item{model}{Resolved model string for text generation}
+\item{item.type.definitions}{Cleaned item type definitions (if provided)}
+\item{item.examples}{Cleaned item examples (if provided)}
+\item{item.attributes}{Cleaned and normalized item attributes}
+\item{prompt.notes}{Cleaned and normalized prompt notes (if provided)}
+\item{main.prompts}{Cleaned and normalized main prompts (if provided)}
+\item{custom}{A flag signaling whether we are in custom mode or not}
 }
 }
 \description{

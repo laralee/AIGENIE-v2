@@ -27,7 +27,7 @@ create_main.prompts(
 
 \item{audience}{(Optional) A string describing the target audience or population (e.g., "adolescents", "working adults").}
 
-\item{item.examples}{(Optional) A data frame of existing high-quality example items. Used to guide item phrasing and structure. Must be compatible with the helper `construct_item.examples_string()`.}
+\item{item.examples}{(Optional) A data frame of existing high-quality example items. Used to guide item phrasing and structure. Must be compatible with the helper \code{construct_item.examples_string()}.}
 }
 \value{
 A named list of character strings. Each entry corresponds to one item type and contains a complete prompt

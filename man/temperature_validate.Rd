@@ -2,7 +2,7 @@
 % Please edit documentation in R/user_validation_helpers.R
 \name{temperature_validate}
 \alias{temperature_validate}
-\title{Validate `temperature` for Text Generation}
+\title{Validate \code{temperature} for Text Generation}
 \usage{
 temperature_validate(temperature)
 }
@@ -10,5 +10,5 @@ temperature_validate(temperature)
 \item{temperature}{A numeric value}
 }
 \description{
-Ensures `temperature` is a numeric value between 0 and 2
+Ensures \code{temperature} is a numeric value between 0 and 2
 }

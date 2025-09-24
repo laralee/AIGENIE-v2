@@ -11,7 +11,8 @@ run_item_reduction_pipeline(
   EGA.algorithm = "walktrap",
   EGA.uni.method = "louvain",
   keep.org,
-  silently
+  silently,
+  plot
 )
 }
 \arguments{
@@ -26,6 +27,8 @@ run_item_reduction_pipeline(
 \item{EGA.uni.method}{Character. Unidimensionality method (default = "louvain")}
 
 \item{silently}{Logical. Print progress?}
+
+\item{plot}{logical. Should the network plot be printed}
 }
 \value{
 A named list of pipeline results, one per item type

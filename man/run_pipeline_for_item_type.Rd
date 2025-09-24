@@ -12,7 +12,8 @@ run_pipeline_for_item_type(
   algorithm = "walktrap",
   uni.method = "louvain",
   keep.org = FALSE,
-  silently
+  silently,
+  plot
 )
 }
 \arguments{
@@ -31,6 +32,8 @@ run_pipeline_for_item_type(
 \item{keep.org}{Logical. Whether to include original items and embeddings}
 
 \item{silently}{Logical. Whether to print progress statements}
+
+\item{plot}{Logicial. Whether to plot the network plots at the end}
 }
 \value{
 A named list containing pipeline results for this type

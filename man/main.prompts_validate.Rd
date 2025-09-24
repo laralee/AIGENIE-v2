@@ -2,22 +2,22 @@
 % Please edit documentation in R/user_validation_helpers.R
 \name{main.prompts_validate}
 \alias{main.prompts_validate}
-\title{Validate and Normalize `main.prompts`}
+\title{Validate and Normalize \code{main.prompts}}
 \usage{
 main.prompts_validate(main.prompts, items.attributes, silently)
 }
 \arguments{
 \item{main.prompts}{A named list of prompt strings, one per attribute.}
 
-\item{items.attributes}{A cleaned list from `validate_items.attributes()`.}
+\item{items.attributes}{A cleaned list from \code{validate_items.attributes()}.}
 
 \item{silently}{A flag determining wheter a warning message should be printed}
 }
 \value{
 A cleaned and ordered named list of trimmed prompt strings.
-   Also returns the appropriate 'custom' flag (TRUE if custom ok, FALSE if not)
+Also returns the appropriate 'custom' flag (TRUE if custom ok, FALSE if not)
 }
 \description{
-Validates that `main.prompts` is a named list of non-empty strings,
-one for each attribute in `items.attributes`, matched by normalized name.
+Validates that \code{main.prompts} is a named list of non-empty strings,
+one for each attribute in \code{items.attributes}, matched by normalized name.
 }

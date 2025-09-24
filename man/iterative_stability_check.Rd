@@ -18,7 +18,7 @@ iterative_stability_check(
 \arguments{
 \item{embedding_matrix}{Numeric matrix of item embeddings (columns = items).}
 
-\item{items}{Data frame containing at least `ID` and `statement`.}
+\item{items}{Data frame containing at least \code{ID} and \code{statement}.}
 
 \item{cut.off}{Numeric. Minimum stability required to retain an item.}
 

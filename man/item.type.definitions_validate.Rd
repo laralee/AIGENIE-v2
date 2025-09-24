@@ -2,28 +2,32 @@
 % Please edit documentation in R/user_validation_helpers.R
 \name{item.type.definitions_validate}
 \alias{item.type.definitions_validate}
-\title{Validate and Clean `item.type.definitions`}
+\title{Validate and Clean \code{item.type.definitions}}
 \usage{
 item.type.definitions_validate(item.type.definitions, items.attributes)
 }
 \arguments{
 \item{item.type.definitions}{A named list of strings, where each name must
-correspond to a name in `items.attributes` and each value must be a
+correspond to a name in \code{items.attributes} and each value must be a
 non-empty string.}
 
-\item{items.attributes}{A cleaned list from `validate_items.attributes()`.}
+\item{items.attributes}{A cleaned list from \code{validate_items.attributes()}.}
 }
 \value{
-A cleaned version of `item.type.definitions`.
+A cleaned version of \code{item.type.definitions}.
 }
 \description{
-Validates that `item.type.definitions` is a named list where:
-  - Names are unique (after trim + case-fold)
-  - Names exist in `items.attributes`
-  - Values are non-empty strings
+Validates that \code{item.type.definitions} is a named list where:
+\itemize{
+\item Names are unique (after trim + case-fold)
+\item Names exist in \code{items.attributes}
+\item Values are non-empty strings
+}
 }
 \details{
 Returns a cleaned version with:
-  - Normalized names (trimmed and lowercased)
-  - Trimmed values (case preserved)
+\itemize{
+\item Normalized names (trimmed and lowercased)
+\item Trimmed values (case preserved)
+}
 }

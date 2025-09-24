@@ -7,12 +7,14 @@
 embedding.model_validate(embedding.model)
 }
 \arguments{
-\item{embedding.model}{A string or `NULL`.}
+\item{embedding.model}{A string or \code{NULL}.}
 }
 \description{
 Validates that the embedding model is one of the supported OpenAI models.
 Allowed values are:
-  - "text-embedding-3-small"
-  - "text-embedding-3-large"
-  - "text-embedding-ada-002"
+\itemize{
+\item "text-embedding-3-small"
+\item "text-embedding-3-large"
+\item "text-embedding-ada-002"
+}
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/user_validation_helpers.R
 \name{items.attributes_validate}
 \alias{items.attributes_validate}
-\title{Validate `items.attributes`}
+\title{Validate \code{items.attributes}}
 \usage{
 items.attributes_validate(items.attributes)
 }
@@ -12,12 +12,12 @@ only character scalars (strings). Each of those inner lists must contain
 at least two truly unique strings after trimming and case-folding.}
 }
 \value{
-A cleaned version of `items.attributes` with normalized names and
-  values. Errors are thrown if validation fails.
+A cleaned version of \code{items.attributes} with normalized names and
+values. Errors are thrown if validation fails.
 }
 \description{
-Validates that `items.attributes` is a **named list** whose names are
+Validates that \code{items.attributes} is a \strong{named list} whose names are
 truly unique after trimming whitespace and ignoring case, and that each
-element is itself a list **containing only strings**, with **at least two**
+element is itself a list \strong{containing only strings}, with \strong{at least two}
 truly unique strings (same trimming + case-insensitive rule).
 }

@@ -33,10 +33,12 @@ results in all zeros.
 }
 \details{
 Sparsification process:
-1. Zero out values between lower and upper quantiles
-2. If result is all zeros, try fallback quantiles
-3. If still all zeros, return original matrix
+\enumerate{
+\item Zero out values between lower and upper quantiles
+\item If result is all zeros, try fallback quantiles
+\item If still all zeros, return original matrix
+}
 
-`silently` is always `TRUE`. It is only set to `FALSE` for developement
+\code{silently} is always \code{TRUE}. It is only set to \code{FALSE} for developement
 and diagnostic purposes.
 }

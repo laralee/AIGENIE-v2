@@ -2,7 +2,7 @@
 % Please edit documentation in R/user_validation_helpers.R
 \name{response.options_validate}
 \alias{response.options_validate}
-\title{Validate and Clean `response.options`}
+\title{Validate and Clean \code{response.options}}
 \usage{
 response.options_validate(response.options)
 }
@@ -10,6 +10,6 @@ response.options_validate(response.options)
 \item{response.options}{An atomic character vector of response labels.}
 }
 \description{
-Validates that `response.options` is an atomic vector of non-empty strings,
+Validates that \code{response.options} is an atomic vector of non-empty strings,
 with no missing or invalid values. Whitespace is trimmed from each string.
 }

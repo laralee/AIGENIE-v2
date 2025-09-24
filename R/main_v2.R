@@ -117,7 +117,8 @@ AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
                                          EGA.algorithm,
                                          EGA.uni.method,
                                          keep.org,
-                                         silently)
+                                         silently,
+                                         plot)
 
   if(!try_item_level$success){
     return(try_item_level$item_level)
@@ -134,13 +135,18 @@ AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
                                          EGA.algorithm,
                                          EGA.uni.method,
                                          keep.org,
-                                         silently)
+                                         silently,
+                                         plot)
 
   if(!try_overall_result$success){
     return(item_level)
   }
 
   overall_result <- try_overall_result$overall_result
+
+  if(!silently){
+    print_results(overall_result, item_level)
+  }
 
   return( list(overall = overall_result,
                item_type_level = item_level))

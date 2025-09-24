@@ -9,7 +9,7 @@ reduce_redundancy_uva(embedding_matrix, items)
 \arguments{
 \item{embedding_matrix}{A numeric matrix of embeddings (columns = items).}
 
-\item{items}{Data frame with `ID` and `statement` columns.}
+\item{items}{Data frame with \code{ID} and \code{statement} columns.}
 }
 \value{
 A list with the reduced matrix, sweep metadata, and redundancy log.

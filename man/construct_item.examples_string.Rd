@@ -7,7 +7,7 @@
 construct_item.examples_string(item.examples, current_type)
 }
 \arguments{
-\item{item.examples}{A validated data frame with `type`, `attribute`, `statement`.}
+\item{item.examples}{A validated data frame with \code{type}, \code{attribute}, \code{statement}.}
 
 \item{current_type}{A string specifying which type to filter for.}
 }
@@ -22,5 +22,5 @@ A single JSON-formatted string (or NULL if no matches).
 }
 \description{
 Given a validated item examples data frame, this function constructs
-a string of well-formatted example items grouped by `attribute`, for a given `type`.
+a string of well-formatted example items grouped by \code{attribute}, for a given \code{type}.
 }

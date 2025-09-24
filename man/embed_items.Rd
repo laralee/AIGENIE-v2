@@ -17,8 +17,8 @@ embed_items(embedding.model, openai.API, items, silently)
 }
 \value{
 A list containing:
-  \item{embeddings}{A matrix where columns are items (named by ID) and rows are embedding dimensions}
-  \item{success}{A logical indicating whether the embedding process was successful}
+\item{embeddings}{A matrix where columns are items (named by ID) and rows are embedding dimensions}
+\item{success}{A logical indicating whether the embedding process was successful}
 }
 \description{
 This function takes a data frame of items and creates embeddings using OpenAI's API.

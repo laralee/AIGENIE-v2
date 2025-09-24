@@ -2,24 +2,26 @@
 % Please edit documentation in R/user_validation_helpers.R
 \name{item.examples_validate}
 \alias{item.examples_validate}
-\title{Validate and Clean `item.examples` Against Cleaned `items.attributes`}
+\title{Validate and Clean \code{item.examples} Against Cleaned \code{items.attributes}}
 \usage{
 item.examples_validate(item.examples, items.attributes)
 }
 \arguments{
-\item{item.examples}{A data frame with columns `type`, `attribute`, `statement`.
+\item{item.examples}{A data frame with columns \code{type}, \code{attribute}, \code{statement}.
 All values must be non-empty strings.}
 
-\item{items.attributes}{A cleaned list from `validate_items.attributes()`.
+\item{items.attributes}{A cleaned list from \code{validate_items.attributes()}.
 All names and values must be normalized (lowercased and trimmed).}
 }
 \value{
-A cleaned version of `item.examples` with normalized values.
+A cleaned version of \code{item.examples} with normalized values.
 }
 \description{
-Ensures `item.examples` is a data frame with required string columns and that the values
-in `type` and `attribute` align with the cleaned structure of `items.attributes`.
+Ensures \code{item.examples} is a data frame with required string columns and that the values
+in \code{type} and \code{attribute} align with the cleaned structure of \code{items.attributes}.
 Returns a cleaned version of the data frame with normalized values:
-  - `type` and `attribute` are trimmed and lowercased
-  - `statement` is trimmed (case preserved)
+\itemize{
+\item \code{type} and \code{attribute} are trimmed and lowercased
+\item \code{statement} is trimmed (case preserved)
+}
 }

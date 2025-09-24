@@ -2,7 +2,7 @@
 % Please edit documentation in R/user_validation_helpers.R
 \name{top.p_validate}
 \alias{top.p_validate}
-\title{Validate `top.p` for Text Generation}
+\title{Validate \code{top.p} for Text Generation}
 \usage{
 top.p_validate(top.p)
 }
@@ -10,5 +10,5 @@ top.p_validate(top.p)
 \item{top.p}{A numeric value}
 }
 \description{
-Ensures `top.p` is a numeric value between 0 and 1, or NULL.
+Ensures \code{top.p} is a numeric value between 0 and 1, or NULL.
 }

@@ -617,11 +617,18 @@ iterative_stability_check <- function(embedding_matrix,
 
 
 
-
-
-
-
-
+#' Run bootstrapped EGA on the initial set of items
+#'
+#' @param result The running results of the item type level so far.
+#' @param data The embedding matrix to be used (either the sparse or full)
+#' @param EGA.algorithm The EGA algorithm to be used
+#' @param EGA.uni.method The EGA unidensinoality that should be used
+#' @param algorithm Community detection algorithm.
+#' @param uni.method Unidimensionality method.
+#' @param silently A logical flag that decides whether to print output
+#' @param EGA.type Type of EGA (default "EGA.fit").
+#'
+#' @return An updated `results` object with the initial stability object added
 calc_final_stability <- function(result,
                                  data,
                                  EGA.algorithm,
@@ -672,6 +679,114 @@ calc_final_stability <- function(result,
 
 
 
+#' Print Results
+#'
+#' Displays a summary of the AI-GENIE analysis results, including the EGA model used, embedding type, starting and final number of items, and NMI values before and after reduction. The summary includes the number of iterations for both UVA (Unique Variable Analysis) and bootstrapped EGA steps.
+#'
+#' @param obj A list object containing the OVERALL analysis results returned by \code{get_results}.
+#' @param obj2 A list object containing the ITEM-TYPE LEVEL analysis results returned by \code{get_results}.
+#' @return No return value; the function prints the results to the console.
+print_results<-function(obj, obj2){
+
+  # Print the title
+  cat("\n")
+  cat("\n")
+  cat(paste("                           AI-Genie Results"))
+  cat("\n")
+  cat("                           ----------------")
+
+
+  for (i in seq_along(obj2)){
+
+    cat("\n")
+    cat("\n")
+
+    EGA.model <- obj2[[i]][["EGA.model_selected"]]
+    before_nmi <- obj2[[i]][["initial_NMI"]]
+    embedding_type <- obj2[[i]][["embeddings"]][["selected"]]
+    after_genie <- obj2[[i]][["final_NMI"]]
+    initial_items <- obj2[[i]][["start_N"]]
+    final_items <- obj2[[i]][["final_N"]]
+
+
+    words <- strsplit(paste(names(obj2)[[i]], "items"), " ")[[1]]
+    words <- paste0(toupper(substring(words, 1, 1)), substring(words, 2))
+    words <- paste(words, collapse = " ")
+
+    cat(paste("                          ", words))
+    cat("\n")
+    cat(paste("EGA Model:", EGA.model,"    Embeddings Used:", embedding_type,
+              "    Staring N:", initial_items, "    Final N:", final_items))
+    cat("\n")
+    cat(paste0("             Initial NMI: ", round(before_nmi,4) * 100,
+               "           Final NMI: ", round(after_genie,4) * 100))
+  }
+
+  cat("\n")
+  cat("\n")
+
+  EGA.model <- obj[["EGA.model_selected"]]
+  before_nmi <- obj[["initial_NMI"]]
+  embedding_type <- obj[["embeddings"]][["selected"]]
+  after_genie <- obj[["final_NMI"]]
+  initial_items <- obj[["start_N"]]
+  final_items <- obj[["final_N"]]
+
+  cat(paste("                          Overall Sample Results"))
+  cat("\n")
+  cat(paste("EGA Model:", EGA.model,"    Embeddings Used:", embedding_type,
+            "    Staring N:", initial_items, "    Final N:", final_items))
+  cat("\n")
+  cat(paste0("             Initial NMI: ", round(before_nmi,4) * 100,
+             "           Final NMI: ", round(after_genie,4) * 100))
+
+}
 
 
 
+
+
+
+
+
+
+#' Plot Comparisons
+#'
+#' Generates a comparative plot of two network analysis results, typically representing the item network
+#' before and after AI-GENIE reduction. The plot includes provided captions, displays NMI values for each network,
+#' and incorporates a scale title to contextualize the comparison. The layout may be adjusted based on the
+#' \code{ident} parameter.
+#'
+#' @param p1 An object representing the first network analysis result (e.g., the initial EGA object before reduction).
+#' @param p2 An object representing the second network analysis result (e.g., the final EGA object after reduction).
+#' @param caption1 A character string to be used as a caption or title for the first network (e.g., "Before AI-GENIE Network").
+#' @param caption2 A character string for the second network (e.g., "After AI-GENIE Network").
+#' @param nmi1 A numeric value representing the Normalized Mutual Information (NMI) of the first network.
+#' @param nmi2 A numeric value representing the NMI of the second network.
+#' @param title A character string specifying the title of the plot.
+#'
+#' @return A plot object that visually compares the two network structures. The plot will typically display
+#'         the two networks (either side-by-side or in an overlaid manner) with the provided captions and NMI values.
+#'         The exact type of the plot object (e.g., a \code{ggplot} object or a base R plot) depends on the implementation.
+plot_comparison <- function(p1, p2, caption1, caption2, nmi2, nmi1, title){
+
+
+    plot1 <- plot(p1) +
+      labs(caption = paste0(caption1," (NMI: ", round(nmi1,4) * 100, ")"))
+
+    plot2 <- plot(p2) +
+      labs(caption = paste0(caption2," (NMI: ", round(nmi2,4) * 100, ")"))
+
+    combined_plot <- plot1 + plot2 +
+      plot_annotation(
+        title = title,
+        subtitle = paste0("Change in NMI: ", round((nmi2 - nmi1),4) * 100),
+        theme = theme(
+          plot.title = element_text(hjust = 0.5, size = 16),
+          plot.subtitle = element_text(hjust = 0.5, size = 12)
+        )
+      )
+
+
+  return(combined_plot)
+}
