@@ -1,35 +1,65 @@
+# zzz.R
 
-# Version control for openai - MUST be version 0.28
-
-.onLoad <- function(libname, pkgname) {
-
-  venv_name <- "AIGENIE_python_env"
-
-  # Check if the virtual environment already exists, otherwise create it
-  if (!reticulate::condaenv_exists(venv_name)) {
-    message("Welcome to AI-GENIE! You need a virtual environment to access Python through R. Once installed, this will not need to be done again. Creating the virtual environment...")
-    reticulate::conda_create(envname = venv_name, python_version = 3.11)
+# Helper function to ensure Python environment is set up
+ensure_aigenie_python <- function() {
+  # Check if we've already initialized in this session
+  if (isTRUE(getOption("aigenie.python_initialized", FALSE))) {
+    return(invisible(TRUE))
   }
 
-  # Use the virtual environment
-  reticulate::use_condaenv(venv_name, required = TRUE)
+  message("AI-GENIE: Setting up Python environment (one-time setup)...")
 
-  # python packages and versions required
-  python_packages <- list(
-    groq = NULL, # no specific version requirement for groq
-    openai = "0.28" # specific version for openai
-  )
+  # Configure Python version
+  reticulate::py_config()
 
-  # check if each python package is available already in the correct version, and install the correct version if not
-  for (pkg in names(python_packages)) {
-    if (!reticulate::py_module_available(pkg)) {
-      message(sprintf("Installing Python package '%s' in virtual environment...", pkg))
-      if (is.null(python_packages[[pkg]])) {
-        reticulate::py_install(pkg, envname = venv_name)
-      } else {
-        reticulate::py_install(paste(pkg, "==", python_packages[[pkg]], sep = ""), envname = venv_name)
-      }
-    }
+  # Check and install packages
+  if (!reticulate::py_module_available("openai")) {
+    message("Installing openai==0.28...")
+    reticulate::py_install("openai==0.28", pip = TRUE)
   }
+
+  if (!reticulate::py_module_available("groq")) {
+    message("Installing groq...")
+    reticulate::py_install("groq", pip = TRUE)
+  }
+
+  # Initialize Python
+  reticulate::py_available(initialize = TRUE)
+
+  # Verify installations
+  tryCatch({
+    openai <- reticulate::import("openai")
+    groq <- reticulate::import("groq")
+    message("AI-GENIE: Python environment ready!")
+  }, error = function(e) {
+    stop("Failed to set up Python packages. Please try restarting R and reinstalling.")
+  })
+
+  # Mark as initialized for this session
+  options(aigenie.python_initialized = TRUE)
+
+  invisible(TRUE)
 }
 
+# Package load hook
+.onLoad <- function(libname, pkgname) {
+  # Set the initialization flag to FALSE
+  options(aigenie.python_initialized = FALSE)
+
+  # Optional: Check for old conda environment and suggest cleanup
+  if (reticulate::condaenv_exists("AIGENIE_python_env")) {
+    packageStartupMessage(
+      "Note: Old conda environment 'AIGENIE_python_env' detected.\n",
+      "You can remove it to save space with: reticulate::conda_remove('AIGENIE_python_env')"
+    )
+  }
+
+  # Don't initialize Python here - wait until it's actually needed
+  packageStartupMessage("AI-GENIE loaded. Python dependencies will be configured on first use.")
+}
+
+# Optional: Package unload hook to clean up
+.onUnload <- function(libpath) {
+  # Reset the initialization flag
+  options(aigenie.python_initialized = NULL)
+}

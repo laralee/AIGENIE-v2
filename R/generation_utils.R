@@ -336,6 +336,9 @@ modify_main.prompts <- function(main.prompts, item.attributes,
 generate_items_via_llm <- function(main.prompts, system.role, model, top.p, temperature,
                                    adaptive, silently, groq.API, openai.API, target.N) {
 
+  # Ensure Python environment is ready
+  ensure_aigenie_python()
+
   # Initialize results dataframe
   all_items_df <- data.frame(type = character(),
                              attribute = character(),
@@ -668,6 +671,9 @@ cleaning_function <- function(raw_text, item_type) {
 #'   \item{success}{A logical indicating whether the embedding process was successful}
 #'
 embed_items <- function(embedding.model, openai.API, items, silently) {
+
+  # Ensure Python environment is ready
+  ensure_aigenie_python()
 
   if(!silently){
     cat("\n")
