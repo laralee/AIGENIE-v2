@@ -526,45 +526,118 @@ resolve_model_name <- function(model, silently) {
 }
 
 
-#' Validate OpenAI Embedding Model
+#' Validate Embedding Model
 #'
-#' Validates that the embedding model is one of the supported OpenAI models.
-#' Allowed values are:
+#' Validates that the embedding model is one of the supported OpenAI or HuggingFace models.
+#'
+#' Allowed OpenAI models:
 #'   - "text-embedding-3-small"
 #'   - "text-embedding-3-large"
 #'   - "text-embedding-ada-002"
 #'
+#' Allowed HuggingFace models:
+#'   - BAAI/bge series (bge-small-en-v1.5, bge-base-en-v1.5, bge-large-en-v1.5)
+#'   - thenlper/gte series (gte-small, gte-base, gte-large)
 #'
 #' @param embedding.model A string or `NULL`.
+#' @param provider Optional string indicating provider ("openai", "huggingface", or "auto" for auto-detection)
 #'
-embedding.model_validate <- function(embedding.model) {
-  allowed <- c(
+embedding.model_validate <- function(embedding.model, provider = "auto") {
+  # Check basic type requirements
+  if (!is.character(embedding.model) || length(embedding.model) != 1 || is.na(embedding.model)) {
+    stop(
+      "AI-GENIE expects embedding.model to be a string. Set it to a valid embedding model.",
+      call. = FALSE
+    )
+  }
+
+  # Define allowed models
+  openai_models <- c(
     "text-embedding-3-small",
     "text-embedding-3-large",
     "text-embedding-ada-002"
   )
 
-  if (!is.character(embedding.model) || length(embedding.model) != 1 || is.na(embedding.model)) {
-    stop(
-      "AI-GENIE expects embedding.model to be a string. Set it to a valid OpenAI embedding model.",
-      call. = FALSE
-    )
+  # Confirmed working HF models
+  hf_models_confirmed <- c(
+    "BAAI/bge-small-en-v1.5",
+    "BAAI/bge-base-en-v1.5",
+    "BAAI/bge-large-en-v1.5",
+    "thenlper/gte-small",
+    "thenlper/gte-base",
+    "thenlper/gte-large"
+  )
+
+  # Known incompatible HF models
+  hf_models_incompatible <- c(
+    "sentence-transformers/all-MiniLM-L6-v2",
+    "sentence-transformers/all-mpnet-base-v2",
+    "intfloat/e5-base-v2",
+    "intfloat/e5-large-v2",
+    "intfloat/e5-small-v2"
+  )
+
+  # Auto-detect provider if needed
+  if (provider == "auto") {
+    if (embedding.model %in% openai_models || grepl("^text-embedding", embedding.model)) {
+      provider <- "openai"
+    } else {
+      provider <- "huggingface"
+    }
   }
 
-  if (!(embedding.model %in% allowed)) {
-    stop(
+  # Validate based on provider
+  if (provider == "openai") {
+    if (!(embedding.model %in% openai_models)) {
+      stop(
+        paste0(
+          "AI-GENIE expects OpenAI embedding.model to be one of the following:\n",
+          paste(sprintf("  • %s", openai_models), collapse = "\n"),
+          "\n\nReceived: '", embedding.model, "'\n\n",
+          "If you meant to use a HuggingFace model, make sure to use a compatible one."
+        ),
+        call. = FALSE
+      )
+    }
+  } else if (provider == "huggingface") {
+    # Check if it's a known incompatible model
+    if (embedding.model %in% hf_models_incompatible) {
+      stop(
+        paste0(
+          "Model '", embedding.model, "' is NOT compatible with AI-GENIE.\n",
+          "This model is configured for sentence-similarity on HuggingFace API, not embeddings.\n\n",
+          "Please use one of these compatible models instead:\n",
+          paste(sprintf("  • %s", hf_models_confirmed), collapse = "\n"),
+          "\n\nExample usage:\n",
+          '  embedding.model = "BAAI/bge-base-en-v1.5"'
+        ),
+        call. = FALSE
+      )
+    }
+
+    # Check if it's a confirmed working model
+    if (embedding.model %in% hf_models_confirmed) {
+      # Model is confirmed to work
+      return(invisible(TRUE))
+    }
+
+    # Unknown HF model - warn but allow
+    warning(
       paste0(
-        "AI-GENIE expects embedding.model to be one of the following: ",
-        paste(sprintf("`%s`", allowed), collapse = ", "),
-        ". Received: `", embedding.model, "`."
+        "Model '", embedding.model, "' has not been tested with AI-GENIE.\n\n",
+        "Known compatible HuggingFace models:\n",
+        paste(sprintf("  • %s", hf_models_confirmed), collapse = "\n"),
+        "\n\n Known incompatible models:\n",
+        paste(sprintf("  • %s", hf_models_incompatible), collapse = "\n"),
+        "\n\nIf this model doesn't work, try 'BAAI/bge-base-en-v1.5' instead.\n"
       ),
-      call. = FALSE
+      call. = FALSE,
+      immediate. = TRUE
     )
   }
 
+  return(provider)
 }
-
-
 
 
 

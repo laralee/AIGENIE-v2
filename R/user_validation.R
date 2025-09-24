@@ -14,6 +14,7 @@
 #' @param item.attributes A named list of attributes and item types. Must be validated via
 #'   \code{item.attributes_validate()}.
 #' @param openai.API A string. OpenAI API key.
+#' @param hf.token A string. HuggingFace API key.
 #' @param main.prompts A named list of custom prompts that the user specifies (if desired)
 #' @param groq.API A string or NULL. Groq API key.
 #' @param model A string. The user-specified language model. Will be resolved to a
@@ -60,7 +61,8 @@
 #'   \item{custom}{A flag signaling whether we are in custom mode or not}
 #' }
 #'
-validate_user_input_AIGENIE <- function(item.attributes, openai.API, main.prompts,
+validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
+                                        main.prompts,
                                         groq.API, model, temperature,
                                         top.p, embedding.model, target.N,
                                         domain, scale.title, item.examples,
@@ -75,7 +77,7 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, main.prompt
   validate_booleans(items.only, adaptive, plot, keep.org, silently, embeddings.only)
 
   # Ensure all string objects are actually strings (or set to NULL)
-  validate_strings(openai.API, groq.API, audience, scale.title,
+  validate_strings(openai.API, groq.API, hf.token, audience, scale.title,
                    system.role, domain, model, EGA.model, EGA.algorithm,
                    embedding.model, EGA.uni.method)
 
@@ -96,7 +98,7 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, main.prompt
   model <- resolve_model_name(model, silently)
 
   # Validate the embedding model
-  embedding.model_validate(embedding.model)
+  provider <- embedding.model_validate(embedding.model)
 
   # Validate the parameters to be passed to EGA
   EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
@@ -139,7 +141,8 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, main.prompt
     item.attributes = item.attributes,
     prompt.notes = prompt.notes,
     main.prompts = main.prompts,
-    custom = custom
+    custom = custom,
+    provider = provider
   ))
 
 }

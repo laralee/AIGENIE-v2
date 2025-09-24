@@ -741,3 +741,214 @@ embed_items <- function(embedding.model, openai.API, items, silently) {
 
   return(result)
 }
+
+
+
+#' Generate Embeddings Using Hugging Face Models
+#'
+#' @description
+#' Generates dense vector embeddings for text items using open-source embedding models
+#' hosted on Hugging Face's Inference API. This function provides a free alternative
+#' to OpenAI's embedding models, with no API key required for public models.
+#'
+#' @param embedding.model Character string specifying the Hugging Face model to use.
+#'   Default is "BAAI/bge-base-en-v1.5". Compatible models include:
+#'   \itemize{
+#'     \item BAAI/bge series: "BAAI/bge-small-en-v1.5" (384 dims),
+#'           "BAAI/bge-base-en-v1.5" (768 dims), "BAAI/bge-large-en-v1.5" (1024 dims)
+#'     \item GTE series: "thenlper/gte-small" (384 dims), "thenlper/gte-base" (768 dims),
+#'           "thenlper/gte-large" (1024 dims)
+#'   }
+#'   Note: sentence-transformers models (e.g., all-MiniLM-L6-v2) are NOT compatible
+#'   as they are configured for sentence similarity, not feature extraction.
+#'
+#' @param hf.token Optional character string. Hugging Face API token for increased rate
+#'   limits and access to private models. Public models work without a token, but may
+#'   have lower rate limits. Get a free token at https://huggingface.co/settings/tokens
+#'
+#' @param items Data frame containing the items to embed. Must have two columns:
+#'   \itemize{
+#'     \item \code{statement}: Character vector of text to embed
+#'     \item \code{ID}: Unique identifiers for each statement
+#'   }
+#'
+#' @param silently Logical. If FALSE (default), displays progress messages during
+#'   embedding generation. Set to TRUE to suppress all messages except errors.
+#'
+#' @return A list with two elements:
+#'   \itemize{
+#'     \item \code{embeddings}: Numeric matrix where each column represents one item's
+#'           embedding vector and each row represents an embedding dimension. Column
+#'           names correspond to the item IDs. Returns NULL if embedding fails.
+#'     \item \code{success}: Logical indicating whether embedding generation was
+#'           successful (TRUE) or failed (FALSE).
+#'   }
+#'
+#' @details
+#' The function connects to Hugging Face's Inference API to generate embeddings.
+#' On first use of a model, there may be a 10-30 second delay while the model loads
+#' on Hugging Face's servers. Subsequent requests will be faster.
+#'
+#' The function automatically handles:
+#' \itemize{
+#'   \item Model loading delays (503 responses)
+#'   \item Rate limiting (429 responses)
+#'   \item Retry logic with exponential backoff
+#' }
+#'
+#' @note
+#' \itemize{
+#'   \item Free tier rate limits: ~100-1000 requests per hour (varies by model)
+#'   \item With HF token: Higher rate limits and priority queue access
+#'   \item Embedding dimensions vary by model (384, 768, or 1024 typically)
+#'   \item Internet connection required
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' # Create sample items
+#' items <- data.frame(
+#'   statement = c("I enjoy social gatherings",
+#'                 "I prefer working alone"),
+#'   ID = c("item_1", "item_2")
+#' )
+#'
+#' # Generate embeddings with default model (no API key needed)
+#' result <- embed_items_huggingface(
+#'   items = items,
+#'   silently = FALSE
+#' )
+#'
+#' # Use a different model with HF token for better performance
+#' result <- embed_items_huggingface(
+#'   embedding.model = "BAAI/bge-large-en-v1.5",
+#'   hf.token = "hf_xxxxx",
+#'   items = items,
+#'   silently = FALSE
+#' )
+#'
+#' # Check success and examine embeddings
+#' if (result$success) {
+#'   dim(result$embeddings)  # rows = embedding dims, cols = number of items
+#'   colnames(result$embeddings)  # Should be item IDs
+#' }
+#' }
+#'
+embed_items_huggingface <- function(embedding.model = "BAAI/bge-base-en-v1.5", hf.token = NULL, items, silently) {
+  # Ensure Python environment is ready
+  ensure_aigenie_python()
+
+  if(!silently){
+    cat("\n")
+    cat("Generating embeddings...")
+  }
+
+  # Initialize return structure
+  result <- list(
+    embeddings = NULL,
+    success = FALSE
+  )
+
+  tryCatch({
+    requests <- reticulate::import("requests")
+    json <- reticulate::import("json")
+
+    # Use models endpoint
+    api_url <- paste0("https://api-inference.huggingface.co/models/", embedding.model)
+
+    # Set up headers
+    headers <- reticulate::dict()
+    headers["Content-Type"] <- "application/json"
+    if (!is.null(hf.token)) {
+      headers["Authorization"] <- paste("Bearer", hf.token)
+    }
+
+    # Extract statements to embed
+    statements <- items$statement
+    item_ids <- items$ID
+
+    # Initialize list to store embeddings
+    all_embeddings <- list()
+
+    # Process each statement
+    for (i in seq_along(statements)) {
+      success <- FALSE
+      retries <- 0
+      max_retries <- 5
+
+      while (!success && retries < max_retries) {
+        payload <- list(
+          inputs = statements[i],
+          options = list(wait_for_model = TRUE)
+        )
+        payload_json <- json$dumps(payload)
+
+        response <- requests$post(api_url, data = payload_json, headers = headers)
+
+        if (response$status_code == 200L) {
+          # Parse response - it's just a numeric vector!
+          embedding_vector <- response$json()
+
+          # Convert to numeric if needed (should already be numeric)
+          if (!is.numeric(embedding_vector)) {
+            embedding_vector <- unlist(embedding_vector)
+          }
+
+          all_embeddings[[i]] <- embedding_vector
+          success <- TRUE
+
+        } else if (response$status_code == 503L) {
+          # Model is loading
+          retries <- retries + 1
+          if (!silently && retries == 1) {
+            cat("\nModel loading, please wait...")
+          }
+          Sys.sleep(10)
+        } else if (response$status_code == 429L) {
+          # Rate limited
+          retries <- retries + 1
+          Sys.sleep(5)
+        } else if (response$status_code == 400L) {
+          # This model might require sentence-similarity format
+          stop(paste0(
+            "Model '", embedding.model, "' may not support feature extraction. ",
+            "Error: ", response$text, "\n",
+            "Try using 'BAAI/bge-base-en-v1.5' or 'thenlper/gte-base' instead."
+          ))
+        } else {
+          stop(paste("API error:", response$status_code, "-", response$text))
+        }
+      }
+
+      if (!success) {
+        stop(paste("Failed to get embedding for item", i, "after", max_retries, "attempts"))
+      }
+    }
+
+    # Combine all embeddings into a matrix
+    # Each column is an item, each row is an embedding dimension
+    embedding_matrix <- do.call(cbind, all_embeddings)
+
+    # Set column names to item IDs
+    colnames(embedding_matrix) <- item_ids
+
+    # Update result
+    result$embeddings <- embedding_matrix
+    result$success <- TRUE
+
+    if(!silently){
+      cat(" Done.\n\n")
+    }
+
+  }, error = function(e) {
+    # Handle API errors gracefully
+    cat("Error occurred during embedding process:\n")
+    cat("Error message:", conditionMessage(e), "\n")
+    cat("Returning partial results with success = FALSE\n")
+    result$success <- FALSE
+    # result$embeddings remains NULL
+  })
+
+  return(result)
+}
+

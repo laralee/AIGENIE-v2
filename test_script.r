@@ -9,14 +9,16 @@ item_attributes <- list(
 
 )
 
-get_embeddings <- AIGENIE.v2::AIGENIE_v2(item.attributes = item_attributes,
-                       openai.API = openai_API,
-                       embeddings.only = TRUE)
+get_embeddings2 <- AIGENIE.v2::AIGENIE_v2(item.attributes = item_attributes,
+                       hf.token = "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",
+                       embedding.model = "BAAI/bge-large-en-v1.5",
+                       embeddings.only = TRUE,
+                       openai.API = openai_API)
 
 get_embeddings <- readRDS("embeddings_testing.RDS")
 
-embeds <- get_embeddings$embeddings
-items <- get_embeddings$items
+embeds <- get_embeddings2$embeddings
+items <- get_embeddings2$items
 
 
 openness_items <- items[items$type == "openness",]
@@ -29,7 +31,8 @@ test_one_item_type <- AIGENIE.v2:::run_pipeline_for_item_type( openness_embeds,
                                                                algorithm = "walktrap",
                                                                uni.method = "louvain",
                                                                keep.org = TRUE,
-                                                               silently = FALSE
+                                                               silently = FALSE,
+                                                               plot = TRUE
 
 )
 
@@ -63,7 +66,10 @@ test2 <- AIGENIE.v2::AIGENIE_v2(item.attributes = item_attributes,
 
 
 
+hf_embeddings <- AIGENIE.v2:::embed_items_huggingface(items = openness_items,
+  hf.token = "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", silently = FALSE, embedding.model = "BAAI/bge-large-en-v1.5")
 
 
 
-
+# Run this first
+test_data <- debug_hf_response("BAAI/bge-base-en-v1.5", hf.token = "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")

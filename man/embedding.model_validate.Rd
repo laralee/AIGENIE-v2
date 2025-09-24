@@ -2,19 +2,29 @@
 % Please edit documentation in R/user_validation_helpers.R
 \name{embedding.model_validate}
 \alias{embedding.model_validate}
-\title{Validate OpenAI Embedding Model}
+\title{Validate Embedding Model}
 \usage{
-embedding.model_validate(embedding.model)
+embedding.model_validate(embedding.model, provider = "auto")
 }
 \arguments{
 \item{embedding.model}{A string or \code{NULL}.}
+
+\item{provider}{Optional string indicating provider ("openai", "huggingface", or "auto" for auto-detection)}
 }
 \description{
-Validates that the embedding model is one of the supported OpenAI models.
-Allowed values are:
+Validates that the embedding model is one of the supported OpenAI or HuggingFace models.
+}
+\details{
+Allowed OpenAI models:
 \itemize{
 \item "text-embedding-3-small"
 \item "text-embedding-3-large"
 \item "text-embedding-ada-002"
+}
+
+Allowed HuggingFace models:
+\itemize{
+\item BAAI/bge series (bge-small-en-v1.5, bge-base-en-v1.5, bge-large-en-v1.5)
+\item thenlper/gte series (gte-small, gte-base, gte-large)
 }
 }

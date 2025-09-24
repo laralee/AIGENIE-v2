@@ -1,5 +1,5 @@
 #' @export
-AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
+AIGENIE_v2 <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required parameters
 
                        # optional parameters --
 
@@ -26,7 +26,8 @@ AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
 
 
   # Validate all params and reassign params
-  validation <- validate_user_input_AIGENIE(item.attributes, openai.API, main.prompts,
+  validation <- validate_user_input_AIGENIE(item.attributes, openai.API, hf.token,
+                                            main.prompts,
                                             groq.API, model, temperature,
                                             top.p, embedding.model, target.N,
                                             domain, scale.title, item.examples,
@@ -92,7 +93,12 @@ AIGENIE_v2 <- function(item.attributes, openai.API, # required parameters
 
 
   # Now, generate item embeddings
-  attempt_to_embed <- embed_items(embedding.model, openai.API, items, silently)
+  if(validation$provider == "openai"){
+    attempt_to_embed <- embed_items(embedding.model, openai.API, items, silently)
+  } else {
+    attempt_to_embed <- embed_items_huggingface(embedding.model, hf.token, items, silently)
+  }
+
   success <- attempt_to_embed$success
   embeddings <- attempt_to_embed$embeddings
 

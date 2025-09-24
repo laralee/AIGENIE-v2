@@ -7,6 +7,7 @@
 validate_user_input_AIGENIE(
   item.attributes,
   openai.API,
+  hf.token,
   main.prompts,
   groq.API,
   model,
@@ -38,6 +39,8 @@ validate_user_input_AIGENIE(
 \code{item.attributes_validate()}.}
 
 \item{openai.API}{A string. OpenAI API key.}
+
+\item{hf.token}{A string. HuggingFace API key.}
 
 \item{main.prompts}{A named list of custom prompts that the user specifies (if desired)}
 

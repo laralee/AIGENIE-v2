@@ -23,6 +23,11 @@ ensure_aigenie_python <- function() {
     reticulate::py_install("groq", pip = TRUE)
   }
 
+  if (!reticulate::py_module_available("requests")) {
+    message("Installing requests...")
+    reticulate::py_install("requests", pip = TRUE)
+  }
+
   # Initialize Python
   reticulate::py_available(initialize = TRUE)
 
@@ -30,6 +35,7 @@ ensure_aigenie_python <- function() {
   tryCatch({
     openai <- reticulate::import("openai")
     groq <- reticulate::import("groq")
+    requests <- reticulate::import("requests")
     message("AI-GENIE: Python environment ready!")
   }, error = function(e) {
     stop("Failed to set up Python packages. Please try restarting R and reinstalling.")
