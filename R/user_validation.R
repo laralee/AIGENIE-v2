@@ -147,3 +147,150 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
 
 }
 
+#' Validate All User Inputs for Local AI-GENIE
+#'
+#' @description
+#' Comprehensive validation of all inputs for local model execution.
+#' Reuses existing validators where applicable and adds local-specific validations.
+#'
+#' @param item.attributes Named list of attributes (same as API version)
+#' @param model_path Path to local GGUF model
+#' @param embedding.model Local embedding model identifier
+#' @param main.prompts Optional custom prompts
+#' @param temperature LLM temperature
+#' @param top.p LLM top-p sampling
+#' @param target.N Target number of items
+#' @param domain Assessment domain
+#' @param scale.title Scale name
+#' @param item.examples Example items
+#' @param audience Target audience
+#' @param item.type.definitions Type definitions
+#' @param response.options Response scale options
+#' @param prompt.notes Additional prompt instructions
+#' @param system.role System prompt
+#' @param EGA.model EGA model type
+#' @param EGA.algorithm EGA algorithm
+#' @param EGA.uni.method EGA unidimensionality method
+#' @param n_ctx Context window size
+#' @param n_gpu_layers GPU layers
+#' @param max_tokens Maximum generation tokens
+#' @param device Embedding computation device
+#' @param batch_size Embedding batch size
+#' @param pooling_strategy Embedding pooling strategy
+#' @param max_length Embedding max sequence length
+#' @param keep.org Keep original data
+#' @param items.only Generate items only
+#' @param embeddings.only Generate embeddings only
+#' @param adaptive Use adaptive generation
+#' @param plot Show plots
+#' @param silently Suppress messages
+#'
+#' @return A list of all validated parameters
+#'
+validate_user_input_local_AIGENIE <- function(
+    item.attributes, model_path, embedding.model,
+    main.prompts, temperature, top.p, target.N,
+    domain, scale.title, item.examples, audience,
+    item.type.definitions, response.options, prompt.notes,
+    system.role, EGA.model, EGA.algorithm, EGA.uni.method,
+    n_ctx, n_gpu_layers, max_tokens,
+    device, batch_size, pooling_strategy, max_length,
+    keep.org, items.only, embeddings.only, adaptive, plot, silently
+) {
+
+  # 1. Validate booleans
+  validate_booleans(items.only, adaptive, plot, keep.org, silently, embeddings.only)
+
+  # 2. Validate strings
+  validate_strings(audience, scale.title, system.role, domain,
+                   EGA.model, EGA.algorithm, EGA.uni.method)
+
+  # 3. Validate local-specific paths and models
+  model_path <- validate_model_path(model_path, silently)
+  embedding.model <- validate_local_embedding_model(embedding.model, silently)
+
+  # 4. Validate item.attributes
+  item.attributes <- items.attributes_validate(item.attributes)
+
+  # 5. Validate optional data structures
+  if (!is.null(item.examples)) {
+    item.examples <- item.examples_validate(item.examples, item.attributes)
+  }
+
+  if (!is.null(item.type.definitions)) {
+    item.type.definitions <- item.type.definitions_validate(item.type.definitions, item.attributes)
+  }
+
+  # 6. Validate EGA parameters
+  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
+  EGA.algorithm <- EGA_params$EGA.algorithm
+  EGA.uni.method <- EGA_params$EGA.uni.method
+  EGA.model <- EGA_params$EGA.model
+
+  # 7. Validate target.N
+  target.N <- target.N_validate(target.N, item.attributes, items.only, embeddings.only, silently)
+
+  # 8. Validate LLM parameters
+  top.p_validate(top.p)
+  temperature_validate(temperature)
+
+  # 9. Validate local LLM specific parameters
+  llm_params <- validate_local_llm_params(n_ctx, n_gpu_layers, max_tokens)
+
+  # 10. Validate local embedding parameters
+  embed_params <- validate_local_embedding_params(device, batch_size, pooling_strategy, max_length)
+
+  # 11. Validate prompt components
+  response.options_validate(response.options)
+  prompt.notes <- validate_prompt.notes(prompt.notes, item.attributes)
+
+  # 12. Check custom prompts mode
+  custom <- FALSE
+  if (!is.null(main.prompts)) {
+    main.prompts_validation <- main.prompts_validate(main.prompts, item.attributes, silently)
+    custom <- main.prompts_validation$custom
+    main.prompts <- main.prompts_validation$out
+  }
+
+  # Return all validated parameters
+  return(list(
+    # Core parameters
+    item.attributes = item.attributes,
+    model_path = model_path,
+    embedding.model = embedding.model,
+
+    # LLM parameters
+    temperature = temperature,
+    top.p = top.p,
+    n_ctx = llm_params$n_ctx,
+    n_gpu_layers = llm_params$n_gpu_layers,
+    max_tokens = llm_params$max_tokens,
+
+    # Embedding parameters
+    device = embed_params$device,
+    batch_size = embed_params$batch_size,
+    pooling_strategy = embed_params$pooling_strategy,
+    max_length = embed_params$max_length,
+
+    # EGA parameters
+    EGA.model = EGA.model,
+    EGA.uni.method = EGA.uni.method,
+    EGA.algorithm = EGA.algorithm,
+
+    # Content parameters
+    target.N = target.N,
+    item.type.definitions = item.type.definitions,
+    item.examples = item.examples,
+    prompt.notes = prompt.notes,
+    main.prompts = main.prompts,
+    custom = custom,
+
+    # Flags
+    items.only = items.only,
+    embeddings.only = embeddings.only,
+    keep.org = keep.org,
+    adaptive = adaptive,
+    plot = plot,
+    silently = silently
+  ))
+}

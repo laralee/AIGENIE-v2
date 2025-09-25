@@ -69,7 +69,48 @@ test2 <- AIGENIE.v2::AIGENIE_v2(item.attributes = item_attributes,
 hf_embeddings <- AIGENIE.v2:::embed_items_huggingface(items = openness_items,
   hf.token = "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", silently = FALSE, embedding.model = "BAAI/bge-large-en-v1.5")
 
+'bert-base-uncased'
 
 
-# Run this first
-test_data <- debug_hf_response("BAAI/bge-base-en-v1.5", hf.token = "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")
+local_embeds <- AIGENIE.v2:::embed_items_local(embedding.model = 'bert-base-uncased',
+                                               items = openness_items)
+
+
+item.type.definitions <- NULL
+domain <- "personality"
+scale.title <- "Partial Big Five Assessment"
+audience <- "adults in the US"
+prompt.notes <- NULL
+item.examples <- NULL
+response.options <- NULL
+system.role <- NULL
+
+system.role <- AIGENIE.v2:::create_system.role(domain, scale.title, audience,
+                                               response.options, system.role)
+
+main.prompts <- AIGENIE.v2:::create_main.prompts(item.attributes = item_attributes, item.type.definitions,
+                                                 domain, scale.title, prompt.notes,
+                                                 audience, item.examples)
+
+
+
+
+model_path <- "/Users/llr7cb/Downloads/phi-3.5-mini-instruct-q4_k_m.gguf"
+
+
+temperature <- 1
+top.p <- 1
+
+adaptive <- FALSE
+silently <- FALSE
+target.N <- list(openness = 60,
+                 agreeableness = 60)
+
+local_items <- AIGENIE.v2:::local_AIGENIE(item.attributes = item_attributes,
+                                         model_path = model_path,
+                                         adaptive = FALSE,
+                                         domain = "personality",
+                                         scale.title = "Shortened Big Five Assessment")
+
+
+
