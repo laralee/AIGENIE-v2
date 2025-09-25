@@ -17,26 +17,15 @@ get_embeddings2 <- AIGENIE.v2::AIGENIE_v2(item.attributes = item_attributes,
 
 get_embeddings <- readRDS("embeddings_testing.RDS")
 
-embeds <- get_embeddings2$embeddings
-items <- get_embeddings2$items
+embeds <- get_embeddings$embeddings
+items <- get_embeddings$items
 
 
 openness_items <- items[items$type == "openness",]
 openness_embeds <- embeds[,colnames(embeds) %in% openness_items$ID]
 
-test_one_item_type <- AIGENIE.v2:::run_pipeline_for_item_type( openness_embeds,
-                                                               openness_items,
-                                                               "openness",
-                                                               model = NULL,
-                                                               algorithm = "walktrap",
-                                                               uni.method = "louvain",
-                                                               keep.org = TRUE,
-                                                               silently = FALSE,
-                                                               plot = TRUE
-
-)
-
-
+test_one_item_type <- AIGENIE.v2::GENIE(items = items,
+                                        embedding.matrix = embeds)
 
 
 test_item_reduction <- AIGENIE.v2:::run_item_reduction_pipeline(embeds,

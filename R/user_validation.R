@@ -294,3 +294,265 @@ validate_user_input_local_AIGENIE <- function(
     silently = silently
   ))
 }
+
+
+#' Validate All User Inputs for GENIE
+#'
+#' @param items A data frame with columns: statement, attribute, type, ID
+#' @param embedding.matrix Optional numeric matrix/data frame with items as columns
+#' @param openai.API OpenAI API key (string or NULL)
+#' @param hf.token HuggingFace token (string or NULL)
+#' @param groq.API Groq API key (string or NULL)
+#' @param model Language model identifier (string)
+#' @param temperature LLM temperature parameter (numeric, 0-2)
+#' @param top.p LLM top-p parameter (numeric, 0-1)
+#' @param embedding.model Embedding model identifier (string)
+#' @param EGA.model EGA network model (string or NULL)
+#' @param EGA.algorithm EGA algorithm (string)
+#' @param EGA.uni.method EGA unidimensionality method (string)
+#' @param embeddings.only Whether to stop after embeddings (boolean)
+#' @param plot Whether to show plots (boolean)
+#' @param silently Whether to suppress messages (boolean)
+#'
+#' @return A named list containing all validated and normalized parameters
+#'
+validate_user_input_GENIE <- function(
+    items,
+    embedding.matrix,
+    openai.API,
+    hf.token,
+    groq.API,
+    model,
+    temperature,
+    top.p,
+    embedding.model,
+    EGA.model,
+    EGA.algorithm,
+    EGA.uni.method,
+    embeddings.only,
+    plot,
+    silently
+) {
+
+  # 1. Validate boolean parameters
+  validate_booleans(embeddings.only, plot, silently)
+
+  # 2. Validate string parameters (allowing NULL where appropriate)
+  validate_strings(openai.API, groq.API, hf.token, model,
+                   EGA.model, EGA.algorithm, EGA.uni.method, embedding.model)
+
+  # 3. Validate and clean the items data frame (GENIE-specific)
+  items <- items_validate_GENIE(items)
+
+  # 4. Build item.attributes from the validated items (GENIE-specific)
+  item.attributes <- build_item_attributes_from_items(items)
+
+  # 5. Validate embedding matrix if provided (GENIE-specific)
+  embedding.matrix <- embedding_matrix_validate_GENIE(
+    embedding.matrix,
+    items,
+    silently
+  )
+
+  # 6. Validate model string and resolve to canonical form
+  model <- resolve_model_name(model, silently)
+
+  # 7. Validate embedding model and detect provider
+  provider <- embedding.model_validate(embedding.model)
+
+  # 8. Validate EGA parameters
+  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
+  EGA.algorithm <- EGA_params$EGA.algorithm
+  EGA.uni.method <- EGA_params$EGA.uni.method
+  EGA.model <- EGA_params$EGA_model
+
+  # 9. Validate LLM parameters
+  temperature_validate(temperature)
+  top.p_validate(top.p)
+
+  # 10. Check API key availability based on what will be needed
+  if (is.null(embedding.matrix)) {
+    # Will need to generate embeddings
+    if (provider == "openai" && is.null(openai.API)) {
+      stop(
+        paste0(
+          "GENIE requires an OpenAI API key to generate embeddings with model '",
+          embedding.model, "'.\n",
+          "Please provide openai.API or use a HuggingFace model instead."
+        ),
+        call. = FALSE
+      )
+    }
+
+    if (provider == "huggingface" && is.null(hf.token) && !silently) {
+      warning(
+        paste0(
+          "No HuggingFace token provided. This may result in lower rate limits.\n",
+          "Consider providing hf.token for better performance."
+        ),
+        call. = FALSE,
+        immediate. = TRUE
+      )
+    }
+  }
+
+  # 11. Validate that we have sufficient data for meaningful analysis
+  if (!embeddings.only) {
+    # Count items per type-attribute combination
+    type_attr_counts <- table(items$type, items$attribute)
+    min_count <- min(type_attr_counts[type_attr_counts > 0])
+
+    if (min_count < 10) {
+      warning(
+        paste0(
+          "GENIE detected type-attribute combinations with very few items (minimum: ",
+          min_count, ").\n",
+          "Network analysis may be unreliable with fewer than 10 items per combination."
+        ),
+        call. = FALSE,
+        immediate. = TRUE
+      )
+    }
+  }
+
+  # 12. Return all validated parameters
+  return(list(
+    # GENIE-specific validated parameters
+    items = items,
+    embedding.matrix = embedding.matrix,
+    item.attributes = item.attributes,
+
+    # Shared parameters (validated)
+    model = model,
+    temperature = temperature,
+    top.p = top.p,
+    embedding.model = embedding.model,
+    provider = provider,
+    EGA.model = EGA.model,
+    EGA.algorithm = EGA.algorithm,
+    EGA.uni.method = EGA.uni.method,
+
+    # API keys (as-is, may be NULL)
+    openai.API = openai.API,
+    hf.token = hf.token,
+    groq.API = groq.API,
+
+    # Flags
+    embeddings.only = embeddings.only,
+    plot = plot,
+    silently = silently
+  ))
+}
+
+
+
+#' Validate All User Inputs for Local GENIE
+#'
+#' @param items Data frame with columns: statement, attribute, type, ID
+#' @param embedding.model Local embedding model identifier or path
+#' @param device Device for embeddings ("auto", "cpu", "cuda", "mps")
+#' @param batch.size Batch size for embedding generation
+#' @param pooling.strategy Pooling strategy ("mean", "cls", "max")
+#' @param max.length Maximum sequence length for embeddings
+#' @param EGA.model EGA network model ("glasso", "TMFG", or NULL)
+#' @param EGA.algorithm EGA algorithm ("walktrap", "leiden", "louvain")
+#' @param EGA.uni.method EGA unidimensionality method ("louvain", "expand", "LE")
+#' @param embeddings.only Whether to stop after embeddings
+#' @param plot Whether to show plots
+#' @param silently Whether to suppress messages
+#'
+#' @return A list of all validated parameters ready for local GENIE execution
+#'
+validate_user_input_local_GENIE <- function(
+    items,
+    embedding.model,
+    device,
+    batch.size,
+    pooling.strategy,
+    max.length,
+    EGA.model,
+    EGA.algorithm,
+    EGA.uni.method,
+    embeddings.only,
+    plot,
+    silently
+) {
+
+  # 1. Validate boolean parameters
+  validate_booleans(embeddings.only, plot, silently)
+
+  # 2. Validate string parameters
+  validate_strings(embedding.model, EGA.model, EGA.algorithm, EGA.uni.method)
+
+  # 3. Validate and clean the items data frame (GENIE-specific)
+  items <- items_validate_GENIE(items)
+
+  # 4. Build item.attributes from the validated items (GENIE-specific)
+  item.attributes <- build_item_attributes_from_items(items)
+
+  # 5. Validate local embedding model
+  embedding.model <- validate_local_embedding_model(embedding.model, silently)
+
+  # 6. Validate local embedding parameters
+  embed_params <- validate_local_embedding_params(
+    device,
+    batch.size,
+    pooling.strategy,
+    max.length
+  )
+
+  # 7. Validate EGA parameters
+  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
+  EGA.algorithm <- EGA_params$EGA.algorithm
+  EGA.uni.method <- EGA_params$EGA.uni.method
+  EGA.model <- EGA_params$EGA_model
+
+  # 8. Validate that we have sufficient data for meaningful analysis
+  if (!embeddings.only) {
+    # Count items per type-attribute combination
+    type_attr_counts <- table(items$type, items$attribute)
+    min_count <- min(type_attr_counts[type_attr_counts > 0])
+
+    if (min_count < 10) {
+      warning(
+        paste0(
+          "Local GENIE detected type-attribute combinations with very few items (minimum: ",
+          min_count, ").\n",
+          "Network analysis may be unreliable with fewer than 10 items per combination."
+        ),
+        call. = FALSE,
+        immediate. = TRUE
+      )
+    }
+  }
+
+  # 9. Inform user about local embedding setup
+  if (!silently) {
+    message("Local GENIE will generate embeddings using: ", embedding.model)
+    message("Embedding generation device: ", embed_params$device)
+  }
+
+  # 10. Return all validated parameters
+  return(list(
+    # GENIE-specific validated parameters
+    items = items,
+    item.attributes = item.attributes,
+
+    # Local embedding parameters
+    embedding.model = embedding.model,
+    device = embed_params$device,
+    batch.size = embed_params$batch.size,
+    pooling.strategy = embed_params$pooling.strategy,
+    max.length = embed_params$max.length,
+
+    # EGA parameters
+    EGA.model = EGA.model,
+    EGA.algorithm = EGA.algorithm,
+    EGA.uni.method = EGA.uni.method,
+
+    # Control flags
+    embeddings.only = embeddings.only,
+    plot = plot,
+    silently = silently
+  ))
+}
