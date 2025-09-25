@@ -361,17 +361,6 @@ embedding_matrix_validate_GENIE <- function(embedding.matrix, items, silently = 
     )
   }
 
-  if (n_dims > n_items * 10) {
-    warning(
-      paste0(
-        "embedding.matrix has unusually high dimensionality relative to number of items.\n",
-        "Dimensions: ", n_dims, ", Items: ", n_items, "\n",
-        "This may affect downstream analyses."
-      ),
-      call. = FALSE,
-      immediate. = TRUE
-    )
-  }
 
   # ---- 11. Check for zero variance columns ----
   col_vars <- apply(embedding.matrix, 2, var)

@@ -168,18 +168,16 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 #' @description
 #' Local version of AI-GENIE that uses locally installed language models and
 #' embeddings for complete privacy and offline operation. Generates items,
-#' creates embeddings, and performs network psychometric validation entirely
+#' creates embeddings, and performs network psychometric reduction entirely
 #' on the user's machine.
 #'
 #' @param item.attributes Named list of item types and their attributes (required)
 #' @param model.path Path to local GGUF model file (required)
 #' @param embedding.model Name or path to local embedding model (default: "bert-base-uncased")
-#'
 #' @param main.prompts Custom prompts for item generation (optional)
 #' @param temperature LLM temperature for randomness (0-2, default: 1)
-#' @param top.p Top-p sampling parameter (0-1, default: 1)
+#' @param top.p Top-p nucleus sampling parameter (0-1, default: 1)
 #' @param target.N Number of items to generate per type (default: 60)
-#'
 #' @param domain Content domain (e.g., "psychological")
 #' @param scale.title Name of the scale
 #' @param item.examples Data frame of example items
@@ -188,11 +186,9 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 #' @param response.options Response scale labels
 #' @param prompt.notes Additional instructions for generation
 #' @param system.role Custom system prompt
-#'
 #' @param EGA.model Network model ("glasso", "TMFG", or NULL for auto)
 #' @param EGA.algorithm Community detection algorithm (default: "walktrap")
 #' @param EGA.uni.method Unidimensionality method (default: "louvain")
-#'
 #' @param n.ctx Context window size (default: 4096)
 #' @param n.gpu.layers GPU layers to use (-1 for all, default: -1)
 #' @param max.tokens Maximum tokens per generation (default: 1024)
@@ -200,7 +196,6 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 #' @param batch.size Batch size for embeddings (default: 32)
 #' @param pooling.strategy Pooling for embeddings ("mean", "cls", "max")
 #' @param max.length Max sequence length for embeddings (default: 512)
-#'
 #' @param keep.org Keep original items and embeddings (default: FALSE)
 #' @param items.only Generate items only, skip reduction (default: FALSE)
 #' @param embeddings.only Generate embeddings only (default: FALSE)

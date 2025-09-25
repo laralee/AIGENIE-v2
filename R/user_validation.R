@@ -81,6 +81,9 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
                    system.role, domain, model, EGA.model, EGA.algorithm,
                    embedding.model, EGA.uni.method)
 
+  # Check if the user forgot to add their API keys if using example code
+  check_for_default_APIs(hf.token, groq.API, openai.API)
+
   # Validate the `item.attributes` object
   item.attributes <- items.attributes_validate(item.attributes)
 
@@ -340,6 +343,9 @@ validate_user_input_GENIE <- function(
   # 2. Validate string parameters (allowing NULL where appropriate)
   validate_strings(openai.API, groq.API, hf.token, model,
                    EGA.model, EGA.algorithm, EGA.uni.method, embedding.model)
+
+  # Check if the user forgot to add their API keys if using example code
+  check_for_default_APIs(hf.token, groq.API, openai.API)
 
   # 3. Validate and clean the items data frame (GENIE-specific)
   items <- items_validate_GENIE(items)

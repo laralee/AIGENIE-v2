@@ -49,7 +49,7 @@ local_AIGENIE(
 
 \item{temperature}{LLM temperature for randomness (0-2, default: 1)}
 
-\item{top.p}{Top-p sampling parameter (0-1, default: 1)}
+\item{top.p}{Top-p nucleus sampling parameter (0-1, default: 1)}
 
 \item{target.N}{Number of items to generate per type (default: 60)}
 
@@ -112,6 +112,6 @@ Depending on flags:
 \description{
 Local version of AI-GENIE that uses locally installed language models and
 embeddings for complete privacy and offline operation. Generates items,
-creates embeddings, and performs network psychometric validation entirely
+creates embeddings, and performs network psychometric reduction entirely
 on the user's machine.
 }

@@ -1084,7 +1084,31 @@ main.prompts_validate <- function(main.prompts, items.attributes, silently) {
 }
 
 
+#' Check for users who pasted the example code but didn't add an API key
+#'
+#' @param hf.token The hugging face token provided
+#' @param groq.API The Groq API key provided
+#' @param openai.API The OpenAI API key provided
+#'
+check_for_default_APIs <- function(hf.token, groq.API, openai.API){
+  if(groq.API == "INSERT YOUR KEY HERE" || openai.API == "INSERT YOUR KEY HERE" || hf.token == "INSERT YOUR KEY HERE"){
+    message("Before running any AIGENIE examples, you need to add your API key. Please create an API key online.")
 
+    if(groq.API == "INSERT YOUR KEY HERE"){
+      message("\n Groq API keys are free to create and use for moderate useage.")
+    }
+
+    if(hf.token == "INSERT YOUR KEY HERE"){
+      message("\n Huggingface Tokens are free to create and use for moderate useage.")
+    }
+
+    if(openai.API == "INSERT YOUR KEY HERE"){
+      message("\n OpenAI keys are extremely inexpensive, but do require a valid payment method to use. To avoid adding a payment method, use an open source model via Groq and an embedding model via Hugging Face.")
+    }
+
+    stop()
+  }
+}
 
 
 
