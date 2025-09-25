@@ -172,7 +172,7 @@ AIGENIE_v2 <- function(item.attributes, openai.API=NULL, hf.token=NULL, # requir
 #' on the user's machine.
 #'
 #' @param item.attributes Named list of item types and their attributes (required)
-#' @param model_path Path to local GGUF model file (required)
+#' @param model.path Path to local GGUF model file (required)
 #' @param embedding.model Name or path to local embedding model (default: "bert-base-uncased")
 #'
 #' @param main.prompts Custom prompts for item generation (optional)
@@ -193,13 +193,13 @@ AIGENIE_v2 <- function(item.attributes, openai.API=NULL, hf.token=NULL, # requir
 #' @param EGA.algorithm Community detection algorithm (default: "walktrap")
 #' @param EGA.uni.method Unidimensionality method (default: "louvain")
 #'
-#' @param n_ctx Context window size (default: 4096)
-#' @param n_gpu_layers GPU layers to use (-1 for all, default: -1)
-#' @param max_tokens Maximum tokens per generation (default: 1024)
+#' @param n.ctx Context window size (default: 4096)
+#' @param n.gpu.layers GPU layers to use (-1 for all, default: -1)
+#' @param max.tokens Maximum tokens per generation (default: 1024)
 #' @param device Device for embeddings ("auto", "cpu", "cuda", "mps")
-#' @param batch_size Batch size for embeddings (default: 32)
-#' @param pooling_strategy Pooling for embeddings ("mean", "cls", "max")
-#' @param max_length Max sequence length for embeddings (default: 512)
+#' @param batch.size Batch size for embeddings (default: 32)
+#' @param pooling.strategy Pooling for embeddings ("mean", "cls", "max")
+#' @param max.length Max sequence length for embeddings (default: 512)
 #'
 #' @param keep.org Keep original items and embeddings (default: FALSE)
 #' @param items.only Generate items only, skip reduction (default: FALSE)
@@ -217,7 +217,7 @@ AIGENIE_v2 <- function(item.attributes, openai.API=NULL, hf.token=NULL, # requir
 local_AIGENIE <- function(
     # Required parameters
   item.attributes,
-  model_path,
+  model.path,
   embedding.model = "bert-base-uncased",
 
   # Optional content parameters
@@ -240,13 +240,13 @@ local_AIGENIE <- function(
   EGA.uni.method = "louvain",
 
   # Local model parameters
-  n_ctx = 4096,
-  n_gpu_layers = -1,
-  max_tokens = 1024,
+  n.ctx = 4096,
+  n.gpu.layers = -1,
+  max.tokens = 1024,
   device = "auto",
-  batch_size = 32,
-  pooling_strategy = "mean",
-  max_length = 512,
+  batch.size = 32,
+  pooling.strategy = "mean",
+  max.length = 512L,
 
   # Flags
   keep.org = FALSE,
@@ -259,13 +259,13 @@ local_AIGENIE <- function(
 
   # Step 1: Validate all inputs
   validation <- validate_user_input_local_AIGENIE(
-    item.attributes, model_path, embedding.model,
+    item.attributes, model.path, embedding.model,
     main.prompts, temperature, top.p, target.N,
     domain, scale.title, item.examples, audience,
     item.type.definitions, response.options, prompt.notes,
     system.role, EGA.model, EGA.algorithm, EGA.uni.method,
-    n_ctx, n_gpu_layers, max_tokens,
-    device, batch_size, pooling_strategy, max_length,
+    n.ctx, n.gpu.layers, max.tokens,
+    device, batch.size, pooling.strategy, max.length,
     keep.org, items.only, embeddings.only, adaptive, plot, silently
   )
 
@@ -280,18 +280,18 @@ local_AIGENIE <- function(
   prompt.notes <- validation$prompt.notes
   main.prompts <- validation$main.prompts
   custom <- validation$custom
-  model_path <- validation$model_path
+  model.path <- validation$model.path
   embedding.model <- validation$embedding.model
-  n_ctx <- validation$n_ctx
-  n_gpu_layers <- validation$n_gpu_layers
-  max_tokens <- validation$max_tokens
+  n.ctx <- validation$n.ctx
+  n.gpu.layers <- validation$n.gpu.layers
+  max.tokens <- validation$max.tokens
   device <- validation$device
-  batch_size <- validation$batch_size
-  pooling_strategy <- validation$pooling_strategy
-  max_length <- validation$max_length
+  batch.size <- validation$batch.size
+  pooling.strategy <- validation$pooling.strategy
+  max.length <- validation$max.length
 
   # Step 2: Check local setup
-  setup_ok <- check_local_llm_setup(model_path, silently)
+  setup_ok <- check_local_llm_setup(model.path, silently)
   if (!setup_ok) {
     stop("Local setup incomplete. Please run check_local_llm_setup() for details.")
   }
@@ -318,9 +318,9 @@ local_AIGENIE <- function(
   }
 
   items_gen <- generate_items_via_local_llm(
-    main.prompts, system.role, model_path,
+    main.prompts, system.role, model.path,
     temperature, top.p, adaptive, silently,
-    target.N, n_ctx, n_gpu_layers, max_tokens
+    target.N, n.ctx, n.gpu.layers, max.tokens
   )
 
   items <- items_gen$items
@@ -342,10 +342,10 @@ local_AIGENIE <- function(
   attempt_to_embed <- embed_items_local(
     embedding.model = embedding.model,
     items = items,
-    pooling_strategy = pooling_strategy,
+    pooling.strategy = pooling.strategy,
     device = device,
-    batch_size = batch_size,
-    max_length = max_length,
+    batch.size = batch.size,
+    max.length = max.length,
     silently = silently
   )
 

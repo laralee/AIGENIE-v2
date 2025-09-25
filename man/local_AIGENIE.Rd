@@ -6,7 +6,7 @@
 \usage{
 local_AIGENIE(
   item.attributes,
-  model_path,
+  model.path,
   embedding.model = "bert-base-uncased",
   main.prompts = NULL,
   temperature = 1,
@@ -23,13 +23,13 @@ local_AIGENIE(
   EGA.model = NULL,
   EGA.algorithm = "walktrap",
   EGA.uni.method = "louvain",
-  n_ctx = 4096,
-  n_gpu_layers = -1,
-  max_tokens = 1024,
+  n.ctx = 4096,
+  n.gpu.layers = -1,
+  max.tokens = 1024,
   device = "auto",
-  batch_size = 32,
-  pooling_strategy = "mean",
-  max_length = 512,
+  batch.size = 32,
+  pooling.strategy = "mean",
+  max.length = 512L,
   keep.org = FALSE,
   items.only = FALSE,
   embeddings.only = FALSE,
@@ -41,7 +41,7 @@ local_AIGENIE(
 \arguments{
 \item{item.attributes}{Named list of item types and their attributes (required)}
 
-\item{model_path}{Path to local GGUF model file (required)}
+\item{model.path}{Path to local GGUF model file (required)}
 
 \item{embedding.model}{Name or path to local embedding model (default: "bert-base-uncased")}
 
@@ -75,19 +75,19 @@ local_AIGENIE(
 
 \item{EGA.uni.method}{Unidimensionality method (default: "louvain")}
 
-\item{n_ctx}{Context window size (default: 4096)}
+\item{n.ctx}{Context window size (default: 4096)}
 
-\item{n_gpu_layers}{GPU layers to use (-1 for all, default: -1)}
+\item{n.gpu.layers}{GPU layers to use (-1 for all, default: -1)}
 
-\item{max_tokens}{Maximum tokens per generation (default: 1024)}
+\item{max.tokens}{Maximum tokens per generation (default: 1024)}
 
 \item{device}{Device for embeddings ("auto", "cpu", "cuda", "mps")}
 
-\item{batch_size}{Batch size for embeddings (default: 32)}
+\item{batch.size}{Batch size for embeddings (default: 32)}
 
-\item{pooling_strategy}{Pooling for embeddings ("mean", "cls", "max")}
+\item{pooling.strategy}{Pooling for embeddings ("mean", "cls", "max")}
 
-\item{max_length}{Max sequence length for embeddings (default: 512)}
+\item{max.length}{Max sequence length for embeddings (default: 512)}
 
 \item{keep.org}{Keep original items and embeddings (default: FALSE)}
 

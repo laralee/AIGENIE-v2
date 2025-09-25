@@ -154,7 +154,7 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
 #' Reuses existing validators where applicable and adds local-specific validations.
 #'
 #' @param item.attributes Named list of attributes (same as API version)
-#' @param model_path Path to local GGUF model
+#' @param model.path Path to local GGUF model
 #' @param embedding.model Local embedding model identifier
 #' @param main.prompts Optional custom prompts
 #' @param temperature LLM temperature
@@ -171,13 +171,13 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
 #' @param EGA.model EGA model type
 #' @param EGA.algorithm EGA algorithm
 #' @param EGA.uni.method EGA unidimensionality method
-#' @param n_ctx Context window size
-#' @param n_gpu_layers GPU layers
-#' @param max_tokens Maximum generation tokens
+#' @param n.ctx Context window size
+#' @param n.gpu.layers GPU layers
+#' @param max.tokens Maximum generation tokens
 #' @param device Embedding computation device
-#' @param batch_size Embedding batch size
-#' @param pooling_strategy Embedding pooling strategy
-#' @param max_length Embedding max sequence length
+#' @param batch.size Embedding batch size
+#' @param pooling.strategy Embedding pooling strategy
+#' @param max.length Embedding max sequence length
 #' @param keep.org Keep original data
 #' @param items.only Generate items only
 #' @param embeddings.only Generate embeddings only
@@ -188,13 +188,13 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
 #' @return A list of all validated parameters
 #'
 validate_user_input_local_AIGENIE <- function(
-    item.attributes, model_path, embedding.model,
+    item.attributes, model.path, embedding.model,
     main.prompts, temperature, top.p, target.N,
     domain, scale.title, item.examples, audience,
     item.type.definitions, response.options, prompt.notes,
     system.role, EGA.model, EGA.algorithm, EGA.uni.method,
-    n_ctx, n_gpu_layers, max_tokens,
-    device, batch_size, pooling_strategy, max_length,
+    n.ctx, n.gpu.layers, max.tokens,
+    device, batch.size, pooling.strategy, max.length,
     keep.org, items.only, embeddings.only, adaptive, plot, silently
 ) {
 
@@ -206,7 +206,7 @@ validate_user_input_local_AIGENIE <- function(
                    EGA.model, EGA.algorithm, EGA.uni.method)
 
   # 3. Validate local-specific paths and models
-  model_path <- validate_model_path(model_path, silently)
+  model.path <- validate_model.path(model.path, silently)
   embedding.model <- validate_local_embedding_model(embedding.model, silently)
 
   # 4. Validate item.attributes
@@ -235,10 +235,10 @@ validate_user_input_local_AIGENIE <- function(
   temperature_validate(temperature)
 
   # 9. Validate local LLM specific parameters
-  llm_params <- validate_local_llm_params(n_ctx, n_gpu_layers, max_tokens)
+  llm_params <- validate_local_llm_params(n.ctx, n.gpu.layers, max.tokens)
 
   # 10. Validate local embedding parameters
-  embed_params <- validate_local_embedding_params(device, batch_size, pooling_strategy, max_length)
+  embed_params <- validate_local_embedding_params(device, batch.size, pooling.strategy, max.length)
 
   # 11. Validate prompt components
   response.options_validate(response.options)
@@ -256,21 +256,21 @@ validate_user_input_local_AIGENIE <- function(
   return(list(
     # Core parameters
     item.attributes = item.attributes,
-    model_path = model_path,
+    model.path = model.path,
     embedding.model = embedding.model,
 
     # LLM parameters
     temperature = temperature,
     top.p = top.p,
-    n_ctx = llm_params$n_ctx,
-    n_gpu_layers = llm_params$n_gpu_layers,
-    max_tokens = llm_params$max_tokens,
+    n.ctx = llm_params$n.ctx,
+    n.gpu.layers = llm_params$n.gpu.layers,
+    max.tokens = llm_params$max.tokens,
 
     # Embedding parameters
     device = embed_params$device,
-    batch_size = embed_params$batch_size,
-    pooling_strategy = embed_params$pooling_strategy,
-    max_length = embed_params$max_length,
+    batch.size = embed_params$batch.size,
+    pooling.strategy = embed_params$pooling.strategy,
+    max.length = embed_params$max.length,
 
     # EGA parameters
     EGA.model = EGA.model,

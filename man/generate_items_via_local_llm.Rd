@@ -7,15 +7,15 @@
 generate_items_via_local_llm(
   main.prompts,
   system.role,
-  model_path,
+  model.path,
   temperature,
   top.p,
   adaptive,
   silently,
   target.N,
-  n_ctx = 4096,
-  n_gpu_layers = -1,
-  max_tokens = 1024
+  n.ctx = 4096,
+  n.gpu.layers = -1,
+  max.tokens = 1024
 )
 }
 \arguments{
@@ -23,7 +23,7 @@ generate_items_via_local_llm(
 
 \item{system.role}{Character string defining the system role}
 
-\item{model_path}{Path to local GGUF model file}
+\item{model.path}{Path to local GGUF model file}
 
 \item{temperature}{Numeric between 0 and 2 for randomness}
 
@@ -35,11 +35,11 @@ generate_items_via_local_llm(
 
 \item{target.N}{Named list of target items per type}
 
-\item{n_ctx}{Integer. Context window size (default 4096)}
+\item{n.ctx}{Integer. Context window size (default 4096)}
 
-\item{n_gpu_layers}{Integer. Number of layers to offload to GPU (-1 for all)}
+\item{n.gpu.layers}{Integer. Number of layers to offload to GPU (-1 for all)}
 
-\item{max_tokens}{Integer. Maximum tokens per generation (default 1024)}
+\item{max.tokens}{Integer. Maximum tokens per generation (default 1024)}
 }
 \value{
 A list containing items dataframe and success flag

@@ -19,14 +19,14 @@
 #'     \item \code{ID}: Unique identifiers for each statement
 #'   }
 #'
-#' @param pooling_strategy Character string for pooling token embeddings:
+#' @param pooling.strategy Character string for pooling token embeddings:
 #'   - "mean": Average all token embeddings (default)
 #'   - "cls": Use only the CLS token embedding
 #'   - "max": Max pooling across tokens
 #'
 #' @param device Character string specifying computation device
-#' @param batch_size Integer. Number of items to process simultaneously
-#' @param max_length Integer. Maximum sequence length (default 512)
+#' @param batch.size Integer. Number of items to process simultaneously
+#' @param max.length Integer. Maximum sequence length (default 512)
 #' @param silently Logical. If FALSE, displays progress messages
 #'
 #' @return A list with embeddings matrix and success flag
@@ -52,14 +52,14 @@
 #'     \item \code{ID}: Unique identifiers for each statement
 #'   }
 #'
-#' @param pooling_strategy Character string for pooling token embeddings:
+#' @param pooling.strategy Character string for pooling token embeddings:
 #'   - "mean": Average all token embeddings (default)
 #'   - "cls": Use only the CLS token embedding
 #'   - "max": Max pooling across tokens
 #'
 #' @param device Character string specifying computation device
-#' @param batch_size Integer. Number of items to process simultaneously
-#' @param max_length Integer. Maximum sequence length (default 512)
+#' @param batch.size Integer. Number of items to process simultaneously
+#' @param max.length Integer. Maximum sequence length (default 512)
 #' @param silently Logical. If FALSE, displays progress messages
 #'
 #' @return A list with embeddings matrix and success flag
@@ -85,24 +85,24 @@
 #'     \item \code{ID}: Unique identifiers for each statement
 #'   }
 #'
-#' @param pooling_strategy Character string for pooling token embeddings:
+#' @param pooling.strategy Character string for pooling token embeddings:
 #'   - "mean": Average all token embeddings (default)
 #'   - "cls": Use only the CLS token embedding
 #'   - "max": Max pooling across tokens
 #'
 #' @param device Character string specifying computation device
-#' @param batch_size Integer. Number of items to process simultaneously
-#' @param max_length Integer. Maximum sequence length (default 512)
+#' @param batch.size Integer. Number of items to process simultaneously
+#' @param max.length Integer. Maximum sequence length (default 512)
 #' @param silently Logical. If FALSE, displays progress messages
 #'
 #' @return A list with embeddings matrix and success flag
 #'
 embed_items_local <- function(embedding.model,
                               items,
-                              pooling_strategy = "mean",
+                              pooling.strategy = "mean",
                               device = "auto",
-                              batch_size = 32,
-                              max_length = 512,
+                              batch.size = 32,
+                              max.length = 512,
                               silently = FALSE) {
 
   # Set tokenizers parallelism to avoid forking warnings
@@ -161,11 +161,11 @@ embed_items_local <- function(embedding.model,
 
     # Generate embeddings in batches
     all_embeddings <- list()
-    n_batches <- ceiling(n_items / batch_size)
+    n_batches <- ceiling(n_items / batch.size)
 
     for (i in seq_len(n_batches)) {
-      start_idx <- (i - 1) * batch_size + 1
-      end_idx <- min(i * batch_size, n_items)
+      start_idx <- (i - 1) * batch.size + 1
+      end_idx <- min(i * batch.size, n_items)
       batch_statements <- statements[start_idx:end_idx]
 
       # Tokenize batch
@@ -173,7 +173,7 @@ embed_items_local <- function(embedding.model,
         batch_statements,
         padding = TRUE,
         truncation = TRUE,
-        max_length = as.integer(max_length),
+        max_length = as.integer(max.length),
         return_tensors = "pt"
       )
 
@@ -196,7 +196,7 @@ embed_items_local <- function(embedding.model,
       hidden_states <- outputs$last_hidden_state
 
       # Apply pooling strategy
-      if (pooling_strategy == "mean") {
+      if (pooling.strategy == "mean") {
         # Mean pooling - average all token embeddings
         # Expand mask to match hidden states shape
         mask_expanded <- attention_mask$unsqueeze(-1L)$expand_as(hidden_states)
@@ -210,12 +210,12 @@ embed_items_local <- function(embedding.model,
         # Average
         embeddings <- sum_embeddings / sum_mask
 
-      } else if (pooling_strategy == "cls") {
+      } else if (pooling.strategy == "cls") {
         # Use CLS token embedding (first token)
         # Python uses 0-based indexing, : means all in that dimension
         embeddings <- hidden_states[reticulate::py_slice(NULL, NULL), 0L, reticulate::py_slice(NULL, NULL)]
 
-      } else if (pooling_strategy == "max") {
+      } else if (pooling.strategy == "max") {
         # Max pooling
         # Need to mask out padding tokens for max pooling
         mask_expanded <- attention_mask$unsqueeze(-1L)$expand_as(hidden_states)

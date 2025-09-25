@@ -4,10 +4,10 @@
 \alias{check_local_llm_setup}
 \title{Check Local LLM Setup}
 \usage{
-check_local_llm_setup(model_path = NULL, silently = FALSE)
+check_local_llm_setup(model.path = NULL, silently = FALSE)
 }
 \arguments{
-\item{model_path}{Optional. Path to GGUF model file to verify it exists}
+\item{model.path}{Optional. Path to GGUF model file to verify it exists}
 
 \item{silently}{Logical. Suppress messages if TRUE}
 }

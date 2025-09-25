@@ -4,14 +4,14 @@
 \alias{validate_local_llm_params}
 \title{Validate Local LLM Generation Parameters}
 \usage{
-validate_local_llm_params(n_ctx, n_gpu_layers, max_tokens)
+validate_local_llm_params(n.ctx, n.gpu.layers, max.tokens)
 }
 \arguments{
-\item{n_ctx}{Context window size}
+\item{n.ctx}{Context window size}
 
-\item{n_gpu_layers}{Number of layers to offload to GPU}
+\item{n.gpu.layers}{Number of layers to offload to GPU}
 
-\item{max_tokens}{Maximum tokens for generation}
+\item{max.tokens}{Maximum tokens for generation}
 }
 \value{
 A list of validated parameters

@@ -6,7 +6,7 @@
 \usage{
 validate_user_input_local_AIGENIE(
   item.attributes,
-  model_path,
+  model.path,
   embedding.model,
   main.prompts,
   temperature,
@@ -23,13 +23,13 @@ validate_user_input_local_AIGENIE(
   EGA.model,
   EGA.algorithm,
   EGA.uni.method,
-  n_ctx,
-  n_gpu_layers,
-  max_tokens,
+  n.ctx,
+  n.gpu.layers,
+  max.tokens,
   device,
-  batch_size,
-  pooling_strategy,
-  max_length,
+  batch.size,
+  pooling.strategy,
+  max.length,
   keep.org,
   items.only,
   embeddings.only,
@@ -41,7 +41,7 @@ validate_user_input_local_AIGENIE(
 \arguments{
 \item{item.attributes}{Named list of attributes (same as API version)}
 
-\item{model_path}{Path to local GGUF model}
+\item{model.path}{Path to local GGUF model}
 
 \item{embedding.model}{Local embedding model identifier}
 
@@ -75,19 +75,19 @@ validate_user_input_local_AIGENIE(
 
 \item{EGA.uni.method}{EGA unidimensionality method}
 
-\item{n_ctx}{Context window size}
+\item{n.ctx}{Context window size}
 
-\item{n_gpu_layers}{GPU layers}
+\item{n.gpu.layers}{GPU layers}
 
-\item{max_tokens}{Maximum generation tokens}
+\item{max.tokens}{Maximum generation tokens}
 
 \item{device}{Embedding computation device}
 
-\item{batch_size}{Embedding batch size}
+\item{batch.size}{Embedding batch size}
 
-\item{pooling_strategy}{Embedding pooling strategy}
+\item{pooling.strategy}{Embedding pooling strategy}
 
-\item{max_length}{Embedding max sequence length}
+\item{max.length}{Embedding max sequence length}
 
 \item{keep.org}{Keep original data}
 

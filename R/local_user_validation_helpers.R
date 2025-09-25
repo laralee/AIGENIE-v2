@@ -1,36 +1,36 @@
 #' Validate Local Model Path
 #'
-#' @param model_path Path to local GGUF model file
+#' @param model.path Path to local GGUF model file
 #' @param silently Logical. Suppress warnings
 #'
 #' @return The expanded, validated path
 #'
-validate_model_path <- function(model_path, silently = FALSE) {
+validate_model.path <- function(model.path, silently = FALSE) {
 
   # Check if provided
-  if (is.null(model_path) || !is.character(model_path) || length(model_path) != 1) {
-    stop("AI-GENIE LOCAL expects model_path to be a path to a GGUF model file.",
+  if (is.null(model.path) || !is.character(model.path) || length(model.path) != 1) {
+    stop("AI-GENIE LOCAL expects model.path to be a path to a GGUF model file.",
          call. = FALSE)
   }
 
   # Expand path (handle ~ etc.)
-  model_path <- path.expand(model_path)
+  model.path <- path.expand(model.path)
 
   # Check if file exists
-  if (!file.exists(model_path)) {
-    stop(paste0("Model file not found: ", model_path, "\n",
+  if (!file.exists(model.path)) {
+    stop(paste0("Model file not found: ", model.path, "\n",
                 "Please provide a valid path to a GGUF model file."),
          call. = FALSE)
   }
 
   # Check file extension
-  if (!grepl("\\.gguf$", tolower(model_path))) {
-    stop(paste0("Model file must have .gguf extension. Found: ", model_path),
+  if (!grepl("\\.gguf$", tolower(model.path))) {
+    stop(paste0("Model file must have .gguf extension. Found: ", model.path),
          call. = FALSE)
   }
 
   # Check file size (warn if suspiciously small)
-  file_size_gb <- file.info(model_path)$size / 1024^3
+  file_size_gb <- file.info(model.path)$size / 1024^3
   if (file_size_gb < 0.5) {
     if (!silently) {
       warning("Model file seems unusually small (< 0.5 GB). ",
@@ -38,7 +38,7 @@ validate_model_path <- function(model_path, silently = FALSE) {
     }
   }
 
-  return(model_path)
+  return(model.path)
 }
 
 
@@ -185,60 +185,60 @@ validate_local_embedding_model <- function(embedding.model, silently = FALSE) {
 #' @description
 #' Validates parameters specific to local LLM generation
 #'
-#' @param n_ctx Context window size
-#' @param n_gpu_layers Number of layers to offload to GPU
-#' @param max_tokens Maximum tokens for generation
+#' @param n.ctx Context window size
+#' @param n.gpu.layers Number of layers to offload to GPU
+#' @param max.tokens Maximum tokens for generation
 #'
 #' @return A list of validated parameters
 #'
-validate_local_llm_params <- function(n_ctx, n_gpu_layers, max_tokens) {
+validate_local_llm_params <- function(n.ctx, n.gpu.layers, max.tokens) {
 
-  # Validate n_ctx (context window)
-  if (!is.numeric(n_ctx) || length(n_ctx) != 1 || is.na(n_ctx)) {
-    stop("AI-GENIE LOCAL expects n_ctx to be a numeric value.", call. = FALSE)
+  # Validate n.ctx (context window)
+  if (!is.numeric(n.ctx) || length(n.ctx) != 1 || is.na(n.ctx)) {
+    stop("AI-GENIE LOCAL expects n.ctx to be a numeric value.", call. = FALSE)
   }
 
-  n_ctx <- as.integer(n_ctx)
+  n.ctx <- as.integer(n.ctx)
 
-  if (n_ctx < 128) {
-    stop("AI-GENIE LOCAL expects n_ctx to be at least 128.", call. = FALSE)
+  if (n.ctx < 128) {
+    stop("AI-GENIE LOCAL expects n.ctx to be at least 128.", call. = FALSE)
   }
 
-  if (n_ctx > 32768) {
-    warning("n_ctx > 32768 may cause memory issues. Consider reducing if problems occur.")
+  if (n.ctx > 32768) {
+    warning("n.ctx > 32768 may cause memory issues. Consider reducing if problems occur.")
   }
 
-  # Validate n_gpu_layers
-  if (!is.numeric(n_gpu_layers) || length(n_gpu_layers) != 1 || is.na(n_gpu_layers)) {
-    stop("AI-GENIE LOCAL expects n_gpu_layers to be a numeric value.", call. = FALSE)
+  # Validate n.gpu.layers
+  if (!is.numeric(n.gpu.layers) || length(n.gpu.layers) != 1 || is.na(n.gpu.layers)) {
+    stop("AI-GENIE LOCAL expects n.gpu.layers to be a numeric value.", call. = FALSE)
   }
 
-  n_gpu_layers <- as.integer(n_gpu_layers)
+  n.gpu.layers <- as.integer(n.gpu.layers)
 
-  if (n_gpu_layers < -1) {
-    stop("AI-GENIE LOCAL expects n_gpu_layers to be -1 (all) or >= 0.", call. = FALSE)
+  if (n.gpu.layers < -1) {
+    stop("AI-GENIE LOCAL expects n.gpu.layers to be -1 (all) or >= 0.", call. = FALSE)
   }
 
-  # Validate max_tokens
-  if (!is.numeric(max_tokens) || length(max_tokens) != 1 || is.na(max_tokens)) {
-    stop("AI-GENIE LOCAL expects max_tokens to be a numeric value.", call. = FALSE)
+  # Validate max.tokens
+  if (!is.numeric(max.tokens) || length(max.tokens) != 1 || is.na(max.tokens)) {
+    stop("AI-GENIE LOCAL expects max.tokens to be a numeric value.", call. = FALSE)
   }
 
-  max_tokens <- as.integer(max_tokens)
+  max.tokens <- as.integer(max.tokens)
 
-  if (max_tokens < 1) {
-    stop("AI-GENIE LOCAL expects max_tokens to be at least 1.", call. = FALSE)
+  if (max.tokens < 1) {
+    stop("AI-GENIE LOCAL expects max.tokens to be at least 1.", call. = FALSE)
   }
 
-  if (max_tokens > n_ctx) {
-    warning("max_tokens exceeds n_ctx. Setting max_tokens to n_ctx - 100.")
-    max_tokens <- n_ctx - 100
+  if (max.tokens > n.ctx) {
+    warning("max.tokens exceeds n.ctx. Setting max.tokens to n.ctx - 100.")
+    max.tokens <- n.ctx - 100
   }
 
   return(list(
-    n_ctx = n_ctx,
-    n_gpu_layers = n_gpu_layers,
-    max_tokens = max_tokens
+    n.ctx = n.ctx,
+    n.gpu.layers = n.gpu.layers,
+    max.tokens = max.tokens
   ))
 }
 
@@ -249,13 +249,13 @@ validate_local_llm_params <- function(n_ctx, n_gpu_layers, max_tokens) {
 #' Validates parameters specific to local embedding generation
 #'
 #' @param device Device for computation ("auto", "cpu", "cuda", "mps")
-#' @param batch_size Number of items to process simultaneously
-#' @param pooling_strategy Strategy for pooling token embeddings
-#' @param max_length Maximum sequence length for tokenization
+#' @param batch.size Number of items to process simultaneously
+#' @param pooling.strategy Strategy for pooling token embeddings
+#' @param max.length Maximum sequence length for tokenization
 #'
 #' @return A list of validated parameters
 #'
-validate_local_embedding_params <- function(device, batch_size, pooling_strategy, max_length) {
+validate_local_embedding_params <- function(device, batch.size, pooling.strategy, max.length) {
 
   # Validate device
   valid_devices <- c("auto", "cpu", "cuda", "mps")
@@ -277,66 +277,66 @@ validate_local_embedding_params <- function(device, batch_size, pooling_strategy
     )
   }
 
-  # Validate batch_size
-  if (!is.numeric(batch_size) || length(batch_size) != 1 || is.na(batch_size)) {
-    stop("AI-GENIE LOCAL expects batch_size to be a numeric value.", call. = FALSE)
+  # Validate batch.size
+  if (!is.numeric(batch.size) || length(batch.size) != 1 || is.na(batch.size)) {
+    stop("AI-GENIE LOCAL expects batch.size to be a numeric value.", call. = FALSE)
   }
 
-  batch_size <- as.integer(batch_size)
+  batch.size <- as.integer(batch.size)
 
-  if (batch_size < 1) {
-    stop("AI-GENIE LOCAL expects batch_size to be at least 1.", call. = FALSE)
+  if (batch.size < 1) {
+    stop("AI-GENIE LOCAL expects batch.size to be at least 1.", call. = FALSE)
   }
 
-  if (batch_size > 128) {
-    warning("Large batch_size (>128) may cause memory issues. Consider reducing if problems occur.")
+  if (batch.size > 128) {
+    warning("Large batch.size (>128) may cause memory issues. Consider reducing if problems occur.")
   }
 
-  # Validate pooling_strategy
+  # Validate pooling.strategy
   valid_strategies <- c("mean", "cls", "max")
 
-  if (!is.character(pooling_strategy) || length(pooling_strategy) != 1 || is.na(pooling_strategy)) {
-    stop("AI-GENIE LOCAL expects pooling_strategy to be a string.", call. = FALSE)
+  if (!is.character(pooling.strategy) || length(pooling.strategy) != 1 || is.na(pooling.strategy)) {
+    stop("AI-GENIE LOCAL expects pooling.strategy to be a string.", call. = FALSE)
   }
 
-  pooling_strategy <- tolower(trimws(pooling_strategy))
+  pooling.strategy <- tolower(trimws(pooling.strategy))
 
-  if (!pooling_strategy %in% valid_strategies) {
+  if (!pooling.strategy %in% valid_strategies) {
     stop(
       paste0(
-        "AI-GENIE LOCAL expects pooling_strategy to be one of: ",
+        "AI-GENIE LOCAL expects pooling.strategy to be one of: ",
         paste(sprintf("'%s'", valid_strategies), collapse = ", "),
-        ". Received: '", pooling_strategy, "'"
+        ". Received: '", pooling.strategy, "'"
       ),
       call. = FALSE
     )
   }
 
-  # Validate max_length
-  if (!is.numeric(max_length) || length(max_length) != 1 || is.na(max_length)) {
-    stop("AI-GENIE LOCAL expects max_length to be a numeric value.", call. = FALSE)
+  # Validate max.length
+  if (!is.numeric(max.length) || length(max.length) != 1 || is.na(max.length)) {
+    stop("AI-GENIE LOCAL expects max.length to be a numeric value.", call. = FALSE)
   }
 
-  max_length <- as.integer(max_length)
+  max.length <- as.integer(max.length)
 
-  if (max_length < 10) {
-    stop("AI-GENIE LOCAL expects max_length to be at least 10.", call. = FALSE)
+  if (max.length < 10) {
+    stop("AI-GENIE LOCAL expects max.length to be at least 10.", call. = FALSE)
   }
 
-  if (max_length > 512) {
+  if (max.length > 512) {
     warning(
       paste0(
-        "max_length > 512 exceeds typical BERT model limits. ",
+        "max.length > 512 exceeds typical BERT model limits. ",
         "Most models max out at 512 tokens. Setting to 512."
       )
     )
-    max_length <- 512
+    max.length <- 512
   }
 
   return(list(
     device = device,
-    batch_size = batch_size,
-    pooling_strategy = pooling_strategy,
-    max_length = max_length
+    batch.size = batch.size,
+    pooling.strategy = pooling.strategy,
+    max.length = max.length
   ))
 }

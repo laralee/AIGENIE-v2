@@ -6,22 +6,22 @@
 #'
 #' @param main.prompts Named list of prompts, one per item type
 #' @param system.role Character string defining the system role
-#' @param model_path Path to local GGUF model file
+#' @param model.path Path to local GGUF model file
 #' @param temperature Numeric between 0 and 2 for randomness
 #' @param top.p Numeric between 0 and 1 for nucleus sampling
 #' @param adaptive Logical. If TRUE, includes previous items to avoid repetition
 #' @param silently Logical. If FALSE, displays progress
 #' @param target.N Named list of target items per type
-#' @param n_ctx Integer. Context window size (default 4096)
-#' @param n_gpu_layers Integer. Number of layers to offload to GPU (-1 for all)
-#' @param max_tokens Integer. Maximum tokens per generation (default 1024)
+#' @param n.ctx Integer. Context window size (default 4096)
+#' @param n.gpu.layers Integer. Number of layers to offload to GPU (-1 for all)
+#' @param max.tokens Integer. Maximum tokens per generation (default 1024)
 #'
 #' @return A list containing items dataframe and success flag
 #'
-generate_items_via_local_llm <- function(main.prompts, system.role, model_path,
+generate_items_via_local_llm <- function(main.prompts, system.role, model.path,
                                          temperature, top.p, adaptive, silently,
-                                         target.N, n_ctx = 4096, n_gpu_layers = -1,
-                                         max_tokens = 1024) {
+                                         target.N, n.ctx = 4096, n.gpu.layers = -1,
+                                         max.tokens = 1024) {
 
   # Ensure Python environment with llama-cpp
   ensure_llama_cpp_python(silently = silently)
@@ -48,9 +48,9 @@ generate_items_via_local_llm <- function(main.prompts, system.role, model_path,
 
     # Initialize Llama model with verbose=FALSE
     llm <- llama_cpp$Llama(
-      model_path = model_path,
-      n_ctx = as.integer(n_ctx),
-      n_gpu_layers = as.integer(n_gpu_layers),
+      model_path = model.path,
+      n_ctx = as.integer(n.ctx),
+      n_gpu_layers = as.integer(n.gpu.layers),
       seed = 123L,
       verbose = FALSE,  # This should suppress most output
       logits_all = FALSE,
@@ -125,7 +125,7 @@ generate_items_via_local_llm <- function(main.prompts, system.role, model_path,
 
       # Check prompt length and adjust if needed
       prompt_tokens <- nchar(full_prompt) / 4  # Rough estimate
-      if (prompt_tokens > n_ctx * 0.7) {
+      if (prompt_tokens > n.ctx * 0.7) {
         if (adaptive && !context_limit_reached) {
           if (!silently) {
             cat("\nWarning: Approaching context limit. Reducing number of previous items.\n")
@@ -150,7 +150,7 @@ generate_items_via_local_llm <- function(main.prompts, system.role, model_path,
             capture.output({
               response <- llm(
                 prompt = full_prompt,
-                max_tokens = as.integer(max_tokens),
+                max_tokens = as.integer(max.tokens),
                 temperature = temperature,
                 top_p = top.p,
                 echo = FALSE,
@@ -163,7 +163,7 @@ generate_items_via_local_llm <- function(main.prompts, system.role, model_path,
             capture.output({
               response <- llm(
                 prompt = full_prompt,
-                max_tokens = as.integer(max_tokens),
+                max_tokens = as.integer(max.tokens),
                 temperature = temperature,
                 top_p = top.p,
                 echo = FALSE,
@@ -416,13 +416,13 @@ get_local_llm <- function(model_id,
 #' Verifies that all components for local LLM generation are properly installed
 #' and configured. Run this before attempting generation to ensure setup is complete.
 #'
-#' @param model_path Optional. Path to GGUF model file to verify it exists
+#' @param model.path Optional. Path to GGUF model file to verify it exists
 #' @param silently Logical. Suppress messages if TRUE
 #'
 #' @return Logical. TRUE if setup is complete, FALSE otherwise
 #'
 #' @export
-check_local_llm_setup <- function(model_path = NULL, silently = FALSE) {
+check_local_llm_setup <- function(model.path = NULL, silently = FALSE) {
 
   setup_ok <- TRUE
 
@@ -454,14 +454,14 @@ check_local_llm_setup <- function(model_path = NULL, silently = FALSE) {
   })
 
   # Check model file if provided
-  if (!is.null(model_path)) {
-    if (file.exists(model_path)) {
-      file_size <- file.info(model_path)$size / 1024^3  # Size in GB
+  if (!is.null(model.path)) {
+    if (file.exists(model.path)) {
+      file_size <- file.info(model.path)$size / 1024^3  # Size in GB
       if (!silently) {
         cat(sprintf("✓ Model file found: %.2f GB\n", file_size))
       }
     } else {
-      cat("✗ Model file not found:", model_path, "\n")
+      cat("✗ Model file not found:", model.path, "\n")
       setup_ok <- FALSE
     }
   }

@@ -106,8 +106,8 @@ silently <- FALSE
 target.N <- list(openness = 60,
                  agreeableness = 60)
 
-local_items <- AIGENIE.v2:::local_AIGENIE(item.attributes = item_attributes,
-                                         model_path = model_path,
+local_items <- AIGENIE.v2::local_AIGENIE(item.attributes = item_attributes,
+                                         model.path = model_path,
                                          adaptive = FALSE,
                                          domain = "personality",
                                          scale.title = "Shortened Big Five Assessment")

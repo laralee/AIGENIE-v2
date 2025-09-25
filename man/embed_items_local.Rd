@@ -7,10 +7,10 @@
 embed_items_local(
   embedding.model,
   items,
-  pooling_strategy = "mean",
+  pooling.strategy = "mean",
   device = "auto",
-  batch_size = 32,
-  max_length = 512,
+  batch.size = 32,
+  max.length = 512,
   silently = FALSE
 )
 }
@@ -33,7 +33,7 @@ embed_items_local(
 \item \code{ID}: Unique identifiers for each statement
 }}
 
-\item{pooling_strategy}{Character string for pooling token embeddings:
+\item{pooling.strategy}{Character string for pooling token embeddings:
 \itemize{
 \item "mean": Average all token embeddings (default)
 \item "cls": Use only the CLS token embedding
@@ -42,9 +42,9 @@ embed_items_local(
 
 \item{device}{Character string specifying computation device}
 
-\item{batch_size}{Integer. Number of items to process simultaneously}
+\item{batch.size}{Integer. Number of items to process simultaneously}
 
-\item{max_length}{Integer. Maximum sequence length (default 512)}
+\item{max.length}{Integer. Maximum sequence length (default 512)}
 
 \item{silently}{Logical. If FALSE, displays progress messages}
 }

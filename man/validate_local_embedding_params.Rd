@@ -6,19 +6,19 @@
 \usage{
 validate_local_embedding_params(
   device,
-  batch_size,
-  pooling_strategy,
-  max_length
+  batch.size,
+  pooling.strategy,
+  max.length
 )
 }
 \arguments{
 \item{device}{Device for computation ("auto", "cpu", "cuda", "mps")}
 
-\item{batch_size}{Number of items to process simultaneously}
+\item{batch.size}{Number of items to process simultaneously}
 
-\item{pooling_strategy}{Strategy for pooling token embeddings}
+\item{pooling.strategy}{Strategy for pooling token embeddings}
 
-\item{max_length}{Maximum sequence length for tokenization}
+\item{max.length}{Maximum sequence length for tokenization}
 }
 \value{
 A list of validated parameters
