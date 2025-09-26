@@ -223,7 +223,7 @@ complex list with two primary components:
 \describe{
 \item{\code{overall}}{Results for all items considered agnostic of item type, containing:
 \describe{
-\item{\code{final_NMI}}{Final normalized mutual information after all reduction steps}
+\item{\code{final_NMI}}{Final normalized mutual information (NMI) after all reduction steps}
 \item{\code{initial_NMI}}{Initial NMI of the pre-reduced, full item pool}
 \item{\code{embeddings}}{List with \code{full} (full embedding matrix of reduced items),
 \code{sparse} (sparsified embeddings of reduced items), \code{selected} (string specifying
@@ -244,7 +244,7 @@ for items of only one type:
 \describe{
 \item{\code{final_NMI}, \code{initial_NMI}, \code{embeddings}, \code{EGA.model_selected}, \code{final_items},
 \code{final_EGA}, \code{initial_EGA}, \code{start_N}, \code{final_N}, \code{network_plot}}{Same as overall object}
-\item{\code{UVA}}{List with \code{n_removed} (number of redundant items removed), \code{n_sweeps}
+\item{\code{UVA}}{List with \code{n_removed} (number of redundant items removed by the Unique Variable Analysis (UVA) step), \code{n_sweeps}
 (number of UVA iterations), \code{redundant_pairs} (data frame with sweep, items, keep, remove columns)}
 \item{\code{bootEGA}}{List with \code{initial_boot} (first bootEGA object), \code{final_boot}
 (final bootEGA object with all stable items), \code{n_removed} (number of unstable items),
@@ -254,9 +254,6 @@ for items of only one type:
 }
 }
 }
-
-All functions validate user input and will produce informative error messages for
-invalid parameter combinations or missing required API keys.
 }
 \description{
 Generate, validate, and check your items for quality and redundancy using AI-GENIE

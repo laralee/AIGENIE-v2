@@ -982,13 +982,7 @@ GENIE <- function(
 
   # Step 3: Return embeddings if that's all that was requested
   if (embeddings.only) {
-    if (!silently) {
-      cat("Embeddings generated successfully. Returning embeddings and items.\n")
-    }
-    return(list(
-      embeddings = embeddings,
-      items = items
-    ))
+    return(embeddings)
   }
 
   # Step 4: Run the network psychometric pipeline (same as AIGENIE)

@@ -89,62 +89,100 @@ sparsify_embeddings <- function(embedding_matrix,
 #' @return A list with the reduced matrix, sweep metadata, and redundancy log.
 reduce_redundancy_uva <- function(embedding_matrix, items) {
 
-
   original_embedding <- embedding_matrix
-  count   <- 1
+  current_matrix <- embedding_matrix
+  count <- 1
   success <- TRUE
   all_redundant_sets <- list()
+  all_removed_items <- character(0)
 
-  # Helper: convert keep_remove to readable set
-  extract_redundancy_sets <- function(keep_remove, sweep, items) {
-    if (is.null(keep_remove) || length(keep_remove) == 0) return(NULL)
+  # Helper: extract redundancy sets and format them
+  extract_redundancy_sets <- function(uva_object, sweep, items, current_matrix) {
+    if (is.null(uva_object$redundant) || length(uva_object$redundant) == 0) {
+      return(NULL)
+    }
 
+    # Get the IDs that remain after reduction
+    remaining_ids <- NULL
+    if (!is.null(uva_object$reduced_data)) {
+      remaining_ids <- colnames(uva_object$reduced_data)
+    }
+
+    # Get the IDs that were removed
+    current_ids <- colnames(current_matrix)
+    removed_ids <- setdiff(current_ids, remaining_ids)
+
+    # Process redundancies more carefully
     out <- list()
+    processed_removals <- character(0)
 
-    # Case 1: paired vectors (two vectors of same length)
-    if (length(keep_remove) == 2 &&
-        is.character(keep_remove[[1]]) &&
-        is.character(keep_remove[[2]]) &&
-        length(keep_remove[[1]]) == length(keep_remove[[2]])) {
+    for (i in seq_along(uva_object$redundant)) {
+      item_name <- names(uva_object$redundant)[i]
+      redundant_with <- uva_object$redundant[[i]]
 
-      keep_ids   <- keep_remove[[1]]
-      remove_ids <- keep_remove[[2]]
+      # Create groups based on what was actually removed
+      # If item_name was removed, find what it was redundant with that was kept
+      if (item_name %in% removed_ids) {
+        # This item was removed
+        kept_partners <- intersect(redundant_with, remaining_ids)
+        if (length(kept_partners) > 0) {
+          # Use the first kept partner
+          kept_id <- kept_partners[1]
 
-      for (i in seq_along(keep_ids)) {
-        k_id <- keep_ids[i]
-        r_id <- remove_ids[i]
+          # Create the minimal group
+          group <- c(kept_id, item_name)
 
-        k_stmt <- items$statement[match(k_id, items$ID)]
-        r_stmt <- items$statement[match(r_id, items$ID)]
+          # Check if any other removed items are also redundant with the same kept item
+          for (other_removed in setdiff(redundant_with, remaining_ids)) {
+            if (!(other_removed %in% processed_removals)) {
+              group <- c(group, other_removed)
+              processed_removals <- c(processed_removals, other_removed)
+            }
+          }
 
-        out[[length(out) + 1]] <- data.frame(
-          sweep  = sweep,
-          items  = I(list(c(k_stmt, r_stmt))),
-          keep   = k_stmt,
-          remove = I(list(r_stmt)),
-          stringsAsFactors = FALSE
-        )
-      }
+          if (!(item_name %in% processed_removals)) {
+            processed_removals <- c(processed_removals, item_name)
 
-    } else {
-      # Case 2: list of sets where first = kept, rest = removed
-      for (group in keep_remove) {
-        if (length(group) < 2) next
+            # Map IDs to statements
+            group <- unique(group)
+            group_stmts <- items$statement[match(group, items$ID)]
+            keep_stmt <- items$statement[match(kept_id, items$ID)]
+            remove_ids <- setdiff(group, kept_id)
+            remove_stmts <- items$statement[match(remove_ids, items$ID)]
 
-        keep_id    <- group[1]
-        remove_ids <- group[-1]
+            out[[length(out) + 1]] <- data.frame(
+              sweep = sweep,
+              items = paste(group_stmts, collapse = "\n "),
+              keep = keep_stmt,
+              remove = paste(remove_stmts, collapse = "\n "),
+              stringsAsFactors = FALSE
+            )
+          }
+        }
+      } else if (item_name %in% remaining_ids) {
+        # This item was kept - find what was removed because of it
+        removed_partners <- intersect(redundant_with, removed_ids)
+        if (length(removed_partners) > 0) {
+          # Only include partners that haven't been processed yet
+          unprocessed_partners <- setdiff(removed_partners, processed_removals)
+          if (length(unprocessed_partners) > 0) {
+            group <- c(item_name, unprocessed_partners)
+            processed_removals <- c(processed_removals, unprocessed_partners)
 
-        keep_stmt    <- items$statement[match(keep_id, items$ID)]
-        remove_stmts <- items$statement[match(remove_ids, items$ID)]
-        group_stmts  <- items$statement[match(group, items$ID)]
+            # Map IDs to statements
+            group_stmts <- items$statement[match(group, items$ID)]
+            keep_stmt <- items$statement[match(item_name, items$ID)]
+            remove_stmts <- items$statement[match(unprocessed_partners, items$ID)]
 
-        out[[length(out) + 1]] <- data.frame(
-          sweep  = sweep,
-          items  = I(list(group_stmts)),
-          keep   = keep_stmt,
-          remove = I(list(remove_stmts)),
-          stringsAsFactors = FALSE
-        )
+            out[[length(out) + 1]] <- data.frame(
+              sweep = sweep,
+              items = paste(group_stmts, collapse = "\n "),
+              keep = keep_stmt,
+              remove = paste(remove_stmts, collapse = "\n "),
+              stringsAsFactors = FALSE
+            )
+          }
+        }
       }
     }
 
@@ -153,205 +191,94 @@ reduce_redundancy_uva <- function(embedding_matrix, items) {
     return(do.call(rbind, out))
   }
 
-
-
-
-  # Initial UVA
-  uva <- tryCatch({
-    EGAnet::UVA(
-      data = embedding_matrix,
-      cut.off = 0.2,
-      reduce.method = "remove",
-      plot = FALSE
-    )
-  }, error = function(e) {
-    warning(paste("Initial UVA failed:", conditionMessage(e)))
-    success <<- FALSE
-    return(NULL)
-  })
-
-  if (is.null(uva)) {
-    attr(original_embedding, "UVA_count") <- 0
-    return(list(
-      embedding_matrix = original_embedding,
-      iterations = 0,
-      items_removed = 0,
-      removed_items = character(0),
-      redundant_pairs = NULL,
-      success = FALSE
-    ))
-  }
-
-  # Extract from first sweep
-  sweep_sets <- extract_redundancy_sets(uva$keep_remove, sweep = count, items)
-  if (!is.null(sweep_sets)) all_redundant_sets[[count]] <- sweep_sets
-
-  # Handle early exit (no redundancy)
-  if (is.null(uva$keep_remove)) {
-    attr(original_embedding, "UVA_count") <- 0
-    return(list(
-      embedding_matrix = original_embedding,
-      iterations = 0,
-      items_removed = 0,
-      removed_items = character(0),
-      redundant_pairs = NULL,
-      success = TRUE
-    ))
-  }
-
-  if (is.null(uva$reduced_data) || ncol(uva$reduced_data) == 0) {
-    log_msg("No items remaining after UVA. Returning original embeddings.")
-    attr(original_embedding, "UVA_count") <- 0
-    return(list(
-      embedding_matrix = original_embedding,
-      iterations = 0,
-      items_removed = 0,
-      removed_items = colnames(embedding_matrix),
-      redundant_pairs = do.call(rbind, all_redundant_sets),
-      success = FALSE
-    ))
-  }
-
-  previous_uva <- uva
-
+  # Main iterative loop
   repeat {
-    if (is.null(uva$keep_remove)) break
+    # Run UVA with reduce = TRUE to get the reduced matrix
+    uva <- tryCatch({
+      EGAnet::UVA(
+        data = current_matrix,
+        cut.off = 0.25,
+        reduce = TRUE,
+        reduce.method = "remove",
+        auto = TRUE,
+        plot = FALSE
+      )
+    }, error = function(e) {
+      warning(paste("UVA failed at iteration", count, ":", conditionMessage(e)))
+      success <- FALSE
+      return(NULL)
+    })
+
+    # Check for failure or completion
+    if (is.null(uva)) break
+    if (is.null(uva$redundant) || length(uva$redundant) == 0) {
+      # No redundancies found, we're done
+      break
+    }
     if (is.null(uva$reduced_data) || ncol(uva$reduced_data) == 0) {
-      log_msg("No items remaining. Stopping iterations.")
+      warning("No items remaining after UVA.")
       success <- FALSE
       break
     }
 
-    previous_uva <- uva
+    # Extract redundancy information for this sweep
+    sweep_sets <- extract_redundancy_sets(uva, sweep = count, items, current_matrix)
+    if (!is.null(sweep_sets)) {
+      all_redundant_sets[[count]] <- sweep_sets
+    }
+
+    # Track removed items
+    current_ids <- colnames(current_matrix)
+    reduced_ids <- colnames(uva$reduced_data)
+    removed_this_sweep <- setdiff(current_ids, reduced_ids)
+    all_removed_items <- c(all_removed_items, removed_this_sweep)
+
+    # Update current matrix for next iteration
+    current_matrix <- uva$reduced_data
     count <- count + 1
 
-    uva <- tryCatch({
-      EGAnet::UVA(
-        data = previous_uva$reduced_data,
-        cut.off = 0.2,
-        reduce.method = "remove",
-        plot = FALSE
-      )
-    }, error = function(e) {
-      success <<- FALSE
-      log_msg(sprintf("UVA failed at iteration %d: %s", count, conditionMessage(e)))
-      return(NULL)
-    })
-
-    if (is.null(uva)) break
-    if (!is.null(uva$keep_remove) && length(uva$keep_remove) == 0) break
+    # Safety check
     if (count > 50) {
       warning("UVA iterations exceeded safety limit (50). Stopping.")
       success <- FALSE
       break
     }
-
-    sweep_sets <- extract_redundancy_sets(uva$keep_remove, sweep = count, items)
-    if (!is.null(sweep_sets)) all_redundant_sets[[count]] <- sweep_sets
   }
 
-  if (!is.null(previous_uva$reduced_data) && ncol(previous_uva$reduced_data) > 0) {
-    final_mat     <- previous_uva$reduced_data
-    start_items   <- colnames(embedding_matrix)
-    final_items   <- colnames(final_mat)
-    removed_items <- setdiff(start_items, final_items)
+  # Combine all redundant sets
+  redundant_df <- if (length(all_redundant_sets) > 0) {
+    do.call(rbind, all_redundant_sets)
+  } else {
+    NULL
+  }
 
-    attr(final_mat, "UVA_count")     <- count
-    attr(final_mat, "items_removed") <- length(removed_items)
+  # Prepare final output
+  if (!is.null(current_matrix) && ncol(current_matrix) > 0) {
+    attr(current_matrix, "UVA_count") <- count - 1
+    attr(current_matrix, "items_removed") <- length(all_removed_items)
 
     return(list(
-      embedding_matrix = final_mat,
-      iterations       = count,
-      items_removed    = length(removed_items),
-      removed_items    = removed_items,
-      redundant_pairs  = do.call(rbind, all_redundant_sets),
-      success          = success
+      embedding_matrix = current_matrix,
+      iterations = count - 1,
+      items_removed = length(all_removed_items),
+      removed_items = all_removed_items,
+      redundant_pairs = redundant_df,
+      success = success
     ))
   } else {
-    log_msg("No valid reduced data. Returning original embeddings.")
+    # Return original if reduction failed
     attr(original_embedding, "UVA_count") <- 0
+
     return(list(
       embedding_matrix = original_embedding,
-      iterations       = 0,
-      items_removed    = 0,
-      removed_items    = character(0),
-      redundant_pairs  = do.call(rbind, all_redundant_sets),
-      success          = FALSE
+      iterations = 0,
+      items_removed = 0,
+      removed_items = character(0),
+      redundant_pairs = redundant_df,
+      success = FALSE
     ))
   }
 }
-
-
-
-
-#' Run Final Community Detection with EGA
-#'
-#' @param embedding_matrix A numeric matrix with items as columns.
-#' @param true_communities Named list mapping items to known communities.
-#' @param model Network estimation model (e.g., "glasso", "TMFG").
-#' @param algorithm Community detection algorithm (e.g., "walktrap").
-#' @param uni.method Unidimensionality method passed to EGA.
-#'
-#' @return A list with final communities, final NMI, dropped items, EGA object, and success flag.
-final_community_detection <- function(embedding_matrix,
-                                      true_communities,
-                                      model = "glasso",
-                                      algorithm = "walktrap",
-                                      uni.method = "louvain") {
-
-  result <- tryCatch({
-
-    ega <- EGAnet::EGA.fit(
-      data = embedding_matrix,
-      model = model,
-      algorithm = algorithm,
-      uni.method = uni.method,
-      plot.EGA = FALSE,
-      verbose = FALSE
-    )
-
-    wc <- ega$EGA$wc
-    if (is.null(wc)) {
-      stop("EGA.fit did not return community structure.")
-    }
-
-    # Drop unclustered items (NA communities)
-    if (anyNA(wc)) {
-      items_dropped <- names(wc)[is.na(wc)]
-      wc <- wc[!is.na(wc)]
-    } else {
-      items_dropped <- character(0)
-    }
-
-    # Final NMI using igraph
-    final_nmi <- igraph::compare(
-      unlist(true_communities[names(wc)]),
-      wc,
-      method = "nmi"
-    )
-
-    list(
-      communities   = wc,
-      final_nmi     = final_nmi,
-      items_dropped = items_dropped,
-      ega           = ega,
-      success       = TRUE
-    )
-
-  }, error = function(e) {
-
-    list(
-      communities   = NULL,
-      final_nmi     = NA_real_,
-      items_dropped = colnames(embedding_matrix),
-      ega           = NULL,
-      success       = FALSE
-    )
-  })
-
-  return(result)
-}
-
 
 
 
@@ -789,4 +716,74 @@ plot_comparison <- function(p1, p2, caption1, caption2, nmi2, nmi1, title){
 
 
   return(combined_plot)
+}
+
+
+
+#' Run Final Community Detection with EGA
+#'
+#' @param embedding_matrix A numeric matrix with items as columns.
+#' @param true_communities Named list mapping items to known communities.
+#' @param model Network estimation model (e.g., "glasso", "TMFG").
+#' @param algorithm Community detection algorithm (e.g., "walktrap").
+#' @param uni.method Unidimensionality method passed to EGA.
+#'
+#' @return A list with final communities, final NMI, dropped items, EGA object, and success flag.
+final_community_detection <- function(embedding_matrix,
+                                      true_communities,
+                                      model = "glasso",
+                                      algorithm = "walktrap",
+                                      uni.method = "louvain") {
+
+  result <- tryCatch({
+
+    ega <- EGAnet::EGA.fit(
+      data = embedding_matrix,
+      model = model,
+      algorithm = algorithm,
+      uni.method = uni.method,
+      plot.EGA = FALSE,
+      verbose = FALSE
+    )
+
+    wc <- ega$EGA$wc
+    if (is.null(wc)) {
+      stop("EGA.fit did not return community structure.")
+    }
+
+    # Drop unclustered items (NA communities)
+    if (anyNA(wc)) {
+      items_dropped <- names(wc)[is.na(wc)]
+      wc <- wc[!is.na(wc)]
+    } else {
+      items_dropped <- character(0)
+    }
+
+    # Final NMI using igraph
+    final_nmi <- igraph::compare(
+      unlist(true_communities[names(wc)]),
+      wc,
+      method = "nmi"
+    )
+
+    list(
+      communities   = wc,
+      final_nmi     = final_nmi,
+      items_dropped = items_dropped,
+      ega           = ega,
+      success       = TRUE
+    )
+
+  }, error = function(e) {
+
+    list(
+      communities   = NULL,
+      final_nmi     = NA_real_,
+      items_dropped = colnames(embedding_matrix),
+      ega           = NULL,
+      success       = FALSE
+    )
+  })
+
+  return(result)
 }

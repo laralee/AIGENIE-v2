@@ -36,7 +36,7 @@ All columns must be character type except ID (numeric or character allowed).
 \itemize{
 \item Rows represent embedding dimensions
 \item Columns represent items (must match items$ID exactly)
-\item If NULL, embeddings will be generated using embedding.model
+\item If \code{NULL}, embeddings will be generated using \code{embedding.model}
 }}
 
 \item{openai.API}{OpenAI API key (required if using OpenAI embedding models)}
@@ -57,24 +57,55 @@ All columns must be character type except ID (numeric or character allowed).
 \item HuggingFace: "BAAI/bge-base-en-v1.5", "BAAI/bge-small-en-v1.5", etc.
 }}
 
-\item{EGA.model}{Network estimation model ("glasso", "TMFG", or NULL for auto-selection)}
+\item{EGA.model}{EGA network estimation model ("glasso", "TMFG", or NULL for auto-selection)}
 
-\item{EGA.algorithm}{Community detection algorithm ("walktrap", "leiden", "louvain")}
+\item{EGA.algorithm}{EGA community detection algorithm ("walktrap", "leiden", "louvain")}
 
 \item{EGA.uni.method}{Unidimensionality assessment method ("louvain", "expand", "LE")}
 
-\item{embeddings.only}{If TRUE, return embeddings and stop (skip network analysis)}
+\item{embeddings.only}{If \code{TRUE}, return embeddings and stop (skip network analysis)}
 
-\item{plot}{If TRUE, display network comparison plots}
+\item{plot}{If \code{TRUE}, display network comparison plots}
 
-\item{silently}{If TRUE, suppress progress messages}
+\item{silently}{If \code{TRUE}, suppress progress messages
+
+\strong{Default behavior (\code{embeddings.only = FALSE}):} Returns a
+complex list with two primary components:
+
+\describe{
+\item{\code{overall}}{Results for all items considered agnostic of item type, containing:
+\describe{
+\item{\code{final_NMI}}{Final normalized mutual information after all reduction steps}
+\item{\code{initial_NMI}}{Initial NMI of the pre-reduced, full item pool}
+\item{\code{embeddings}}{List with \code{full} (full embedding matrix of reduced items),
+\code{sparse} (sparsified embeddings of reduced items), \code{selected} (string specifying
+which embeddings were used). If \code{keep.org = TRUE}, also includes \code{full_org}
+and \code{sparse_org} for complete pre-reduction item set}
+\item{\code{EGA.model_selected}}{EGA model used for analysis (TMFG or Glasso)}
+\item{\code{final_items}}{Data frame with final items after reduction (columns: ID,
+statement, attribute, type, EGA_com)}
+\item{\code{final_EGA}}{Final EGA object from EGAnet package post-reduction}
+\item{\code{initial_EGA}}{Initial EGA object of all items in original pool}
+\item{\code{start_N}}{Initial number of items pre-reduction}
+\item{\code{final_N}}{Final number of items in reduced pool}
+\item{\code{network_plot}}{ggplot/patchwork comparison plot showing EGA network before vs after reduction}
 }
-\value{
-Depending on embeddings.only flag:
-\itemize{
-\item If embeddings.only = TRUE: List with embeddings matrix and items
-\item If embeddings.only = FALSE: List with overall and item-type level results
 }
+\item{\code{item_type_level}}{Named list where results are displayed at the item type level. Each element contains results
+for items of only one type:
+\describe{
+\item{\code{final_NMI}, \code{initial_NMI}, \code{embeddings}, \code{EGA.model_selected}, \code{final_items},
+\code{final_EGA}, \code{initial_EGA}, \code{start_N}, \code{final_N}, \code{network_plot}}{Same as overall object}
+\item{\code{UVA}}{List with \code{n_removed} (number of redundant items removed), \code{n_sweeps}
+(number of UVA iterations), \code{redundant_pairs} (data frame with sweep, items, keep, remove columns)}
+\item{\code{bootEGA}}{List with \code{initial_boot} (first bootEGA object), \code{final_boot}
+(final bootEGA object with all stable items), \code{n_removed} (number of unstable items),
+\code{items_removed} (data frame of removed items with boot run information),
+\code{initial_boot_with_redundancies} (boot EGA object for original item pool)}
+\item{\code{stability_plot}}{ggplot/patchwork stability plot showing item stability before vs after reduction}
+}
+}
+}}
 }
 \description{
 GENIE provides psychometric validation and quality assessment for user-supplied
@@ -82,17 +113,4 @@ items using the same network psychometric pipeline as AI-GENIE, but without the
 item generation phase. Users provide their own items and optionally their own
 embeddings, then GENIE performs redundancy reduction, community detection, and
 structural validation to assess item quality and dimensionality.
-}
-\details{
-GENIE workflow:
-\enumerate{
-\item Validate and clean user-provided items
-\item Generate embeddings (if not provided) using specified embedding model
-\item Run network psychometric pipeline: redundancy reduction, community detection, stability analysis
-\item Return comprehensive results with network plots and quality metrics
-}
-
-Unlike AI-GENIE which generates items from scratch, GENIE evaluates existing items,
-making it ideal for researchers who want to validate their own item pools using
-modern network psychometric methods.
 }

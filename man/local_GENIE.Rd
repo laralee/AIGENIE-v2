@@ -35,7 +35,7 @@ All columns must be character type except ID (numeric or character allowed).
 \item RoBERTa: "roberta-base", "roberta-large"
 \item DeBERTa: "microsoft/deberta-v3-base", "microsoft/deberta-v3-large"
 \item DistilBERT: "distilbert-base-uncased"
-\item Local paths: "/path/to/local/model"
+\item Local paths: e.g., "/path/to/local/model"
 }}
 
 \item{device}{Device for embedding computation:
@@ -63,78 +63,53 @@ All columns must be character type except ID (numeric or character allowed).
 
 \item{EGA.uni.method}{Unidimensionality assessment method ("louvain", "expand", "LE")}
 
-\item{embeddings.only}{If TRUE, return embeddings and stop (skip network analysis)}
+\item{embeddings.only}{If \code{TRUE}, return embeddings and stop (skip network analysis)}
 
-\item{plot}{If TRUE, display network comparison plots}
+\item{plot}{If \code{TRUE}, display network comparison plots}
 
-\item{silently}{If TRUE, suppress progress messages}
+\item{silently}{If \code{TRUE}, suppress progress messages
+
+\strong{Default behavior (\code{embeddings.only = FALSE}):} Returns a
+complex list with two primary components:
+
+\describe{
+\item{\code{overall}}{Results for all items considered agnostic of item type, containing:
+\describe{
+\item{\code{final_NMI}}{Final normalized mutual information after all reduction steps}
+\item{\code{initial_NMI}}{Initial NMI of the pre-reduced, full item pool}
+\item{\code{embeddings}}{List with \code{full} (full embedding matrix of reduced items),
+\code{sparse} (sparsified embeddings of reduced items), \code{selected} (string specifying
+which embeddings were used). If \code{keep.org = TRUE}, also includes \code{full_org}
+and \code{sparse_org} for complete pre-reduction item set}
+\item{\code{EGA.model_selected}}{EGA model used for analysis (TMFG or Glasso)}
+\item{\code{final_items}}{Data frame with final items after reduction (columns: ID,
+statement, attribute, type, EGA_com)}
+\item{\code{final_EGA}}{Final EGA object from EGAnet package post-reduction}
+\item{\code{initial_EGA}}{Initial EGA object of all items in original pool}
+\item{\code{start_N}}{Initial number of items pre-reduction}
+\item{\code{final_N}}{Final number of items in reduced pool}
+\item{\code{network_plot}}{ggplot/patchwork comparison plot showing EGA network before vs after reduction}
 }
-\value{
-Depending on embeddings.only flag:
-\itemize{
-\item If embeddings.only = TRUE: List with embeddings matrix and items
-\item If embeddings.only = FALSE: List with overall and item-type level results
 }
+\item{\code{item_type_level}}{Named list where results are displayed at the item type level. Each element contains results
+for items of only one type:
+\describe{
+\item{\code{final_NMI}, \code{initial_NMI}, \code{embeddings}, \code{EGA.model_selected}, \code{final_items},
+\code{final_EGA}, \code{initial_EGA}, \code{start_N}, \code{final_N}, \code{network_plot}}{Same as overall object}
+\item{\code{UVA}}{List with \code{n_removed} (number of redundant items removed), \code{n_sweeps}
+(number of UVA iterations), \code{redundant_pairs} (data frame with sweep, items, keep, remove columns)}
+\item{\code{bootEGA}}{List with \code{initial_boot} (first bootEGA object), \code{final_boot}
+(final bootEGA object with all stable items), \code{n_removed} (number of unstable items),
+\code{items_removed} (data frame of removed items with boot run information),
+\code{initial_boot_with_redundancies} (boot EGA object for original item pool)}
+\item{\code{stability_plot}}{ggplot/patchwork stability plot showing item stability before vs after reduction}
+}
+}
+}}
 }
 \description{
 Local version of GENIE that uses locally installed embedding models for complete
 privacy and offline operation. Provides the same psychometric validation and
 quality assessment for user-supplied items as GENIE, but generates embeddings
 locally using transformer models instead of API calls.
-}
-\details{
-local_GENIE workflow:
-\enumerate{
-\item Validate and clean user-provided items
-\item Generate embeddings locally using specified transformer model
-\item Run network psychometric pipeline: redundancy reduction, community detection, stability analysis
-\item Return comprehensive results with network plots and quality metrics
-}
-
-Unlike regular GENIE which uses API-based embeddings, local_GENIE processes everything
-on the user's machine for complete privacy and offline capability. This makes it
-ideal for sensitive data or environments without internet access.
-}
-\note{
-Requirements:
-\itemize{
-\item Python environment with transformers, torch, and numpy
-\item Local transformer model (downloaded automatically on first use)
-\item Sufficient RAM/VRAM for model and batch processing
-}
-}
-\examples{
-\dontrun{
-# Create sample items
-items <- data.frame(
-  statement = c("I enjoy social gatherings", "I prefer working alone",
-                "I feel anxious in crowds", "I am comfortable speaking publicly"),
-  attribute = c("extraversion", "introversion", "social_anxiety", "confidence"),
-  type = c("personality", "personality", "anxiety", "anxiety"),
-  ID = 1:4,
-  stringsAsFactors = FALSE
-)
-
-# Run local_GENIE with default BERT model
-results <- local_GENIE(
-  items = items,
-  embedding.model = "bert-base-uncased"
-)
-
-# Run with GPU acceleration and larger batch size
-results <- local_GENIE(
-  items = items,
-  embedding.model = "roberta-base",
-  device = "cuda",
-  batch.size = 64
-)
-
-# Generate embeddings only for external use
-embeddings_result <- local_GENIE(
-  items = items,
-  embedding.model = "distilbert-base-uncased",
-  embeddings.only = TRUE
-)
-}
-
 }
