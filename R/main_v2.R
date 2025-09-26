@@ -198,7 +198,7 @@
 #' \describe{
 #'   \item{`overall`}{Results for all items considered agnostic of item type, containing:
 #'     \describe{
-#'       \item{`final_NMI`}{Final normalized mutual information after all reduction steps}
+#'       \item{`final_NMI`}{Final normalized mutual information (NMI) after all reduction steps}
 #'       \item{`initial_NMI`}{Initial NMI of the pre-reduced, full item pool}
 #'       \item{`embeddings`}{List with `full` (full embedding matrix of reduced items),
 #'         `sparse` (sparsified embeddings of reduced items), `selected` (string specifying
@@ -219,7 +219,7 @@
 #'     \describe{
 #'       \item{`final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`,
 #'         `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`}{Same as overall object}
-#'       \item{`UVA`}{List with `n_removed` (number of redundant items removed), `n_sweeps`
+#'       \item{`UVA`}{List with `n_removed` (number of redundant items removed by the Unique Variable Analysis (UVA) step), `n_sweeps`
 #'         (number of UVA iterations), `redundant_pairs` (data frame with sweep, items, keep, remove columns)}
 #'       \item{`bootEGA`}{List with `initial_boot` (first bootEGA object), `final_boot`
 #'         (final bootEGA object with all stable items), `n_removed` (number of unstable items),
@@ -230,8 +230,6 @@
 #'   }
 #' }
 #'
-#' All functions validate user input and will produce informative error messages for
-#' invalid parameter combinations or missing required API keys.
 #'
 #' @examples
 #' \dontrun{
@@ -524,7 +522,7 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 
   overall_result <- try_overall_result$overall_result
 
-  if(!silently){
+  if(!silently && try_overall_result$success && try_item_level$success){
     print_results(overall_result, item_level)
   }
 
@@ -577,10 +575,43 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 #' @param plot Display network plots (default: TRUE)
 #' @param silently Suppress progress messages (default: FALSE)
 #'
-#' @return Depending on flags:
-#'   - Full pipeline: List with overall and item-type level results
-#'   - items.only: Data frame of generated items
-#'   - embeddings.only: List with embeddings matrix and items
+#' **Default behavior (`items.only = FALSE`, `embeddings.only = FALSE`):** Returns a
+#' complex list with two primary components:
+#'
+#' \describe{
+#'   \item{`overall`}{Results for all items considered agnostic of item type, containing:
+#'     \describe{
+#'       \item{`final_NMI`}{Final normalized mutual information after all reduction steps}
+#'       \item{`initial_NMI`}{Initial NMI of the pre-reduced, full item pool}
+#'       \item{`embeddings`}{List with `full` (full embedding matrix of reduced items),
+#'         `sparse` (sparsified embeddings of reduced items), `selected` (string specifying
+#'         which embeddings were used). If `keep.org = TRUE`, also includes `full_org`
+#'         and `sparse_org` for complete pre-reduction item set}
+#'       \item{`EGA.model_selected`}{EGA model used for analysis (TMFG or Glasso)}
+#'       \item{`final_items`}{Data frame with final items after reduction (columns: ID,
+#'         statement, attribute, type, EGA_com)}
+#'       \item{`final_EGA`}{Final EGA object from EGAnet package post-reduction}
+#'       \item{`initial_EGA`}{Initial EGA object of all items in original pool}
+#'       \item{`start_N`}{Initial number of items pre-reduction}
+#'       \item{`final_N`}{Final number of items in reduced pool}
+#'       \item{`network_plot`}{ggplot/patchwork comparison plot showing EGA network before vs after reduction}
+#'     }
+#'   }
+#'   \item{`item_type_level`}{Named list where results are displayed at the item type level. Each element contains results
+#'     for items of only one type:
+#'     \describe{
+#'       \item{`final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`,
+#'         `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`}{Same as overall object}
+#'       \item{`UVA`}{List with `n_removed` (number of redundant items removed), `n_sweeps`
+#'         (number of UVA iterations), `redundant_pairs` (data frame with sweep, items, keep, remove columns)}
+#'       \item{`bootEGA`}{List with `initial_boot` (first bootEGA object), `final_boot`
+#'         (final bootEGA object with all stable items), `n_removed` (number of unstable items),
+#'         `items_removed` (data frame of removed items with boot run information),
+#'         `initial_boot_with_redundancies` (boot EGA object for original item pool)}
+#'       \item{`stability_plot`}{ggplot/patchwork stability plot showing item stability before vs after reduction}
+#'     }
+#'   }
+#' }
 #'
 #' @export
 local_AIGENIE <- function(
@@ -760,7 +791,7 @@ local_AIGENIE <- function(
   overall_result <- try_overall_result$overall_result
 
   # Step 7: Print results summary
-  if (!silently) {
+  if(!silently && try_overall_result$success && try_item_level$success){
     print_results(overall_result, item_level)
   }
 
@@ -794,7 +825,7 @@ local_AIGENIE <- function(
 #'   \itemize{
 #'     \item Rows represent embedding dimensions
 #'     \item Columns represent items (must match items$ID exactly)
-#'     \item If NULL, embeddings will be generated using embedding.model
+#'     \item If `NULL`, embeddings will be generated using `embedding.model`
 #'   }
 #'
 #' @param openai.API OpenAI API key (required if using OpenAI embedding models)
@@ -808,29 +839,50 @@ local_AIGENIE <- function(
 #'     \item OpenAI: "text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"
 #'     \item HuggingFace: "BAAI/bge-base-en-v1.5", "BAAI/bge-small-en-v1.5", etc.
 #'   }
-#' @param EGA.model Network estimation model ("glasso", "TMFG", or NULL for auto-selection)
-#' @param EGA.algorithm Community detection algorithm ("walktrap", "leiden", "louvain")
+#' @param EGA.model EGA network estimation model ("glasso", "TMFG", or NULL for auto-selection)
+#' @param EGA.algorithm EGA community detection algorithm ("walktrap", "leiden", "louvain")
 #' @param EGA.uni.method Unidimensionality assessment method ("louvain", "expand", "LE")
-#' @param embeddings.only If TRUE, return embeddings and stop (skip network analysis)
-#' @param plot If TRUE, display network comparison plots
-#' @param silently If TRUE, suppress progress messages
+#' @param embeddings.only If `TRUE`, return embeddings and stop (skip network analysis)
+#' @param plot If `TRUE`, display network comparison plots
+#' @param silently If `TRUE`, suppress progress messages
 #'
-#' @return Depending on embeddings.only flag:
-#'   \itemize{
-#'     \item If embeddings.only = TRUE: List with embeddings matrix and items
-#'     \item If embeddings.only = FALSE: List with overall and item-type level results
+#' **Default behavior (`embeddings.only = FALSE`):** Returns a
+#' complex list with two primary components:
+#'
+#' \describe{
+#'   \item{`overall`}{Results for all items considered agnostic of item type, containing:
+#'     \describe{
+#'       \item{`final_NMI`}{Final normalized mutual information after all reduction steps}
+#'       \item{`initial_NMI`}{Initial NMI of the pre-reduced, full item pool}
+#'       \item{`embeddings`}{List with `full` (full embedding matrix of reduced items),
+#'         `sparse` (sparsified embeddings of reduced items), `selected` (string specifying
+#'         which embeddings were used). If `keep.org = TRUE`, also includes `full_org`
+#'         and `sparse_org` for complete pre-reduction item set}
+#'       \item{`EGA.model_selected`}{EGA model used for analysis (TMFG or Glasso)}
+#'       \item{`final_items`}{Data frame with final items after reduction (columns: ID,
+#'         statement, attribute, type, EGA_com)}
+#'       \item{`final_EGA`}{Final EGA object from EGAnet package post-reduction}
+#'       \item{`initial_EGA`}{Initial EGA object of all items in original pool}
+#'       \item{`start_N`}{Initial number of items pre-reduction}
+#'       \item{`final_N`}{Final number of items in reduced pool}
+#'       \item{`network_plot`}{ggplot/patchwork comparison plot showing EGA network before vs after reduction}
+#'     }
 #'   }
-#'
-#' @details
-#' GENIE workflow:
-#' 1. Validate and clean user-provided items
-#' 2. Generate embeddings (if not provided) using specified embedding model
-#' 3. Run network psychometric pipeline: redundancy reduction, community detection, stability analysis
-#' 4. Return comprehensive results with network plots and quality metrics
-#'
-#' Unlike AI-GENIE which generates items from scratch, GENIE evaluates existing items,
-#' making it ideal for researchers who want to validate their own item pools using
-#' modern network psychometric methods.
+#'   \item{`item_type_level`}{Named list where results are displayed at the item type level. Each element contains results
+#'     for items of only one type:
+#'     \describe{
+#'       \item{`final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`,
+#'         `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`}{Same as overall object}
+#'       \item{`UVA`}{List with `n_removed` (number of redundant items removed), `n_sweeps`
+#'         (number of UVA iterations), `redundant_pairs` (data frame with sweep, items, keep, remove columns)}
+#'       \item{`bootEGA`}{List with `initial_boot` (first bootEGA object), `final_boot`
+#'         (final bootEGA object with all stable items), `n_removed` (number of unstable items),
+#'         `items_removed` (data frame of removed items with boot run information),
+#'         `initial_boot_with_redundancies` (boot EGA object for original item pool)}
+#'       \item{`stability_plot`}{ggplot/patchwork stability plot showing item stability before vs after reduction}
+#'     }
+#'   }
+#' }
 #'
 #' @export
 GENIE <- function(
@@ -981,7 +1033,7 @@ GENIE <- function(
   overall_result <- try_overall_result$overall_result
 
   # Step 5: Display results summary
-  if (!silently) {
+  if(!silently && try_overall_result$success && try_item_level$success){
     print_results(overall_result, item_level)
   }
 
@@ -1019,7 +1071,7 @@ GENIE <- function(
 #'     \item RoBERTa: "roberta-base", "roberta-large"
 #'     \item DeBERTa: "microsoft/deberta-v3-base", "microsoft/deberta-v3-large"
 #'     \item DistilBERT: "distilbert-base-uncased"
-#'     \item Local paths: "/path/to/local/model"
+#'     \item Local paths: e.g., "/path/to/local/model"
 #'   }
 #'
 #' @param device Device for embedding computation:
@@ -1043,65 +1095,46 @@ GENIE <- function(
 #' @param EGA.algorithm Community detection algorithm ("walktrap", "leiden", "louvain")
 #' @param EGA.uni.method Unidimensionality assessment method ("louvain", "expand", "LE")
 #'
-#' @param embeddings.only If TRUE, return embeddings and stop (skip network analysis)
-#' @param plot If TRUE, display network comparison plots
-#' @param silently If TRUE, suppress progress messages
+#' @param embeddings.only If `TRUE`, return embeddings and stop (skip network analysis)
+#' @param plot If `TRUE`, display network comparison plots
+#' @param silently If `TRUE`, suppress progress messages
 #'
-#' @return Depending on embeddings.only flag:
-#'   \itemize{
-#'     \item If embeddings.only = TRUE: List with embeddings matrix and items
-#'     \item If embeddings.only = FALSE: List with overall and item-type level results
+#' **Default behavior (`embeddings.only = FALSE`):** Returns a
+#' complex list with two primary components:
+#'
+#' \describe{
+#'   \item{`overall`}{Results for all items considered agnostic of item type, containing:
+#'     \describe{
+#'       \item{`final_NMI`}{Final normalized mutual information after all reduction steps}
+#'       \item{`initial_NMI`}{Initial NMI of the pre-reduced, full item pool}
+#'       \item{`embeddings`}{List with `full` (full embedding matrix of reduced items),
+#'         `sparse` (sparsified embeddings of reduced items), `selected` (string specifying
+#'         which embeddings were used). If `keep.org = TRUE`, also includes `full_org`
+#'         and `sparse_org` for complete pre-reduction item set}
+#'       \item{`EGA.model_selected`}{EGA model used for analysis (TMFG or Glasso)}
+#'       \item{`final_items`}{Data frame with final items after reduction (columns: ID,
+#'         statement, attribute, type, EGA_com)}
+#'       \item{`final_EGA`}{Final EGA object from EGAnet package post-reduction}
+#'       \item{`initial_EGA`}{Initial EGA object of all items in original pool}
+#'       \item{`start_N`}{Initial number of items pre-reduction}
+#'       \item{`final_N`}{Final number of items in reduced pool}
+#'       \item{`network_plot`}{ggplot/patchwork comparison plot showing EGA network before vs after reduction}
+#'     }
 #'   }
-#'
-#' @details
-#' local_GENIE workflow:
-#' 1. Validate and clean user-provided items
-#' 2. Generate embeddings locally using specified transformer model
-#' 3. Run network psychometric pipeline: redundancy reduction, community detection, stability analysis
-#' 4. Return comprehensive results with network plots and quality metrics
-#'
-#' Unlike regular GENIE which uses API-based embeddings, local_GENIE processes everything
-#' on the user's machine for complete privacy and offline capability. This makes it
-#' ideal for sensitive data or environments without internet access.
-#'
-#' @note
-#' Requirements:
-#' - Python environment with transformers, torch, and numpy
-#' - Local transformer model (downloaded automatically on first use)
-#' - Sufficient RAM/VRAM for model and batch processing
-#'
-#' @examples
-#' \dontrun{
-#' # Create sample items
-#' items <- data.frame(
-#'   statement = c("I enjoy social gatherings", "I prefer working alone",
-#'                 "I feel anxious in crowds", "I am comfortable speaking publicly"),
-#'   attribute = c("extraversion", "introversion", "social_anxiety", "confidence"),
-#'   type = c("personality", "personality", "anxiety", "anxiety"),
-#'   ID = 1:4,
-#'   stringsAsFactors = FALSE
-#' )
-#'
-#' # Run local_GENIE with default BERT model
-#' results <- local_GENIE(
-#'   items = items,
-#'   embedding.model = "bert-base-uncased"
-#' )
-#'
-#' # Run with GPU acceleration and larger batch size
-#' results <- local_GENIE(
-#'   items = items,
-#'   embedding.model = "roberta-base",
-#'   device = "cuda",
-#'   batch.size = 64
-#' )
-#'
-#' # Generate embeddings only for external use
-#' embeddings_result <- local_GENIE(
-#'   items = items,
-#'   embedding.model = "distilbert-base-uncased",
-#'   embeddings.only = TRUE
-#' )
+#'   \item{`item_type_level`}{Named list where results are displayed at the item type level. Each element contains results
+#'     for items of only one type:
+#'     \describe{
+#'       \item{`final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`,
+#'         `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`}{Same as overall object}
+#'       \item{`UVA`}{List with `n_removed` (number of redundant items removed), `n_sweeps`
+#'         (number of UVA iterations), `redundant_pairs` (data frame with sweep, items, keep, remove columns)}
+#'       \item{`bootEGA`}{List with `initial_boot` (first bootEGA object), `final_boot`
+#'         (final bootEGA object with all stable items), `n_removed` (number of unstable items),
+#'         `items_removed` (data frame of removed items with boot run information),
+#'         `initial_boot_with_redundancies` (boot EGA object for original item pool)}
+#'       \item{`stability_plot`}{ggplot/patchwork stability plot showing item stability before vs after reduction}
+#'     }
+#'   }
 #' }
 #'
 #' @export
@@ -1227,7 +1260,7 @@ local_GENIE <- function(
   overall_result <- try_overall_result$overall_result
 
   # Step 5: Display results summary
-  if (!silently) {
+  if(!silently && try_overall_result$success && try_item_level$success){
     print_results(overall_result, item_level)
   }
 

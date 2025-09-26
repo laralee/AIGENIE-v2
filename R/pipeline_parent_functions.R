@@ -325,7 +325,7 @@ run_item_reduction_pipeline <- function(embedding_matrix,
       )
     }, error = function(e) {
       warning("Pipeline failed for type: ", tname, " — ", e$message)
-      success <- FALSE
+      success <<- FALSE
       return(NULL)
     })
   })
