@@ -1091,23 +1091,42 @@ main.prompts_validate <- function(main.prompts, items.attributes, silently) {
 #' @param openai.API The OpenAI API key provided
 #'
 check_for_default_APIs <- function(hf.token, groq.API, openai.API){
-  if(groq.API == "INSERT YOUR KEY HERE" || openai.API == "INSERT YOUR KEY HERE" || hf.token == "INSERT YOUR KEY HERE"){
-    message("Before running any AIGENIE examples, you need to add your API key. Please create an API key online.")
 
-    if(groq.API == "INSERT YOUR KEY HERE"){
-      message("\n Groq API keys are free to create and use for moderate useage.")
+  phrase <- "INSERT YOUR KEY HERE"
+  stop <- FALSE
+
+  if(!is.null(groq.API)){
+
+    if(groq.API == phrase){
+      message("Before running any AIGENIE examples, you need to add your Groq API key. Please create an API key online via the Groq website.")
+      message("\nGroq API keys are free to create and use for moderate useage.")
+      stop <- TRUE
     }
 
-    if(hf.token == "INSERT YOUR KEY HERE"){
-      message("\n Huggingface Tokens are free to create and use for moderate useage.")
+  }
+  if(!is.null(hf.token)){
+
+    if(hf.token == phrase){
+      message("Before running any AIGENIE examples, you need to add your Hugging Face token. Please create a token online via the Hugging Face website.")
+      message("\nHugging Face tokens are free to create and use for moderate useage.")
+      stop <- TRUE
     }
 
-    if(openai.API == "INSERT YOUR KEY HERE"){
-      message("\n OpenAI keys are extremely inexpensive, but do require a valid payment method to use. To avoid adding a payment method, use an open source model via Groq and an embedding model via Hugging Face.")
+  }
+  if(!is.null(openai.API)){
+
+    if(openai.API == phrase){
+      message("Before running any AIGENIE examples, you need to add your OpenAI API key. Please create a key online via the OpenAI website.")
+      message("\n Using OpenAI keys is extremely inexpensive. But OpenAI does require a valid payment method to use. To avoid adding a payment method, use an open source model via Groq and an embedding model via Hugging Face.")
+      stop <- TRUE
     }
 
+  }
+
+  if(stop){
     stop()
   }
+
 }
 
 

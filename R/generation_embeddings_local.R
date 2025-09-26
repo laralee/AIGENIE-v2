@@ -294,7 +294,7 @@ ensure_aigenie_python_local <- function(force = FALSE, silently = FALSE) {
   }
 
   if (!silently) {
-    message("AI-GENIE LOCAL: Checking Python environment for local models...")
+    message("Checking Python environment for local models...")
   }
 
   # Configure Python
@@ -328,7 +328,7 @@ ensure_aigenie_python_local <- function(force = FALSE, silently = FALSE) {
     numpy <- reticulate::import("numpy")
 
     if (!silently) {
-      message("AI-GENIE LOCAL: Python environment ready for raw embeddings!")
+      message("Python environment ready for raw embeddings!")
 
       # Check for GPU availability
       if (torch$cuda$is_available()) {

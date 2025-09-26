@@ -7,7 +7,7 @@ ensure_aigenie_python <- function() {
     return(invisible(TRUE))
   }
 
-  message("AI-GENIE: Setting up Python environment (one-time setup)...")
+  message("Setting up Python environment ...")
 
   # Configure Python version
   reticulate::py_config()
