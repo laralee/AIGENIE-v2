@@ -613,6 +613,43 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 #'   }
 #' }
 #'
+#' @examples
+#' \dontrun{
+#' ########################################################
+#' #### Running AIGENIE with a downloaded LLM model ######
+#' ########################################################
+#'
+#' # Item type definitions
+#' trait.definitions <- list(
+#'  neuroticism = "Neuroticism is a personality trait that describes one's tendency to experience negative emotions like anxiety, depression, irritability, anger, and self-consciousness.",
+#'  extraversion = "Extraversion is a personality trait that describes people who are more focused on the external world than their internal experience."
+#' )
+#'
+#' # Item attributes
+#' aspects.of.personality.traits <- list(
+#'  neuroticism = c("anxious", "depressed", "insecure", "emotional"),
+#'  extraversion = c("friendly", "positive", "assertive", "energetic")
+#' )
+#'
+#' # Name the field or specialty
+#' domain <- "Personality Measurement"
+#'
+#' # Name the Inventory being created
+#' scale.title <- "Three of 'Big Five:' A Streamlined Personality Inventory"
+#'
+#' # Add a file path name to a local text generation model downloaded on your computer
+#' model.path <- "ADD FILE PATH TO DOWNLOADED MODEL HERE"
+#'
+#'
+#' # Generate and validate items using a model installed on your machine
+#' local_example <- local_AIGENIE(
+#'  item.attributes = aspects.of.personality.traits,
+#'  item.type.definitions = trait.definitions,
+#'  domain = domain,
+#'  model.path = model.path
+#' )
+#'
+#' }
 #' @export
 local_AIGENIE <- function(
     # Required parameters
