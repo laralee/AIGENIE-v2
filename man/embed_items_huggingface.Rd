@@ -8,7 +8,7 @@ embed_items_huggingface(
   embedding.model = "BAAI/bge-base-en-v1.5",
   hf.token = NULL,
   items,
-  silently
+  silently = FALSE
 )
 }
 \arguments{

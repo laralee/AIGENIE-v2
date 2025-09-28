@@ -543,7 +543,7 @@ resolve_model_name <- function(model, silently) {
 #' @param provider Optional string indicating provider ("openai", "huggingface", or "auto" for auto-detection)
 #'
 embedding.model_validate <- function(embedding.model, provider = "auto") {
-  # Check basic type requirements
+
   if (!is.character(embedding.model) || length(embedding.model) != 1 || is.na(embedding.model)) {
     stop(
       "AI-GENIE expects embedding.model to be a string. Set it to a valid embedding model.",
@@ -551,7 +551,7 @@ embedding.model_validate <- function(embedding.model, provider = "auto") {
     )
   }
 
-  # Define allowed models
+  # OpenAI models
   openai_models <- c(
     "text-embedding-3-small",
     "text-embedding-3-large",
@@ -560,24 +560,32 @@ embedding.model_validate <- function(embedding.model, provider = "auto") {
 
   # Confirmed working HF models
   hf_models_confirmed <- c(
+    # BAAI models (work via API)
     "BAAI/bge-small-en-v1.5",
     "BAAI/bge-base-en-v1.5",
     "BAAI/bge-large-en-v1.5",
+
+    # Google EmbeddingGemma models (work via sentence-transformers with auth)
+    "google/embeddinggemma-300m",
+    "google/embeddinggemma-256m",
+    "google/embeddinggemma-128m",
+
+    # Models that work via sentence-transformers fallback
+    "sentence-transformers/all-MiniLM-L6-v2",
+
+    # GTE models (work via sentence-transformers)
     "thenlper/gte-small",
     "thenlper/gte-base",
     "thenlper/gte-large"
   )
 
-  # Known incompatible HF models
-  hf_models_incompatible <- c(
-    "sentence-transformers/all-MiniLM-L6-v2",
-    "sentence-transformers/all-mpnet-base-v2",
-    "intfloat/e5-base-v2",
-    "intfloat/e5-large-v2",
-    "intfloat/e5-small-v2"
+  # Known problematic models
+  hf_models_problematic <- c(
+    "hkunlp/instructor-base",  # Requires special instruction format
+    "jinaai/jina-embeddings-v2-small-en"  # Initialization issues
   )
 
-  # Auto-detect provider if needed
+  # Auto-detect provider
   if (provider == "auto") {
     if (embedding.model %in% openai_models || grepl("^text-embedding", embedding.model)) {
       provider <- "openai"
@@ -591,54 +599,64 @@ embedding.model_validate <- function(embedding.model, provider = "auto") {
     if (!(embedding.model %in% openai_models)) {
       stop(
         paste0(
-          "AI-GENIE expects OpenAI embedding.model to be one of the following:\n",
+          "AI-GENIE expects OpenAI embedding.model to be one of:\n",
           paste(sprintf("  • %s", openai_models), collapse = "\n"),
-          "\n\nReceived: '", embedding.model, "'\n\n",
-          "If you meant to use a HuggingFace model, make sure to use a compatible one."
+          "\n\nReceived: '", embedding.model, "'"
         ),
         call. = FALSE
       )
     }
   } else if (provider == "huggingface") {
-    # Check if it's a known incompatible model
-    if (embedding.model %in% hf_models_incompatible) {
+
+    # Check for known problematic models
+    if (embedding.model %in% hf_models_problematic) {
       stop(
         paste0(
-          "Model '", embedding.model, "' is NOT compatible with AI-GENIE.\n",
-          "This model is configured for sentence-similarity on HuggingFace API, not embeddings.\n\n",
-          "Please use one of these compatible models instead:\n",
-          paste(sprintf("  • %s", hf_models_confirmed), collapse = "\n"),
-          "\n\nExample usage:\n",
-          '  embedding.model = "BAAI/bge-base-en-v1.5"'
+          "Model '", embedding.model, "' has known compatibility issues.\n",
+          "Please use one of these alternatives:\n",
+          "  • BAAI/bge-base-en-v1.5\n",
+          "  • google/embeddinggemma-300m\n",
+          "  • thenlper/gte-base"
         ),
         call. = FALSE
       )
     }
 
-    # Check if it's a confirmed working model
-    if (embedding.model %in% hf_models_confirmed) {
-      # Model is confirmed to work
-      return(invisible(TRUE))
+    # Special note for Google EmbeddingGemma models
+    if (grepl("google/embeddinggemma", embedding.model)) {
+      if (is.null(hf.token)) {
+        stop(
+          paste0(
+            "Model '", embedding.model, "' requires authentication.\n",
+            "Please provide your HuggingFace token with: hf.token = 'your_token'\n",
+            "Also ensure you have accepted the model's license at:\n",
+            "https://huggingface.co/", embedding.model
+          ),
+          call. = FALSE
+        )
+      }
     }
 
-    # Unknown HF model - warn but allow
+    # Check if it's confirmed working - no warning needed
+    if (embedding.model %in% hf_models_confirmed) {
+      return(provider)
+    }
+
+    # For unknown models, provide guidance
     warning(
       paste0(
-        "Model '", embedding.model, "' has not been tested with AI-GENIE.\n\n",
-        "Known compatible HuggingFace models:\n",
-        paste(sprintf("  • %s", hf_models_confirmed), collapse = "\n"),
-        "\n\n Known incompatible models:\n",
-        paste(sprintf("  • %s", hf_models_incompatible), collapse = "\n"),
-        "\n\nIf this model doesn't work, try 'BAAI/bge-base-en-v1.5' instead.\n"
+        "Model '", embedding.model, "' has not been tested with AI-GENIE.\n",
+        "If it doesn't work, try one of these confirmed models:\n",
+        "  • BAAI/bge-base-en-v1.5\n",
+        "  • google/embeddinggemma-300m (requires HF token)\n",
+        "  • thenlper/gte-base"
       ),
-      call. = FALSE,
       immediate. = TRUE
     )
   }
 
   return(provider)
 }
-
 
 
 # Validate EGA parameters ----
