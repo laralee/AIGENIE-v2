@@ -339,43 +339,43 @@ generate_items_via_llm <- function(main.prompts, system.role, model, top.p, temp
   # Ensure Python environment is ready
   ensure_aigenie_python()
 
+  # Normalize and validate model name
+  model_info <- normalize_model_name(model, groq.API, openai.API, silently)
+  normalized_model <- model_info$model
+  provider <- model_info$provider
+
+  # Remove prefix for actual API calls
+  # e.g., "OpenAI/gpt-4o" -> "gpt-4o", "Groq/mixtral-8x7b" -> "mixtral-8x7b"
+  model_for_api <- sub("^[^/]+/", "", normalized_model)
+
   # Initialize results dataframe
-  all_items_df <- data.frame(type = character(),
-                             attribute = character(),
-                             statement = character(),
-                             stringsAsFactors = FALSE)
+  all_items_df <- data.frame(
+    type = character(),
+    attribute = character(),
+    statement = character(),
+    stringsAsFactors = FALSE
+  )
 
-  # Determine which API to use based on model string
-  use_groq <- FALSE
-
-  # Check for model type - special case for "oss" overrides "gpt"
-  if (grepl("oss", model, ignore.case = TRUE)) {
-    use_groq <- TRUE
-  } else if (grepl("gpt|o1|o3|o4", model, ignore.case = TRUE)) {
-    use_groq <- FALSE
-  } else {
-    use_groq <- TRUE
-  }
-
-  # Check for missing Groq API key if needed
-  if (use_groq && is.null(groq.API)) {
-    if (!silently) {
-      cat("Groq API key missing. Switching to GPT-4o for generation.\n")
-    }
-    use_groq <- FALSE
-    model <- "gpt-4o"
-  }
-
-  # Set up API client and generate function
+  # Set up API client and generate function based on provider
   tryCatch({
-    if (use_groq) {
+    if (provider == "groq") {
+      if (is.null(groq.API)) {
+        stop(paste("Groq API key required for model:", normalized_model))
+      }
       groq <- reticulate::import("groq")
       groq_client <- groq$Groq(api_key = groq.API)
       generate_FUN <- groq_client$chat$completions$create
-    } else {
+      use_groq <- TRUE
+    } else if (provider == "openai") {
+      if (is.null(openai.API)) {
+        stop(paste("OpenAI API key required for model:", normalized_model))
+      }
       openai <- reticulate::import("openai")
       openai$api_key <- openai.API
       generate_FUN <- openai$ChatCompletion$create
+      use_groq <- FALSE
+    } else {
+      stop(paste("Unsupported provider:", provider))
     }
   }, error = function(e) {
     stop(paste("Failed to initialize API client:", conditionMessage(e)))
@@ -384,7 +384,7 @@ generate_items_via_llm <- function(main.prompts, system.role, model, top.p, temp
   # Helper function to make API call
   call_generate_FUN <- function(messages_list) {
     call_params <- list(
-      model = model,
+      model = model_for_api,  # Use the model name without prefix
       messages = messages_list,
       temperature = temperature,
       top_p = top.p
@@ -400,10 +400,12 @@ generate_items_via_llm <- function(main.prompts, system.role, model, top.p, temp
     }
 
     # Track items for this type
-    type_items_df <- data.frame(type = character(),
-                                attribute = character(),
-                                statement = character(),
-                                stringsAsFactors = FALSE)
+    type_items_df <- data.frame(
+      type = character(),
+      attribute = character(),
+      statement = character(),
+      stringsAsFactors = FALSE
+    )
 
     # Track iterations without new items
     iterations_without_new <- 0
@@ -479,13 +481,13 @@ generate_items_via_llm <- function(main.prompts, system.role, model, top.p, temp
 
         if (nrow(all_items_df) > 0) {
           warning("Returning partial results generated before error.")
-          return(all_items_df)
+          return(list(items = all_items_df, successful = FALSE))
         } else {
           stop(error_msg)
         }
       }
 
-      # Extract raw text from response
+      # Extract raw text from response based on provider
       raw_text <- if (use_groq) {
         response$choices[[1]]$message$content
       } else {

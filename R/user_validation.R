@@ -18,7 +18,7 @@
 #' @param main.prompts A named list of custom prompts that the user specifies (if desired)
 #' @param groq.API A string or NULL. Groq API key.
 #' @param model A string. The user-specified language model. Will be resolved to a
-#'   canonical model name using \code{resolve_model_name()}.
+#'   canonical model name using \code{normalize_model_name()}.
 #' @param temperature A numeric value between 0 and 2.
 #' @param top.p A numeric value between 0 and 1.
 #' @param embedding.model A string or NULL. Must be one of the accepted OpenAI embedding models.
@@ -98,7 +98,7 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
   }
 
   # Validate the `model` string and replace it with a valid model string if necessary
-  model <- resolve_model_name(model, silently)
+  model <- normalize_model_name(model, groq.API, openai.API, silently)
 
   # Validate the embedding model
   provider <- embedding.model_validate(embedding.model)
@@ -361,7 +361,7 @@ validate_user_input_GENIE <- function(
   )
 
   # 6. Validate model string and resolve to canonical form
-  model <- resolve_model_name(model, silently)
+  model <- normalize_model_name(model, silently)
 
   # 7. Validate embedding model and detect provider
   provider <- embedding.model_validate(embedding.model)

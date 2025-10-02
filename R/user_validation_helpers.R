@@ -469,61 +469,159 @@ resolve_model_name <- function(model, silently) {
   }
 
   model_trimmed <- trimws(model)
-  model_clean <- tolower(gsub("[^a-z0-9]", "", model_trimmed))  # Remove spaces, hyphens, dots, etc.
+  model_clean <- tolower(gsub("[^a-z0-9]", "", model_trimmed))
 
-  # Canonical models
+  # Canonical models with prefixes
   canonical_models <- c(
-    "gpt-5",
-    "gpt-4o",
-    "gpt-4.1",
-    "gpt-3.5-turbo",
-    "openai/gpt-oss-20b",
-    "openai/gpt-oss-120b",
-    "deepseek-r1-distill-llama-70b",
-    "meta-llama/Llama-3.3-70B-Instruct",
-    "gemma2-9b-it"
+    "OpenAI/gpt-5",
+    "OpenAI/gpt-4o",
+    "OpenAI/gpt-4.1",
+    "OpenAI/gpt-3.5-turbo",
+    "Groq/openai/gpt-oss-20b",
+    "Groq/openai/gpt-oss-120b",
+    "Groq/deepseek-r1-distill-llama-70b",
+    "Groq/meta-llama/Llama-3.3-70B-Instruct",
+    "Groq/gemma2-9b-it"
   )
 
-  # Alias mapping
+  # Alias mapping (maps to prefixed versions)
   alias_map <- list(
-    gpt5       = "gpt-5",
-    gpt4o      = "gpt-4o",
-    gpt41      = "gpt-4.1",
-    gpt35      = "gpt-3.5-turbo",
-    gpt35turbo = "gpt-3.5-turbo",
-    gpt3dot5   = "gpt-3.5-turbo",
-    oss20b     = "openai/gpt-oss-20b",
-    oss120b    = "openai/gpt-oss-120b",
-    deepseek   = "deepseek-r1-distill-llama-70b",
-    llama      = "meta-llama/Llama-3.3-70B-Instruct",
-    gemma      = "gemma2-9b-it"
+    gpt5       = "OpenAI/gpt-5",
+    gpt4o      = "OpenAI/gpt-4o",
+    gpt41      = "OpenAI/gpt-4.1",
+    gpt35      = "OpenAI/gpt-3.5-turbo",
+    gpt35turbo = "OpenAI/gpt-3.5-turbo",
+    gpt3dot5   = "OpenAI/gpt-3.5-turbo",
+    oss20b     = "Groq/openai/gpt-oss-20b",
+    oss120b    = "Groq/openai/gpt-oss-120b",
+    oss        = "Groq/openai/gpt-oss-120b",  # Default oss to 120b
+    deepseek   = "Groq/deepseek-r1-distill-llama-70b",
+    llama      = "Groq/meta-llama/Llama-3.3-70B-Instruct",
+    gemma      = "Groq/gemma2-9b-it"
   )
 
-  # 1. Exact match to canonical model → return directly
-  if (tolower(model_trimmed) %in% tolower(canonical_models)) {
+  # 1. Check for exact alias match first
+  if (model_clean %in% names(alias_map)) {
+    return(alias_map[[model_clean]])
+  }
+
+  # 2. Check if already has correct prefix format
+  if (grepl("^(OpenAI|Groq|HuggingFace)/", model_trimmed)) {
     return(model_trimmed)
   }
 
-  # 2. Starts with canonical model → assume versioned variant
-  for (canon in canonical_models) {
-    if (startsWith(tolower(model_trimmed), tolower(canon))) {
-      return(model_trimmed)
-    }
-  }
-
-  # 3. Starts with alias → return mapped canonical model
-  for (alias in names(alias_map)) {
-    if (startsWith(model_clean, alias)) {
-      return(alias_map[[alias]])
-    }
-  }
-
-  # 4. Unchanged input — warn and return as-is
-  if(!silently){
-    warning(paste0("AI-GENIE does not recognize the model `", model_trimmed, "`. Proceeding as-is."))
-  }
-    return(model_trimmed)
+  # 3. Return as-is for unknown models (normalize_model_name will handle)
+  return(model_trimmed)
 }
+
+
+#' Normalize and Validate Model Names with Provider Prefixes
+#'
+#' @description
+#' Converts model names to the standardized format: Provider/model-name
+#' Maintains backward compatibility with existing model names.
+#'
+#' @param model Character string of the model name
+#' @param groq.API Optional Groq API key
+#' @param openai.API Optional OpenAI API key
+#' @param silently Logical, suppress warnings
+#'
+#' @return List with normalized model name and detected provider
+#'
+normalize_model_name <- function(model, groq.API = NULL, openai.API = NULL, silently = FALSE) {
+
+  # Store original for error messages
+  original_model <- model
+
+  # First try backward compatibility resolution
+  resolved_model <- resolve_model_name(model, silently)
+
+  # Now check the resolved model for prefixes (lowercase for comparison)
+  model_lower <- tolower(trimws(resolved_model))
+
+  # Check if already has a provider prefix
+  if (grepl("^(openai|groq|huggingface)/", model_lower)) {
+    # Extract provider from the resolved model
+    provider <- tolower(strsplit(resolved_model, "/")[[1]][1])
+
+    # Handle HuggingFace case
+    if (provider == "huggingface") {
+      stop(paste0(
+        "Model '", original_model, "' specifies HuggingFace as provider.\n",
+        "HuggingFace text generation models are not available via the free Inference API.\n\n",
+        "Options for open-source models:\n",
+        "  1. Use local_AIGENIE() with downloaded GGUF models\n",
+        "  2. Use Groq's library of open source models. Get a free API key at: https://groq.com"
+      ), call. = FALSE)
+    }
+
+    return(list(
+      model = resolved_model,  # Return the resolved model with proper casing
+      provider = provider
+    ))
+  }
+
+  # If resolve_model_name didn't add a prefix, continue with pattern detection
+  model_lower_check <- tolower(resolved_model)
+
+  # OpenAI patterns (for models not caught by resolve_model_name)
+  if (grepl("^(gpt|o[1-9])", model_lower_check)) {
+    normalized <- paste0("OpenAI/", resolved_model)
+    if (!silently) {
+      message(sprintf("Model '%s' interpreted as OpenAI model: '%s'",
+                      original_model, normalized))
+    }
+    return(list(model = normalized, provider = "openai"))
+  }
+
+  # HuggingFace patterns (org/model format without prefix)
+  if (grepl("/", resolved_model) && !grepl("^(openai|groq)/", model_lower_check)) {
+    stop(paste0(
+      "Model '", original_model, "' appears to be a HuggingFace model.\n",
+      "HuggingFace text generation is not supported via the free API.\n\n",
+      "For this model, consider:\n",
+      "  1. Use local_AIGENIE() with downloaded GGUF models\n",
+      "  2. Use Groq's library of open source models. Get a free API key at: https://groq.com"
+    ), call. = FALSE)
+  }
+
+  # Default to Groq for unknown models if Groq API available
+  if (!is.null(groq.API)) {
+    normalized <- paste0("Groq/", resolved_model)
+    if (!silently) {
+      warning(sprintf(
+        "Unknown model '%s' assumed to be Groq model: '%s'\n",
+        "For clarity, please use explicit prefixes: OpenAI/, Groq/, or HuggingFace/",
+        original_model, normalized
+      ))
+    }
+    return(list(model = normalized, provider = "groq"))
+  }
+
+  # Check if OpenAI API is available as fallback
+  if (!is.null(openai.API)) {
+    normalized <- paste0("OpenAI/", resolved_model)
+    if (!silently) {
+      warning(sprintf(
+        "Unknown model '%s' assumed to be OpenAI model: '%s'\n",
+        "For clarity, please use explicit prefixes: OpenAI/, Groq/, or HuggingFace/",
+        original_model, normalized
+      ))
+    }
+    return(list(model = normalized, provider = "openai"))
+  }
+
+  # No API keys available
+  stop(paste0(
+    "Cannot determine provider for model '", original_model, "'.\n",
+    "Please either:\n",
+    "  1. Use explicit prefix: OpenAI/, Groq/, or HuggingFace/\n",
+    "  2. Provide appropriate API key (openai.API or groq.API)\n",
+    "  3. Use local_AIGENIE() for local model execution"
+  ), call. = FALSE)
+}
+
+
 
 
 #' Validate Embedding Model
