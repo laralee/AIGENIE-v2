@@ -504,26 +504,33 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 
   item_level <- try_item_level$item_level
 
+  if(length(names(item.attributes)) > 1) { # only run overall if you have to
+    # If successful, generate results for items overall
+    try_overall_result <- run_pipeline_for_all(item_level,
+                                           items,
+                                           embeddings,
+                                           EGA.model,
+                                           EGA.algorithm,
+                                           EGA.uni.method,
+                                           keep.org,
+                                           silently,
+                                           plot)
 
-  # If successful, generate results for items overall
-  try_overall_result <- run_pipeline_for_all(item_level,
-                                         items,
-                                         embeddings,
-                                         EGA.model,
-                                         EGA.algorithm,
-                                         EGA.uni.method,
-                                         keep.org,
-                                         silently,
-                                         plot)
+    if(!try_overall_result$success){
+      return(item_level)
+    }
 
-  if(!try_overall_result$success){
-    return(item_level)
+    overall_result <- try_overall_result$overall_result
+    only.one <- FALSE
+  } else {
+    overall_result <- item_level
+    try_overall_result <- list(success = TRUE)
+    only.one <- TRUE
   }
 
-  overall_result <- try_overall_result$overall_result
 
   if(!silently && try_overall_result$success && try_item_level$success){
-    print_results(overall_result, item_level)
+    print_results(overall_result, item_level, only.one)
   }
 
   return( list(overall = overall_result,
@@ -814,22 +821,29 @@ local_AIGENIE <- function(
 
   item_level <- try_item_level$item_level
 
+  if(length(names(item.attributes)) > 1){
   # Overall reduction
-  try_overall_result <- run_pipeline_for_all(
-    item_level, items, embeddings, EGA.model,
-    EGA.algorithm, EGA.uni.method, keep.org,
-    silently, plot
-  )
+    try_overall_result <- run_pipeline_for_all(
+      item_level, items, embeddings, EGA.model,
+      EGA.algorithm, EGA.uni.method, keep.org,
+      silently, plot
+    )
 
-  if (!try_overall_result$success) {
-    return(item_level)
+    if (!try_overall_result$success) {
+      return(item_level)
+    }
+
+    overall_result <- try_overall_result$overall_result
+    only.one <- FALSE
+  } else {
+    overall_result <- item_level
+    try_overall_result <- list(success = TRUE)
+    only.one <- TRUE
   }
-
-  overall_result <- try_overall_result$overall_result
 
   # Step 7: Print results summary
   if(!silently && try_overall_result$success && try_item_level$success){
-    print_results(overall_result, item_level)
+    print_results(overall_result, item_level, only.one)
   }
 
   # Return results
@@ -1226,6 +1240,7 @@ GENIE <- function(
   item_level <- try_item_level$item_level
 
   # Overall analysis
+  if(length(names(item.attributes)) > 1){
   try_overall_result <- run_pipeline_for_all(
     item_level = item_level,
     items = items,
@@ -1244,10 +1259,16 @@ GENIE <- function(
   }
 
   overall_result <- try_overall_result$overall_result
+  only.one <- FALSE
+  } else {
+    overall_result <- item_level
+    try_overall_result <- list(success = TRUE)
+    only.one <- TRUE
+  }
 
   # Step 5: Display results summary
   if(!silently && try_overall_result$success && try_item_level$success){
-    print_results(overall_result, item_level)
+    print_results(overall_result, item_level, only.one)
   }
 
   # Step 6: Return comprehensive results
@@ -1452,6 +1473,7 @@ local_GENIE <- function(
 
   item_level <- try_item_level$item_level
 
+  if(length(names(item.attributes)) > 1){
   # Overall analysis
   try_overall_result <- run_pipeline_for_all(
     item_level = item_level,
@@ -1471,10 +1493,16 @@ local_GENIE <- function(
   }
 
   overall_result <- try_overall_result$overall_result
+  only.one <- FALSE
+  } else {
+    overall_result <- item_level
+    try_overall_result <- list(success = TRUE)
+    only.one <- TRUE
+  }
 
   # Step 5: Display results summary
   if(!silently && try_overall_result$success && try_item_level$success){
-    print_results(overall_result, item_level)
+    print_results(overall_result, item_level, only.one)
   }
 
   # Step 6: Return comprehensive results

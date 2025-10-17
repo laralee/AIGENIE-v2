@@ -47,7 +47,7 @@ validate_user_input_AIGENIE(
 \item{groq.API}{A string or NULL. Groq API key.}
 
 \item{model}{A string. The user-specified language model. Will be resolved to a
-canonical model name using \code{resolve_model_name()}.}
+canonical model name using \code{normalize_model_name()}.}
 
 \item{temperature}{A numeric value between 0 and 2.}
 

@@ -15,12 +15,12 @@ ensure_aigenie_python <- function() {
   # Check and install packages
   if (!reticulate::py_module_available("openai")) {
     message("Installing openai==0.28...")
-    reticulate::py_install("openai==0.28", pip = TRUE)
+    reticulate::py_require(c("openai==0.28"))
   }
 
   if (!reticulate::py_module_available("groq")) {
     message("Installing groq...")
-    reticulate::py_install("groq", pip = TRUE)
+    reticulate::py_require(c("groq"))
   }
 
   if (!reticulate::py_module_available("requests")) {

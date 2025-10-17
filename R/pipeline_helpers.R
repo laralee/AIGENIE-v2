@@ -612,8 +612,9 @@ calc_final_stability <- function(result,
 #'
 #' @param obj A list object containing the OVERALL analysis results returned by \code{get_results}.
 #' @param obj2 A list object containing the ITEM-TYPE LEVEL analysis results returned by \code{get_results}.
+#' @param only.one A flag denoting if overall results should be printed
 #' @return No return value; the function prints the results to the console.
-print_results<-function(obj, obj2){
+print_results<-function(obj, obj2, only.one){
 
   # Print the title
   cat("\n")
@@ -649,23 +650,26 @@ print_results<-function(obj, obj2){
                "           Final NMI: ", round(after_genie,4) * 100))
   }
 
-  cat("\n")
-  cat("\n")
+  if(!only.one){ # only print overall results if you have them
 
-  EGA.model <- obj[["EGA.model_selected"]]
-  before_nmi <- obj[["initial_NMI"]]
-  embedding_type <- obj[["embeddings"]][["selected"]]
-  after_genie <- obj[["final_NMI"]]
-  initial_items <- obj[["start_N"]]
-  final_items <- obj[["final_N"]]
+    cat("\n")
+    cat("\n")
 
-  cat(paste("                          Overall Sample Results"))
-  cat("\n")
-  cat(paste("EGA Model:", EGA.model,"    Embeddings Used:", embedding_type,
-            "    Staring N:", initial_items, "    Final N:", final_items))
-  cat("\n")
-  cat(paste0("             Initial NMI: ", round(before_nmi,4) * 100,
-             "           Final NMI: ", round(after_genie,4) * 100))
+    EGA.model <- obj[["EGA.model_selected"]]
+    before_nmi <- obj[["initial_NMI"]]
+    embedding_type <- obj[["embeddings"]][["selected"]]
+    after_genie <- obj[["final_NMI"]]
+    initial_items <- obj[["start_N"]]
+    final_items <- obj[["final_N"]]
+
+    cat(paste("                          Overall Sample Results"))
+    cat("\n")
+    cat(paste("EGA Model:", EGA.model,"    Embeddings Used:", embedding_type,
+              "    Staring N:", initial_items, "    Final N:", final_items))
+    cat("\n")
+    cat(paste0("             Initial NMI: ", round(before_nmi,4) * 100,
+               "           Final NMI: ", round(after_genie,4) * 100))
+  }
 
 }
 
