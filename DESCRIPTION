@@ -1,6 +1,6 @@
 Package: AIGENIE
 Type: Package
-Title: Generate and Validate Items Automatically via AI-GENIE
+Title: Automatic Item Generation and Validation (Structural Validity) with Network-Integrated Evaluation. AI-Guided Exploration and Network Inference for Items and Embeddings.
 Version: 2.1.0
 Authors@R: c(
     person("Lara", "Russell-Lasalandra", email = "llr7cb@virginia.edu", role = "cre",
@@ -8,9 +8,9 @@ Authors@R: c(
     person("Alexander", "Christensen", role = "aut",
            comment = c(ORCID = "0000-0002-9798-7037")),
     person("Hudson", "Golino", role = "aut",
-           comment = c(ORCID = "0000-0002-1601-1447."))
+           comment = c(ORCID = "0000-0002-1601-1447"))
            )
-Description: Generate, validate, and check your items for quality and redundancy using AI-GENIE (Generative Psychometrics via AI-GENIE: Automatic Item Generation and Validation via Network-Integrated Evaluation). AI-GENIE is a methodology that lowers several barriers to developing high-quality and theoretically-informed scales. The pipeline combines the latest open-source LLMs and generative artificial intelligence with advances in network psychometrics to facilitate scale generation, selection, and validation. Our process eliminates the need to generate hundreds of items by content experts, recruit diverse and experienced researchers, administer the items to (as well as compensate) thousands of participants, and employ modern psychometric methods in the data collected in this process.  
+Description: AIGENIE is an R package for automated psychological scale development and structural validation using large language models (LLMs) and network psychometric methods. The package implements the AI-GENIE framework (Automatic Item Generation and Validation via Network-Integrated Evaluation) to generate candidate items, compute embedding representations, and estimate dimensional structure using Exploratory Graph Analysis (EGA). Item quality is further evaluated using Unique Variable Analysis to identify redundant items and Bootstrap EGA to assess item and dimension stability. AI-GENIE supports both fully automated item generation and analysis of user-provided item sets, facilitating efficient, theory-informed measurement development prior to empirical data collection. 
 License: AGPL (>= 3.0)
 Encoding: UTF-8
 Depends: R (>= 3.6.0), reticulate, EGAnet, ggplot2, igraph, patchwork, tm, R.utils, jsonlite

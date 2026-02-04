@@ -43,11 +43,26 @@
 #'   items via Groq's API platform using open-source models. Commonly used in combination
 #'   with `openai.API` since Groq does not provide embedding services.
 #'
-#' @param model A character string (optional, default: "gpt 4o"). Specifies which large
-#'   language model to use for item generation. Accepts any text generation model currently
-#'   available on either OpenAI or Groq's API. The function automatically determines which
-#'   API service to use based on the model name. Users should check which models are
-#'   available, especially for Groq, since new models are frequently added and deprecated.
+#' @param anthropic.API A character string or NULL (optional, default: NULL). The Anthropic
+#'   API key for authentication with Anthropic's Claude models. Required when using Claude
+#'   models (e.g., "sonnet", "opus", "haiku") for item generation. Get a key at
+#'   \url{https://console.anthropic.com/}.
+#'
+#' @param jina.API A character string or NULL (optional, default: NULL). The Jina AI API
+#'   key for authentication with Jina's embedding services. Required when using Jina
+#'   embedding models (e.g., "jina-embeddings-v3", "jina-embeddings-v4"). Free tier
+#'   available at \url{https://jina.ai/}.
+#'
+#' @param model A character string (optional, default: "gpt4o"). Specifies which large
+#'   language model to use for item generation. Supports models from multiple providers:
+#'   \itemize{
+#'     \item \strong{OpenAI}: \code{"gpt-4o"}, \code{"gpt-4"}, \code{"gpt-3.5-turbo"}, \code{"o1"}, \code{"o1-mini"}
+#'     \item \strong{Anthropic}: \code{"sonnet"}, \code{"opus"}, \code{"haiku"}, or full names like \code{"claude-sonnet-4-5-20250929"}
+#'     \item \strong{Groq}: \code{"llama-3.3-70b-versatile"}, \code{"mixtral-8x7b-32768"}, \code{"gemma2-9b-it"}, \code{"deepseek-r1-distill-llama-70b"}, \code{"qwen-2.5-72b"}
+#'   }
+#'   Aliases like \code{"llama"}, \code{"mixtral"}, \code{"gemma"}, \code{"deepseek"}, \code{"claude"} are also accepted.
+#'   The function automatically determines which API service to use based on the model name
+#'   and available API keys.
 #'
 #' @param temperature A numeric value (optional, default: 1). Controls the randomness and
 #'   creativity of the LLM's item generation. Must be between 0-2, where lower values
@@ -59,13 +74,14 @@
 #'   with `temperature`.
 #'
 #' @param embedding.model A character string (optional, default: "text-embedding-3-small").
-#'   Specifies which model to use for generating embeddings of items. For OpenAI models,
-#'   allowed options are: "text-embedding-3-small", "text-embedding-3-large", or
-#'   "text-embedding-ada-002". For Hugging Face models, supported options include BAAI/bge
-#'   series (bge-small-en-v1.5, bge-base-en-v1.5, bge-large-en-v1.5) and thenlper/gte
-#'   series (gte-small, gte-base, gte-large). If another embedding model is provided, it
-#'   will be assumed to be a Hugging Face model and will issue a warning. The embedding
-#'   models must generate raw embeddings (not configured for sentence-similarity).
+#'   Specifies which model to use for generating embeddings of items. Supports multiple providers:
+#'   \itemize{
+#'     \item \strong{OpenAI}: \code{"text-embedding-3-small"}, \code{"text-embedding-3-large"}, \code{"text-embedding-ada-002"}
+#'     \item \strong{Jina AI}: \code{"jina-embeddings-v3"}, \code{"jina-embeddings-v4"}, \code{"jina-embeddings-v2-base-en"} (requires \code{jina.API})
+#'     \item \strong{HuggingFace}: \code{"BAAI/bge-small-en-v1.5"}, \code{"BAAI/bge-base-en-v1.5"}, \code{"thenlper/gte-base"}, \code{"sentence-transformers/all-MiniLM-L6-v2"}
+#'   }
+#'   The provider is automatically detected based on the model name. Jina models support
+#'   task adapters and Matryoshka dimension truncation for optimized embeddings.
 #'
 #' @param target.N An integer, named list of integers, or NULL (optional, default: NULL).
 #'   Specifies the number of items to generate for each item type. Can be a single integer
@@ -368,6 +384,68 @@
 #' # View the final item pool
 #' View(personality.inventory.results.hf)
 #'
+#' ################################################################
+#' #### Example 4: Using Anthropic Claude for Item Generation ####
+#' ################################################################
+#'
+#' # Add your Anthropic API key
+#' anthropic.key <- "INSERT YOUR KEY HERE"
+#'
+#' # Use Claude Sonnet (or "opus", "haiku", or full model names)
+#' personality.inventory.claude <- AIGENIE(
+#'   item.attributes = aspects.of.personality.traits,
+#'   anthropic.API = anthropic.key,
+#'   openai.API = key,  # Still needed for embeddings
+#'   model = "sonnet",  # Alias for claude-sonnet-4-5-20250929
+#'   domain = domain,
+#'   scale.title = scale.title,
+#'   item.type.definitions = trait.definitions
+#' )
+#'
+#' # View the final item pool
+#' View(personality.inventory.claude)
+#'
+#' ################################################################
+#' #### Example 5: Using Jina AI Embeddings ####
+#' ################################################################
+#'
+#' # Add your Jina API key (free tier available)
+#' jina.key <- "INSERT YOUR KEY HERE"
+#'
+#' # Use Jina embeddings with Groq for generation
+#' personality.inventory.jina <- AIGENIE(
+#'   item.attributes = aspects.of.personality.traits,
+#'   groq.API = groq.key,
+#'   jina.API = jina.key,
+#'   model = "llama-3.3-70b-versatile",
+#'   embedding.model = "jina-embeddings-v3",
+#'   domain = domain,
+#'   scale.title = scale.title,
+#'   item.type.definitions = trait.definitions
+#' )
+#'
+#' # View the final item pool
+#' View(personality.inventory.jina)
+#'
+#' ################################################################
+#' #### Example 6: Anthropic + Jina (No OpenAI Required) ####
+#' ################################################################
+#'
+#' # Full pipeline without OpenAI
+#' personality.inventory.no.openai <- AIGENIE(
+#'   item.attributes = aspects.of.personality.traits,
+#'   anthropic.API = anthropic.key,
+#'   jina.API = jina.key,
+#'   model = "sonnet",
+#'   embedding.model = "jina-embeddings-v3",
+#'   domain = domain,
+#'   scale.title = scale.title,
+#'   item.type.definitions = trait.definitions
+#' )
+#'
+#' # View the final item pool
+#' View(personality.inventory.no.openai)
+#'
 #' }
 #'
 #' @export
@@ -379,7 +457,8 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
                        main.prompts = NULL,
 
                        # LLM parameters
-                       groq.API = NULL, model = "gpt4o", temperature = 1,
+                       groq.API = NULL, anthropic.API = NULL, jina.API = NULL,
+                       model = "gpt4o", temperature = 1,
                        top.p = 1, embedding.model = "text-embedding-3-small",
                        target.N = NULL,
 
@@ -400,7 +479,8 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
   # Validate all params and reassign params
   validation <- validate_user_input_AIGENIE(item.attributes, openai.API, hf.token,
                                             main.prompts,
-                                            groq.API, model, temperature,
+                                            groq.API, anthropic.API, jina.API,
+                                            model, temperature,
                                             top.p, embedding.model, target.N,
                                             domain, scale.title, item.examples,
                                             audience, item.type.definitions,
@@ -445,7 +525,8 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 
   # Generate the items for reduction analysis
   items_gen <- generate_items_via_llm(main.prompts, system.role, model, top.p, temperature,
-                                  adaptive, silently, groq.API, openai.API, target.N)
+                                  adaptive, silently, groq.API, openai.API,
+                                  anthropic.API = anthropic.API, target.N = target.N)
   items <- items_gen$items
   success <- items_gen$successful
 
@@ -465,11 +546,14 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 
 
   # Now, generate item embeddings
-  if(validation$provider == "openai"){
-    attempt_to_embed <- embed_items(embedding.model, openai.API, items, silently)
-  } else {
-    attempt_to_embed <- embed_items_huggingface(embedding.model, hf.token, items, silently)
-  }
+  attempt_to_embed <- generate_embeddings(
+    embedding.model = embedding.model,
+    items = items,
+    openai.API = openai.API,
+    hf.token = hf.token,
+    jina.API = jina.API,
+    silently = silently
+  )
 
   success <- attempt_to_embed$success
   embeddings <- attempt_to_embed$embeddings
@@ -881,13 +965,16 @@ local_AIGENIE <- function(
 #' @param openai.API OpenAI API key (required if using OpenAI embedding models)
 #' @param hf.token HuggingFace token (optional, improves rate limits for HF models)
 #' @param groq.API Groq API key (currently unused in GENIE)
+#' @param jina.API Jina AI API key for using Jina embedding models (e.g., "jina-embeddings-v3").
+#'   Free tier available at \url{https://jina.ai/}.
 #' @param model Language model identifier (currently unused in GENIE)
 #' @param temperature LLM temperature (currently unused in GENIE)
 #' @param top.p LLM top-p parameter (currently unused in GENIE)
 #' @param embedding.model Embedding model to use if embedding.matrix not provided:
 #'   \itemize{
 #'     \item OpenAI: "text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"
-#'     \item HuggingFace: "BAAI/bge-base-en-v1.5", "BAAI/bge-small-en-v1.5", etc.
+#'     \item Jina AI: "jina-embeddings-v3", "jina-embeddings-v4", "jina-embeddings-v2-base-en" (requires jina.API)
+#'     \item HuggingFace: "BAAI/bge-base-en-v1.5", "BAAI/bge-small-en-v1.5", "sentence-transformers/all-MiniLM-L6-v2"
 #'   }
 #' @param EGA.model EGA network estimation model ("glasso", "TMFG", or NULL for auto-selection)
 #' @param EGA.algorithm EGA community detection algorithm ("walktrap", "leiden", "louvain")
@@ -1126,6 +1213,7 @@ GENIE <- function(
     openai.API = NULL,
     hf.token = NULL,
     groq.API = NULL,                         # Unused but kept for consistency
+    jina.API = NULL,
 
     # LLM parameters (unused but kept for consistency)
     model = "gpt4o",
@@ -1153,6 +1241,7 @@ GENIE <- function(
     openai.API = openai.API,
     hf.token = hf.token,
     groq.API = groq.API,
+    jina.API = jina.API,
     model = model,
     temperature = temperature,
     top.p = top.p,
@@ -1183,22 +1272,15 @@ GENIE <- function(
       cat("Generating embeddings using", embedding.model, "\n")
     }
 
-    # Generate embeddings using the same functions as AIGENIE
-    if (provider == "openai") {
-      embedding_result <- embed_items(
-        embedding.model = embedding.model,
-        openai.API = openai.API,
-        items = items,
-        silently = silently
-      )
-    } else {
-      embedding_result <- embed_items_huggingface(
-        embedding.model = embedding.model,
-        hf.token = hf.token,
-        items = items,
-        silently = silently
-      )
-    }
+    # Generate embeddings using unified provider dispatch
+    embedding_result <- generate_embeddings(
+      embedding.model = embedding.model,
+      items = items,
+      openai.API = openai.API,
+      hf.token = hf.token,
+      jina.API = jina.API,
+      silently = silently
+    )
 
     if (!embedding_result$success) {
       stop("Failed to generate embeddings. Please check your API credentials and model selection.")

@@ -4,7 +4,13 @@
 \alias{check_for_default_APIs}
 \title{Check for users who pasted the example code but didn't add an API key}
 \usage{
-check_for_default_APIs(hf.token, groq.API, openai.API)
+check_for_default_APIs(
+  hf.token,
+  groq.API,
+  openai.API,
+  anthropic.API = NULL,
+  jina.API = NULL
+)
 }
 \arguments{
 \item{hf.token}{The hugging face token provided}

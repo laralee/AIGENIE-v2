@@ -6,6 +6,9 @@
 #' @param model NULL, "glasso", or "TMFG"
 #' @param algorithm EGA algorithm
 #' @param uni.method EGA uni.method
+#' @param corr Character. Correlation method. Default "auto" uses EGAnet's automatic detection.
+#' @param ncores Numeric. Number of cores for parallel processing. Default NULL uses EGAnet default.
+#' @param boot.iter Numeric. Number of bootstrap iterations. Default 100.
 #' @param keep.org Logical. Whether to include original items and embeddings
 #' @param silently Logical. Whether to print progress statements
 #' @param plot Logicial. Whether to plot the network plots at the end
@@ -17,6 +20,9 @@ run_pipeline_for_item_type <- function(embedding_matrix,
                                        model = NULL,
                                        algorithm = "walktrap",
                                        uni.method = "louvain",
+                                       corr = "auto",
+                                       ncores = NULL,
+                                       boot.iter = 100,
                                        keep.org = FALSE,
                                        silently,
                                        plot) {
@@ -56,6 +62,16 @@ run_pipeline_for_item_type <- function(embedding_matrix,
       )
   }
 
+  # Check minimum items for meaningful analysis
+
+  if (nrow(items) < 6) {
+    warning("[", type_name, "] Too few items (", nrow(items), 
+            ") for meaningful network analysis. Minimum recommended is 6. Returning partial result.")
+    result$final_items <- items
+    result$final_N <- nrow(items)
+    return(result)
+  }
+
   if(!silently){
     cat("\n\n")
     cat(paste("Starting item pool reduction for", type_name  ,"items.\n"))
@@ -68,7 +84,7 @@ run_pipeline_for_item_type <- function(embedding_matrix,
 
   # 2. Redundancy reduction (UVA)
 
-  uva_res <- reduce_redundancy_uva(embedding_matrix, items)
+  uva_res <- reduce_redundancy_uva(embedding_matrix, items, corr = corr)
 
   if (!uva_res$success) {
     warning("[", type_name, "] UVA failed — returning partial result.")
@@ -87,6 +103,15 @@ run_pipeline_for_item_type <- function(embedding_matrix,
   reduced_matrix <- uva_res$embedding_matrix
   reduced_items <- items[items$ID %in% colnames(reduced_matrix), , drop = FALSE]
 
+  # Check if enough items remain after UVA
+  if (ncol(reduced_matrix) < 4) {
+    warning("[", type_name, "] Too few items (", ncol(reduced_matrix), 
+            ") remaining after UVA for further analysis. Returning partial result.")
+    result$final_items <- reduced_items
+    result$final_N <- nrow(reduced_items)
+    return(result)
+  }
+
   if (keep.org) {
     result$embeddings$full_org <- embedding_matrix
     result$embeddings$sparse_org <- sparsify_embeddings(embedding_matrix)
@@ -99,7 +124,8 @@ run_pipeline_for_item_type <- function(embedding_matrix,
     true_communities = true_communities,
     model = model,
     algorithm = algorithm,
-    uni.method = uni.method
+    uni.method = uni.method,
+    corr = corr
   )
 
   if (!isTRUE(select_res$success)) {
@@ -130,6 +156,9 @@ run_pipeline_for_item_type <- function(embedding_matrix,
     model = select_res$model,
     algorithm = select_res$algorithm,
     uni.method = select_res$uni.method,
+    corr = corr,
+    ncores = ncores,
+    boot.iter = boot.iter,
     silently = silently
   )
 
@@ -152,7 +181,8 @@ run_pipeline_for_item_type <- function(embedding_matrix,
     true_communities = true_communities,
     model = select_res$model,
     algorithm = select_res$algorithm,
-    uni.method = select_res$uni.method
+    uni.method = select_res$uni.method,
+    corr = corr
   )
 
   if (!isTRUE(final_res$success)) {
@@ -189,7 +219,8 @@ run_pipeline_for_item_type <- function(embedding_matrix,
     true_communities = true_communities,
     model = select_res$model,
     algorithm = select_res$algorithm,
-    uni.method = select_res$uni.method
+    uni.method = select_res$uni.method,
+    corr = corr
   )
 
   if (!isTRUE(initial_res$success)) {
@@ -219,6 +250,9 @@ run_pipeline_for_item_type <- function(embedding_matrix,
                                    data,
                                    algorithm,
                                    uni.method,
+                                   corr = corr,
+                                   ncores = ncores,
+                                   boot.iter = boot.iter,
                                    silently)
 
   if(try_stab$successful){
@@ -260,31 +294,34 @@ run_pipeline_for_item_type <- function(embedding_matrix,
     nmi2 = result$final_NMI,
     title = paste("Bootstrapped Item Stability for", type_name, "Items Before vs After AIGENIE Reduction")
   )
-  result$stability_plot <- stability_plot
-  }, error = function(e) {
+  result$stability_plot <- stability_plot },
+  error = function(e) {
     warning(paste("Failed to create stability plots for", type_name, "items."))
   })
 
 
-
   if(plot && !is.null(result$network_plot)){
-    plot(network_plot)
+    plot(result$network_plot)
   }
+
 
   return(result)
 }
 
 
-
-#' Run Full Item Reduction Pipeline Across All Item Types
+#' Run reduction pipeline for all item types
 #'
-#' @param embedding_matrix Numeric matrix of all items (columns = items)
-#' @param items Data frame of all item metadata (must include ID, type, statement, attribute)
+#' @param embedding_matrix Full embedding matrix (columns = all items)
+#' @param items Data frame of all items (must include ID, statement, attribute, type)
 #' @param EGA.model NULL, "glasso", or "TMFG"
-#' @param EGA.algorithm Character. EGA algorithm to use (default = "walktrap")
-#' @param EGA.uni.method Character. Unidimensionality method (default = "louvain")
-#' @param silently Logical. Print progress?
-#' @param plot logical. Should the network plot be printed
+#' @param EGA.algorithm EGA algorithm
+#' @param EGA.uni.method EGA uni.method
+#' @param corr Character. Correlation method. Default "auto" uses EGAnet's automatic detection.
+#' @param ncores Numeric. Number of cores for parallel processing.
+#' @param boot.iter Numeric. Number of bootstrap iterations.
+#' @param keep.org Logical. Whether to include original items and embeddings
+#' @param silently Logical. Whether to print progress statements
+#' @param plot Logical. Whether to plot the network plots at the end
 #'
 #' @return A named list of pipeline results, one per item type
 run_item_reduction_pipeline <- function(embedding_matrix,
@@ -292,6 +329,9 @@ run_item_reduction_pipeline <- function(embedding_matrix,
                                         EGA.model = NULL,
                                         EGA.algorithm = "walktrap",
                                         EGA.uni.method = "louvain",
+                                        corr = "auto",
+                                        ncores = NULL,
+                                        boot.iter = 100,
                                         keep.org,
                                         silently,
                                         plot) {
@@ -319,6 +359,9 @@ run_item_reduction_pipeline <- function(embedding_matrix,
         model = EGA.model,
         algorithm = EGA.algorithm,
         uni.method = EGA.uni.method,
+        corr = corr,
+        ncores = ncores,
+        boot.iter = boot.iter,
         keep.org = keep.org,
         silently = silently,
         plot = plot
@@ -348,6 +391,7 @@ run_item_reduction_pipeline <- function(embedding_matrix,
 #' @param model NULL, "glasso", or "TMFG"
 #' @param algorithm EGA algorithm
 #' @param uni.method EGA uni.method
+#' @param corr Character. Correlation method. Default "auto" uses EGAnet's automatic detection.
 #' @param keep.org Logical. Whether to include original items and embeddings
 #' @param silently Logical. Whether to print progress statements
 #' @param plot logical. Whether to plot the network plot
@@ -359,6 +403,7 @@ run_pipeline_for_all <- function(item_level,
                                  model = NULL,
                                  algorithm = "walktrap",
                                  uni.method = "louvain",
+                                 corr = "auto",
                                  keep.org = FALSE,
                                  silently,
                                  plot) {
@@ -433,7 +478,8 @@ run_pipeline_for_all <- function(item_level,
     true_communities = true_communities,
     model = model,
     algorithm = algorithm,
-    uni.method = uni.method
+    uni.method = uni.method,
+    corr = corr
   )
 
   if (!isTRUE(select_res$success)) {
@@ -486,7 +532,8 @@ run_pipeline_for_all <- function(item_level,
     true_communities = initial_communities,
     model = select_res$model,
     algorithm = select_res$algorithm,
-    uni.method = select_res$uni.method
+    uni.method = select_res$uni.method,
+    corr = corr
   )
 
   if (!isTRUE(initial_res$success)) {

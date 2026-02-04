@@ -38,3 +38,4 @@ Constructs structured prompts for an LLM to generate scale items based on a list
 optional item type definitions, audience and domain context, and example items. Each resulting prompt
 includes strict formatting requirements, attribute listings, and item-generation instructions.
 }
+\keyword{internal}

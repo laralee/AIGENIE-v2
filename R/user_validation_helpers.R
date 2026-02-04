@@ -481,7 +481,10 @@ resolve_model_name <- function(model, silently) {
     "Groq/openai/gpt-oss-120b",
     "Groq/deepseek-r1-distill-llama-70b",
     "Groq/meta-llama/Llama-3.3-70B-Instruct",
-    "Groq/gemma2-9b-it"
+    "Groq/gemma2-9b-it",
+    "Anthropic/claude-sonnet-4-5-20250929",
+    "Anthropic/claude-opus-4-5-20251101",
+    "Anthropic/claude-haiku-4-5-20251001"
   )
 
   # Alias mapping (maps to prefixed versions)
@@ -497,7 +500,11 @@ resolve_model_name <- function(model, silently) {
     oss        = "Groq/openai/gpt-oss-120b",  # Default oss to 120b
     deepseek   = "Groq/deepseek-r1-distill-llama-70b",
     llama      = "Groq/meta-llama/Llama-3.3-70B-Instruct",
-    gemma      = "Groq/gemma2-9b-it"
+    gemma      = "Groq/gemma2-9b-it",
+    sonnet     = "Anthropic/claude-sonnet-4-5-20250929",
+    claude     = "Anthropic/claude-sonnet-4-5-20250929",
+    opus       = "Anthropic/claude-opus-4-5-20251101",
+    haiku      = "Anthropic/claude-haiku-4-5-20251001"
   )
 
   # 1. Check for exact alias match first
@@ -506,7 +513,7 @@ resolve_model_name <- function(model, silently) {
   }
 
   # 2. Check if already has correct prefix format
-  if (grepl("^(OpenAI|Groq|HuggingFace)/", model_trimmed)) {
+  if (grepl("^(OpenAI|Groq|Anthropic|HuggingFace)/", model_trimmed)) {
     return(model_trimmed)
   }
 
@@ -528,7 +535,8 @@ resolve_model_name <- function(model, silently) {
 #'
 #' @return List with normalized model name and detected provider
 #'
-normalize_model_name <- function(model, groq.API = NULL, openai.API = NULL, silently = FALSE) {
+normalize_model_name <- function(model, groq.API = NULL, openai.API = NULL,
+                                  anthropic.API = NULL, silently = FALSE) {
 
   # Store original for error messages
   original_model <- model
@@ -540,7 +548,7 @@ normalize_model_name <- function(model, groq.API = NULL, openai.API = NULL, sile
   model_lower <- tolower(trimws(resolved_model))
 
   # Check if already has a provider prefix
-  if (grepl("^(openai|groq|huggingface)/", model_lower)) {
+  if (grepl("^(openai|groq|anthropic|huggingface)/", model_lower)) {
     # Extract provider from the resolved model
     provider <- tolower(strsplit(resolved_model, "/")[[1]][1])
 
@@ -564,6 +572,16 @@ normalize_model_name <- function(model, groq.API = NULL, openai.API = NULL, sile
   # If resolve_model_name didn't add a prefix, continue with pattern detection
   model_lower_check <- tolower(resolved_model)
 
+  # Anthropic patterns (claude-* models passed as full strings)
+  if (grepl("^claude", model_lower_check)) {
+    normalized <- paste0("Anthropic/", resolved_model)
+    if (!silently) {
+      message(sprintf("Model '%s' interpreted as Anthropic model: '%s'",
+                      original_model, normalized))
+    }
+    return(list(model = normalized, provider = "anthropic"))
+  }
+
   # OpenAI patterns (for models not caught by resolve_model_name)
   if (grepl("^(gpt|o[1-9])", model_lower_check)) {
     normalized <- paste0("OpenAI/", resolved_model)
@@ -574,8 +592,18 @@ normalize_model_name <- function(model, groq.API = NULL, openai.API = NULL, sile
     return(list(model = normalized, provider = "openai"))
   }
 
+  # Groq patterns (llama, mixtral, gemma, deepseek, qwen models)
+  if (grepl("^(llama|mixtral|gemma|deepseek|qwen)", model_lower_check)) {
+    normalized <- paste0("Groq/", resolved_model)
+    if (!silently) {
+      message(sprintf("Model '%s' interpreted as Groq model: '%s'",
+                      original_model, normalized))
+    }
+    return(list(model = normalized, provider = "groq"))
+  }
+
   # HuggingFace patterns (org/model format without prefix)
-  if (grepl("/", resolved_model) && !grepl("^(openai|groq)/", model_lower_check)) {
+  if (grepl("/", resolved_model) && !grepl("^(openai|groq|anthropic)/", model_lower_check)) {
     stop(paste0(
       "Model '", original_model, "' appears to be a HuggingFace model.\n",
       "HuggingFace text generation is not supported via the free API.\n\n",
@@ -585,13 +613,24 @@ normalize_model_name <- function(model, groq.API = NULL, openai.API = NULL, sile
     ), call. = FALSE)
   }
 
+  # Default to Anthropic for unknown models if Anthropic API available
+  if (!is.null(anthropic.API)) {
+    normalized <- paste0("Anthropic/", resolved_model)
+    if (!silently) {
+      warning(sprintf(
+        "Unknown model '%s' assumed to be Anthropic model: '%s'\nFor clarity, please use explicit prefixes: OpenAI/, Groq/, or Anthropic/",
+        original_model, normalized
+      ))
+    }
+    return(list(model = normalized, provider = "anthropic"))
+  }
+
   # Default to Groq for unknown models if Groq API available
   if (!is.null(groq.API)) {
     normalized <- paste0("Groq/", resolved_model)
     if (!silently) {
       warning(sprintf(
-        "Unknown model '%s' assumed to be Groq model: '%s'\n",
-        "For clarity, please use explicit prefixes: OpenAI/, Groq/, or HuggingFace/",
+        "Unknown model '%s' assumed to be Groq model: '%s'\nFor clarity, please use explicit prefixes: OpenAI/, Groq/, or Anthropic/",
         original_model, normalized
       ))
     }
@@ -603,8 +642,7 @@ normalize_model_name <- function(model, groq.API = NULL, openai.API = NULL, sile
     normalized <- paste0("OpenAI/", resolved_model)
     if (!silently) {
       warning(sprintf(
-        "Unknown model '%s' assumed to be OpenAI model: '%s'\n",
-        "For clarity, please use explicit prefixes: OpenAI/, Groq/, or HuggingFace/",
+        "Unknown model '%s' assumed to be OpenAI model: '%s'\nFor clarity, please use explicit prefixes: OpenAI/, Groq/, or Anthropic/",
         original_model, normalized
       ))
     }
@@ -615,8 +653,8 @@ normalize_model_name <- function(model, groq.API = NULL, openai.API = NULL, sile
   stop(paste0(
     "Cannot determine provider for model '", original_model, "'.\n",
     "Please either:\n",
-    "  1. Use explicit prefix: OpenAI/, Groq/, or HuggingFace/\n",
-    "  2. Provide appropriate API key (openai.API or groq.API)\n",
+    "  1. Use explicit prefix: OpenAI/, Groq/, Anthropic/\n",
+    "  2. Provide appropriate API key (openai.API, groq.API, or anthropic.API)\n",
     "  3. Use local_AIGENIE() for local model execution"
   ), call. = FALSE)
 }
@@ -626,19 +664,25 @@ normalize_model_name <- function(model, groq.API = NULL, openai.API = NULL, sile
 
 #' Validate Embedding Model
 #'
-#' Validates that the embedding model is one of the supported OpenAI or HuggingFace models.
+#' Validates that the embedding model is one of the supported OpenAI,
+#' Jina AI, or HuggingFace models.
 #'
 #' Allowed OpenAI models:
 #'   - "text-embedding-3-small"
 #'   - "text-embedding-3-large"
 #'   - "text-embedding-ada-002"
 #'
+#' Allowed Jina AI models:
+#'   - jina-embeddings-v4, jina-embeddings-v3, jina-clip-v2
+#'   - jina-code-embeddings-1.5b, jina-code-embeddings-0.5b
+#'   - jina-embeddings-v2-base-{en,zh,de,es,code}, jina-embeddings-v2-small-en
+#'
 #' Allowed HuggingFace models:
 #'   - BAAI/bge series (bge-small-en-v1.5, bge-base-en-v1.5, bge-large-en-v1.5)
 #'   - thenlper/gte series (gte-small, gte-base, gte-large)
 #'
-#' @param embedding.model A string or `NULL`.
-#' @param provider Optional string indicating provider ("openai", "huggingface", or "auto" for auto-detection)
+#' @param embedding.model A string.
+#' @param provider One of "auto", "openai", "jina", "huggingface", or "local".
 #'
 embedding.model_validate <- function(embedding.model, provider = "auto") {
 
@@ -654,6 +698,21 @@ embedding.model_validate <- function(embedding.model, provider = "auto") {
     "text-embedding-3-small",
     "text-embedding-3-large",
     "text-embedding-ada-002"
+  )
+
+  # Jina AI embedding models
+  jina_models <- c(
+    "jina-embeddings-v4",
+    "jina-embeddings-v3",
+    "jina-clip-v2",
+    "jina-code-embeddings-1.5b",
+    "jina-code-embeddings-0.5b",
+    "jina-embeddings-v2-base-en",
+    "jina-embeddings-v2-base-zh",
+    "jina-embeddings-v2-base-de",
+    "jina-embeddings-v2-base-es",
+    "jina-embeddings-v2-base-code",
+    "jina-embeddings-v2-small-en"
   )
 
   # Confirmed working HF models
@@ -680,13 +739,17 @@ embedding.model_validate <- function(embedding.model, provider = "auto") {
   # Known problematic models
   hf_models_problematic <- c(
     "hkunlp/instructor-base",  # Requires special instruction format
-    "jinaai/jina-embeddings-v2-small-en"  # Initialization issues
+    "jinaai/jina-embeddings-v2-small-en"  # Initialization issues via HF
   )
+
+  model_lower <- tolower(trimws(embedding.model))
 
   # Auto-detect provider
   if (provider == "auto") {
     if (embedding.model %in% openai_models || grepl("^text-embedding", embedding.model)) {
       provider <- "openai"
+    } else if (embedding.model %in% jina_models || grepl("^jina-", model_lower)) {
+      provider <- "jina"
     } else {
       provider <- "huggingface"
     }
@@ -702,6 +765,17 @@ embedding.model_validate <- function(embedding.model, provider = "auto") {
           "\n\nReceived: '", embedding.model, "'"
         ),
         call. = FALSE
+      )
+    }
+  } else if (provider == "jina") {
+    # Jina models: confirm known or accept any jina- prefix
+    if (!(embedding.model %in% jina_models) && !grepl("^jina-", model_lower)) {
+      warning(
+        paste0(
+          "Model '", embedding.model, "' detected as Jina but not in confirmed list.\n",
+          "Proceeding anyway. If it fails, try: jina-embeddings-v3 or jina-embeddings-v4"
+        ),
+        immediate. = TRUE
       )
     }
   } else if (provider == "huggingface") {
@@ -1206,7 +1280,8 @@ main.prompts_validate <- function(main.prompts, items.attributes, silently) {
 #' @param groq.API The Groq API key provided
 #' @param openai.API The OpenAI API key provided
 #'
-check_for_default_APIs <- function(hf.token, groq.API, openai.API){
+check_for_default_APIs <- function(hf.token, groq.API, openai.API,
+                                    anthropic.API = NULL, jina.API = NULL){
 
   phrase <- "INSERT YOUR KEY HERE"
   stop <- FALSE
@@ -1234,6 +1309,24 @@ check_for_default_APIs <- function(hf.token, groq.API, openai.API){
     if(openai.API == phrase){
       message("Before running any AIGENIE examples, you need to add your OpenAI API key. Please create a key online via the OpenAI website.")
       message("\n Using OpenAI keys is extremely inexpensive. But OpenAI does require a valid payment method to use. To avoid adding a payment method, use an open source model via Groq and an embedding model via Hugging Face.")
+      stop <- TRUE
+    }
+
+  }
+  if(!is.null(anthropic.API)){
+
+    if(anthropic.API == phrase){
+      message("Before running any AIGENIE examples, you need to add your Anthropic API key. Please create a key online via the Anthropic Console.")
+      message("\nAnthropic API keys require a valid payment method.")
+      stop <- TRUE
+    }
+
+  }
+  if(!is.null(jina.API)){
+
+    if(jina.API == phrase){
+      message("Before running any AIGENIE examples, you need to add your Jina AI API key. Please create a key online via the Jina AI website.")
+      message("\nJina AI offers a free tier for moderate usage.")
       stop <- TRUE
     }
 

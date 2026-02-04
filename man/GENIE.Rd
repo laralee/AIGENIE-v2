@@ -10,6 +10,7 @@ GENIE(
   openai.API = NULL,
   hf.token = NULL,
   groq.API = NULL,
+  jina.API = NULL,
   model = "gpt4o",
   temperature = 1,
   top.p = 1,
@@ -45,6 +46,9 @@ All columns must be character type except ID (numeric or character allowed).
 
 \item{groq.API}{Groq API key (currently unused in GENIE)}
 
+\item{jina.API}{Jina AI API key for using Jina embedding models (e.g., "jina-embeddings-v3").
+Free tier available at \url{https://jina.ai/}.}
+
 \item{model}{Language model identifier (currently unused in GENIE)}
 
 \item{temperature}{LLM temperature (currently unused in GENIE)}
@@ -54,7 +58,8 @@ All columns must be character type except ID (numeric or character allowed).
 \item{embedding.model}{Embedding model to use if embedding.matrix not provided:
 \itemize{
 \item OpenAI: "text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"
-\item HuggingFace: "BAAI/bge-base-en-v1.5", "BAAI/bge-small-en-v1.5", etc.
+\item Jina AI: "jina-embeddings-v3", "jina-embeddings-v4", "jina-embeddings-v2-base-en" (requires jina.API)
+\item HuggingFace: "BAAI/bge-base-en-v1.5", "BAAI/bge-small-en-v1.5", "sentence-transformers/all-MiniLM-L6-v2"
 }}
 
 \item{EGA.model}{EGA network estimation model ("glasso", "TMFG", or NULL for auto-selection)}

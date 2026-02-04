@@ -53,10 +53,6 @@ sparsify_embeddings <- function(embedding_matrix,
     # If still all zeros, return original
     if (all(embedding_sparse == 0, na.rm = TRUE)) {
 
-      if (!silently) {
-        cat("Fallback sparsification also resulted in all zeros. Using original embeddings.\n")
-      }
-
       embedding_sparse <- original_embedding
       attr(embedding_sparse, "sparsification_applied") <- FALSE
 
@@ -78,16 +74,17 @@ sparsify_embeddings <- function(embedding_matrix,
 
 
 
-
 #' Reduce Redundancy via Iterative UVA (with Redundant Pair Logging)
 #'
 #' Applies EGAnet::UVA iteratively and logs human-readable redundant item sets.
 #'
 #' @param embedding_matrix A numeric matrix of embeddings (columns = items).
 #' @param items Data frame with `ID` and `statement` columns.
+#' @param corr Character. Correlation method to use. Default "auto" uses EGAnet's
+#'   automatic correlation detection. Other options: "pearson", "spearman", "cosine".
 #'
 #' @return A list with the reduced matrix, sweep metadata, and redundancy log.
-reduce_redundancy_uva <- function(embedding_matrix, items) {
+reduce_redundancy_uva <- function(embedding_matrix, items, corr = "auto") {
 
   original_embedding <- embedding_matrix
   current_matrix <- embedding_matrix
@@ -197,6 +194,7 @@ reduce_redundancy_uva <- function(embedding_matrix, items) {
     uva <- tryCatch({
       EGAnet::UVA(
         data = current_matrix,
+        corr = corr,
         cut.off = 0.25,
         reduce = TRUE,
         reduce.method = "remove",
@@ -290,6 +288,7 @@ reduce_redundancy_uva <- function(embedding_matrix, items) {
 #' @param model Character. One of "glasso", "TMFG", or NULL (to test both).
 #' @param algorithm Community detection algorithm (e.g., "walktrap").
 #' @param uni.method Unidimensionality method (e.g., "louvain").
+#' @param corr Character. Correlation method. Default "auto" uses EGAnet's automatic detection.
 #' @param sparsify_function Function to sparsify the embedding.
 #'
 #' @return A list with best embedding, model, communities, NMI, and comparison log.
@@ -298,6 +297,7 @@ select_optimal_embedding <- function(embedding_matrix,
                                      model = NULL,
                                      algorithm = "walktrap",
                                      uni.method = "louvain",
+                                     corr = "auto",
                                      sparsify_function = sparsify_embeddings) {
 
   # Prepare embeddings
@@ -328,6 +328,7 @@ select_optimal_embedding <- function(embedding_matrix,
       result <- tryCatch({
         ega <- EGAnet::EGA.fit(
           data = emb,
+          corr = corr,
           model = m,
           algorithm = algorithm,
           uni.method = uni.method,
@@ -410,7 +411,11 @@ select_optimal_embedding <- function(embedding_matrix,
 #' @param model Network estimation model (e.g., "glasso", "TMFG").
 #' @param algorithm Community detection algorithm.
 #' @param uni.method Unidimensionality method.
+#' @param corr Character. Correlation method. Default "auto" uses EGAnet's automatic detection.
+#' @param ncores Numeric. Number of cores for parallel processing. Default NULL uses EGAnet default.
+#' @param boot.iter Numeric. Number of bootstrap iterations. Default 100.
 #' @param EGA.type Type of EGA (default "EGA.fit").
+#' @param silently Logical. Suppress output.
 #'
 #' @return A list containing the final embedding, boot objects, items removed per iteration, etc.
 iterative_stability_check <- function(embedding_matrix,
@@ -419,6 +424,9 @@ iterative_stability_check <- function(embedding_matrix,
                                       model = "NULL",
                                       algorithm = "",
                                       uni.method,
+                                      corr = "auto",
+                                      ncores = NULL,
+                                      boot.iter = 100,
                                       EGA.type = "EGA.fit",
                                       silently) {
 
@@ -432,19 +440,29 @@ iterative_stability_check <- function(embedding_matrix,
     cat("\n")
   }
 
+  # Build bootEGA arguments
+  boot_args <- list(
+    data = current_embedding,
+    corr = corr,
+    model = model,
+    algorithm = algorithm,
+    uni.method = uni.method,
+    iter = boot.iter,
+    EGA.type = EGA.type,
+    plot.itemStability = FALSE,
+    plot.typicalStructure = FALSE,
+    verbose = !silently,
+    seed = 123
+  )
+  
+  # Add ncores only if specified (otherwise use EGAnet default)
+  if (!is.null(ncores)) {
+    boot_args$ncores <- ncores
+  }
+
   # First run
   boot1 <- tryCatch({
-    EGAnet::bootEGA(
-      data = current_embedding,
-      model = model,
-      algorithm = algorithm,
-      uni.method = uni.method,
-      EGA.type = EGA.type,
-      plot.itemStability = FALSE,
-      plot.typicalStructure = FALSE,
-      verbose = !silently,
-      seed = 123
-    )
+    do.call(EGAnet::bootEGA, boot_args)
   }, error = function(e) {
     successful <<- FALSE
     return(NULL)
@@ -465,13 +483,36 @@ iterative_stability_check <- function(embedding_matrix,
   current_boot <- NULL
 
   repeat {
-    emp_dims <- bootstrap$stability$item.stability$item.stability$empirical.dimensions
+    # Safely extract empirical dimensions
+    emp_dims <- tryCatch({
+      bootstrap$stability$item.stability$item.stability$empirical.dimensions
+    }, error = function(e) NULL)
+    
+    # Check if emp_dims is valid
+    if (is.null(emp_dims) || length(emp_dims) == 0) {
+      warning("Could not extract item stability. Returning current results.")
+      successful <- FALSE
+      break
+    }
 
-    # Remove NA
-    if (any(is.na(emp_dims))) {
-      valid_idx <- which(!is.na(emp_dims))
+    # Remove NA - with safe check
+    na_check <- is.na(emp_dims)
+    if (any(na_check, na.rm = TRUE)) {
+      valid_idx <- which(!na_check)
+      if (length(valid_idx) == 0) {
+        warning("All items have NA stability. Returning current results.")
+        successful <- FALSE
+        break
+      }
       current_embedding <- current_embedding[, valid_idx, drop = FALSE]
       emp_dims <- emp_dims[valid_idx]
+    }
+    
+    # Check minimum items for analysis
+    if (ncol(current_embedding) < 3) {
+      warning("Too few items remaining for stability analysis. Returning current results.")
+      successful <- FALSE
+      break
     }
 
     # Identify unstable items
@@ -492,19 +533,12 @@ iterative_stability_check <- function(embedding_matrix,
     current_embedding <- current_embedding[, -unstable_idx, drop = FALSE]
     count <- count + 1
 
+    # Update boot_args with new data
+    boot_args$data <- current_embedding
+
     # Run again
     bootstrap <- tryCatch({
-      EGAnet::bootEGA(
-        data = current_embedding,
-        model = model,
-        algorithm = algorithm,
-        uni.method = uni.method,
-        EGA.type = EGA.type,
-        plot.typicalStructure = FALSE,
-        plot.itemStability = FALSE,
-        verbose = !silently,
-        seed = 123
-      )
+      do.call(EGAnet::bootEGA, boot_args)
     }, error = function(e) {
       successful <<- FALSE
       return(NULL)
@@ -550,8 +584,9 @@ iterative_stability_check <- function(embedding_matrix,
 #' @param data The embedding matrix to be used (either the sparse or full)
 #' @param EGA.algorithm The EGA algorithm to be used
 #' @param EGA.uni.method The EGA unidensinoality that should be used
-#' @param algorithm Community detection algorithm.
-#' @param uni.method Unidimensionality method.
+#' @param corr Character. Correlation method. Default "auto".
+#' @param ncores Numeric. Number of cores for parallel processing.
+#' @param boot.iter Numeric. Number of bootstrap iterations.
 #' @param silently A logical flag that decides whether to print output
 #' @param EGA.type Type of EGA (default "EGA.fit").
 #'
@@ -560,6 +595,9 @@ calc_final_stability <- function(result,
                                  data,
                                  EGA.algorithm,
                                  EGA.uni.method,
+                                 corr = "auto",
+                                 ncores = NULL,
+                                 boot.iter = 100,
                                  silently,
                                  EGA.type = "EGA.fit"){
   if(!silently){
@@ -571,22 +609,32 @@ calc_final_stability <- function(result,
 
   x <- result
 
+  # Build bootEGA arguments
+  boot_args <- list(
+    data = data,
+    corr = corr,
+    model = x$EGA.model_selected,
+    algorithm = EGA.algorithm,
+    uni.method = EGA.uni.method,
+    iter = boot.iter,
+    EGA.type = EGA.type,
+    plot.itemStability = FALSE,
+    plot.typicalStructure = FALSE,
+    verbose = !silently,
+    seed = 123
+  )
+  
+  # Add ncores only if specified
+  if (!is.null(ncores)) {
+    boot_args$ncores <- ncores
+  }
+
   try_stab <- tryCatch({
-      EGAnet::bootEGA(
-        data = data,
-        model = x$EGA.model_selected,
-        algorithm = EGA.algorithm,
-        uni.method = EGA.uni.method,
-        EGA.type = EGA.type,
-        plot.itemStability = FALSE,
-        plot.typicalStructure = FALSE,
-        verbose = !silently,
-        seed = 123
-      )
-    }, error = function(e) {
-      warning("Stability check failed. Returning partial results.")
-      return(list(successful=FALSE))
-    })
+    do.call(EGAnet::bootEGA, boot_args)
+  }, error = function(e) {
+    warning("Stability check failed. Returning partial results.")
+    return(list(successful=FALSE))
+  })
 
 
   # Add the initial stability
@@ -680,7 +728,6 @@ print_results<-function(obj, obj2, only.one){
 
 
 
-
 #' Plot Comparisons
 #'
 #' Generates a comparative plot of two network analysis results, typically representing the item network
@@ -731,18 +778,21 @@ plot_comparison <- function(p1, p2, caption1, caption2, nmi2, nmi1, title){
 #' @param model Network estimation model (e.g., "glasso", "TMFG").
 #' @param algorithm Community detection algorithm (e.g., "walktrap").
 #' @param uni.method Unidimensionality method passed to EGA.
+#' @param corr Character. Correlation method. Default "auto" uses EGAnet's automatic detection.
 #'
 #' @return A list with final communities, final NMI, dropped items, EGA object, and success flag.
 final_community_detection <- function(embedding_matrix,
                                       true_communities,
                                       model = "glasso",
                                       algorithm = "walktrap",
-                                      uni.method = "louvain") {
+                                      uni.method = "louvain",
+                                      corr = "auto") {
 
   result <- tryCatch({
 
     ega <- EGAnet::EGA.fit(
       data = embedding_matrix,
+      corr = corr,
       model = model,
       algorithm = algorithm,
       uni.method = uni.method,

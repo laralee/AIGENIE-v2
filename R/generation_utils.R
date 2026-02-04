@@ -1,6 +1,4 @@
-
 #### Building Prompts for AIGENIE #### ----
-
 ## Construct system.role ----
 #' Create a System Role Prompt for an LLM Item Writer
 #'
@@ -19,6 +17,7 @@
 #' @return A single character string representing the full system prompt to be passed to an LLM interface (e.g., OpenAI Chat API).
 #' If \code{system.role} is not provided, the function dynamically constructs one based on the other parameters.
 #'
+#' @keywords internal
 create_system.role <- function(domain, scale.title, audience,
                                response.options, system.role){
 
@@ -64,7 +63,7 @@ create_system.role <- function(domain, scale.title, audience,
   return(system.role)
 }
 
-### Create/Modify Main Prompts ----
+### Create/Modify Main Prompts
 
 #' Create Initial Main Prompts for Item Generation
 #'
@@ -83,6 +82,7 @@ create_system.role <- function(domain, scale.title, audience,
 #' @return A named list of character strings. Each entry corresponds to one item type and contains a complete prompt
 #' to guide an LLM in generating two distinct items per attribute, formatted as a JSON array.
 #'
+#' @keywords internal
 create_main.prompts <- function(item.attributes, item.type.definitions,
                                 domain, scale.title, prompt.notes,
                                 audience, item.examples){
@@ -121,7 +121,7 @@ create_main.prompts <- function(item.attributes, item.type.definitions,
     }
 
     if(is.data.frame(item.examples)){
-      examples_str <- construct_item.examples_string(item.examples, current_type)
+      examples_str <- construct_item.examples_string_for_prompt(item.examples, current_type)
     } else {
       examples_str <- NULL
     }
@@ -157,25 +157,18 @@ create_main.prompts <- function(item.attributes, item.type.definitions,
 }
 
 
-#' Construct Formatted String of Example Items
+#' Construct Formatted String of Example Items for Prompts
 #'
 #' Given a validated item examples data frame, this function constructs
-#' a string of well-formatted example items grouped by `attribute`, for a given `type`.
-#'
-#' @param item.examples A validated data frame of item examples.
-#' @param current_type A character scalar indicating the type of items to include in the string.
-#'
-#' @return A character string with grouped and formatted item examples.
-#' Construct JSON String of Item Examples (Filtered by Type)
-#'
-#' Converts a filtered set of item.examples into a JSON array of
-#' attribute/statement objects, ready for prompt usage or LLM API calls.
+#' a JSON string of example items for a given type, to be used in prompt building.
 #'
 #' @param item.examples A validated data frame with `type`, `attribute`, `statement`.
 #' @param current_type A string specifying which type to filter for.
 #'
 #' @return A single JSON-formatted string (or NULL if no matches).
-construct_item.examples_string <- function(item.examples, current_type) {
+#'
+#' @keywords internal
+construct_item.examples_string_for_prompt <- function(item.examples, current_type) {
   # Filter by exact match (already normalized during validation)
   filtered <- item.examples[item.examples$type == current_type, , drop = FALSE]
 
@@ -214,6 +207,7 @@ construct_item.examples_string <- function(item.examples, current_type) {
 #'
 #' @return A modified list of character strings, with each prompt updated to include relevant metadata, instructions, and formatting examples as needed.
 #'
+#' @keywords internal
 modify_main.prompts <- function(main.prompts, item.attributes,
                                 item.type.definitions,
                                 domain, scale.title, prompt.notes,
@@ -272,7 +266,7 @@ modify_main.prompts <- function(main.prompts, item.attributes,
     # EXAMPLES
     examples_str <- NULL
     if (is.data.frame(item.examples)) {
-      examples_str <- construct_item.examples_string(item.examples, current_type)
+      examples_str <- construct_item.examples_string_for_prompt(item.examples, current_type)
     }
 
     examples_section <- ""
@@ -322,523 +316,4 @@ modify_main.prompts <- function(main.prompts, item.attributes,
   }
 
   return(main.prompts)
-}
-
-
-
-
-
-
-
-
-#### Generating Items #### ----
-
-generate_items_via_llm <- function(main.prompts, system.role, model, top.p, temperature,
-                                   adaptive, silently, groq.API, openai.API, target.N) {
-
-  # Ensure Python environment is ready
-  ensure_aigenie_python()
-
-  # Normalize and validate model name
-  model_info <- normalize_model_name(model, groq.API, openai.API, silently)
-  normalized_model <- model_info$model
-  provider <- model_info$provider
-
-  # Remove prefix for actual API calls
-  # e.g., "OpenAI/gpt-4o" -> "gpt-4o", "Groq/mixtral-8x7b" -> "mixtral-8x7b"
-  model_for_api <- sub("^[^/]+/", "", normalized_model)
-
-  # Initialize results dataframe
-  all_items_df <- data.frame(
-    type = character(),
-    attribute = character(),
-    statement = character(),
-    stringsAsFactors = FALSE
-  )
-
-  # Set up API client and generate function based on provider
-  tryCatch({
-    if (provider == "groq") {
-      if (is.null(groq.API)) {
-        stop(paste("Groq API key required for model:", normalized_model))
-      }
-      groq <- reticulate::import("groq")
-      groq_client <- groq$Groq(api_key = groq.API)
-      generate_FUN <- groq_client$chat$completions$create
-      use_groq <- TRUE
-    } else if (provider == "openai") {
-      if (is.null(openai.API)) {
-        stop(paste("OpenAI API key required for model:", normalized_model))
-      }
-      openai <- reticulate::import("openai")
-      openai$api_key <- openai.API
-      generate_FUN <- openai$ChatCompletion$create
-      use_groq <- FALSE
-    } else {
-      stop(paste("Unsupported provider:", provider))
-    }
-  }, error = function(e) {
-    stop(paste("Failed to initialize API client:", conditionMessage(e)))
-  })
-
-  # Helper function to make API call
-  call_generate_FUN <- function(messages_list) {
-    call_params <- list(
-      model = model_for_api,  # Use the model name without prefix
-      messages = messages_list,
-      temperature = temperature,
-      top_p = top.p
-    )
-    do.call(generate_FUN, call_params)
-  }
-
-  # Iterate through each item type
-  for (item_type in names(main.prompts)) {
-
-    if (!silently) {
-      cat(paste("Generating items for", item_type, "...\n"))
-    }
-
-    # Track items for this type
-    type_items_df <- data.frame(
-      type = character(),
-      attribute = character(),
-      statement = character(),
-      stringsAsFactors = FALSE
-    )
-
-    # Track iterations without new items
-    iterations_without_new <- 0
-    total_iterations <- 0
-    rate_limit_truncate <- FALSE
-    max_previous_items <- Inf
-
-    # Continue until target.N reached or stalled
-    while (nrow(type_items_df) < target.N[[item_type]]) {
-
-      total_iterations <- total_iterations + 1
-
-      # Construct prompt with adaptive mode if needed
-      current_prompt <- main.prompts[[item_type]]
-
-      if (adaptive && nrow(all_items_df) > 0) {
-        # Get previous items to append
-        previous_items_to_use <- all_items_df
-
-        # If rate limiting detected, truncate the number of previous items
-        if (rate_limit_truncate && nrow(previous_items_to_use) > max_previous_items) {
-          previous_items_to_use <- tail(previous_items_to_use, max_previous_items)
-        }
-
-        examples_string <- construct_item.examples_string(previous_items_to_use, item_type)
-        current_prompt <- paste0(current_prompt,
-                                 "\n\nDo NOT repeat, rephrase, or reuse the content of ANY items from this list of items you've already generated:\n",
-                                 examples_string)
-      }
-
-      # Prepare messages list
-      messages_list <- list(
-        list("role" = "system", "content" = system.role),
-        list("role" = "user", "content" = current_prompt)
-      )
-
-      # Try API call with retry logic
-      api_success <- FALSE
-      api_attempts <- 0
-
-      while (!api_success && api_attempts < 5) {
-        api_attempts <- api_attempts + 1
-
-        try_resp <- tryCatch({
-          response <- call_generate_FUN(messages_list)
-          api_success <- TRUE
-          response
-        }, error = function(e) {
-          # Check for rate limiting error
-          if (grepl("token limit|context length|context window|token window",
-                    conditionMessage(e), ignore.case = TRUE)) {
-            if (adaptive && !rate_limit_truncate) {
-              if (!silently) {
-                cat("\nWarning: Rate limiting detected. Reducing number of previous items in prompt.\n")
-              }
-              rate_limit_truncate <- TRUE
-              max_previous_items <- floor(nrow(all_items_df) * 0.5)  # Reduce by half
-            }
-          }
-          e
-        })
-
-        if (!api_success) {
-          Sys.sleep(2)  # Brief pause before retry
-        }
-      }
-
-      # Check if API calls failed
-      if (!api_success) {
-        error_msg <- paste("API call failed after 5 attempts for", item_type,
-                           "Error:", conditionMessage(try_resp))
-        cat(paste0("\n", error_msg, "\n"))
-
-        if (nrow(all_items_df) > 0) {
-          warning("Returning partial results generated before error.")
-          return(list(items = all_items_df, successful = FALSE))
-        } else {
-          stop(error_msg)
-        }
-      }
-
-      # Extract raw text from response based on provider
-      raw_text <- if (use_groq) {
-        response$choices[[1]]$message$content
-      } else {
-        response$choices[[1]]$message$content
-      }
-
-      # Clean the output
-      cleaned_df <- cleaning_function(raw_text, item_type)
-
-      if (nrow(cleaned_df) > 0) {
-        # Keep only unique statements
-        new_items <- cleaned_df[!cleaned_df$statement %in% c(type_items_df$statement, all_items_df$statement), ]
-
-        if (nrow(new_items) > 0) {
-          type_items_df <- rbind(type_items_df, new_items)
-          all_items_df <- rbind(all_items_df, new_items)
-          iterations_without_new <- 0
-
-          if (!silently) {
-            cat(sprintf("\rItems generated for %s: %d", item_type, nrow(type_items_df)))
-            flush.console()
-          }
-        } else {
-          iterations_without_new <- iterations_without_new + 1
-        }
-      } else {
-        iterations_without_new <- iterations_without_new + 1
-      }
-
-      # Check for stalling
-      if (iterations_without_new >= 10) {
-        if (!silently) {
-          warning(paste0("\nWarning: Unable to generate new unique items for ", item_type,
-                         " after 10 iterations. Moving to next item type.\n",
-                         "Generated ", nrow(type_items_df), " out of ",
-                         target.N[[item_type]], " requested items."))
-        }
-        break
-      }
-    }
-
-    if (!silently) {
-      cat("\n")  # New line after progress updates
-    }
-  }
-
-  # Final message
-  if (!silently) {
-    cat(paste0("All items generated. Final sample size: ", nrow(all_items_df), "\n"))
-  }
-
-  return(list(items = all_items_df, successful = TRUE))
-}
-
-
-
-cleaning_function <- function(raw_text, item_type) {
-
-  # Return empty dataframe for null/empty responses
-  if (is.null(raw_text) || nchar(trimws(raw_text)) == 0) {
-    return(data.frame(type = character(),
-                      attribute = character(),
-                      statement = character(),
-                      stringsAsFactors = FALSE))
-  }
-
-  # Initialize results dataframe
-  result_df <- data.frame(type = character(),
-                          attribute = character(),
-                          statement = character(),
-                          stringsAsFactors = FALSE)
-
-  # Find all JSON arrays in the text
-  # Pattern to match JSON arrays (accounting for nested objects)
-  json_pattern <- "\\[\\s*\\{[^\\[\\]]*\\}\\s*(,\\s*\\{[^\\[\\]]*\\}\\s*)*\\]"
-
-  # Extract all potential JSON arrays
-  json_matches <- regmatches(raw_text, gregexpr(json_pattern, raw_text, perl = TRUE))[[1]]
-
-  # If no JSON arrays found, try to find JSON that might be malformed
-  if (length(json_matches) == 0) {
-    # Try a more lenient search - anything between [ and ]
-    lenient_pattern <- "\\[.*?\\]"
-    json_matches <- regmatches(raw_text, gregexpr(lenient_pattern, raw_text, perl = TRUE))[[1]]
-  }
-
-  # Process each potential JSON array
-  for (json_str in json_matches) {
-
-    # Clean up common JSON formatting issues
-    cleaned_json <- json_str
-
-    # Remove trailing commas before closing brackets/braces
-    cleaned_json <- gsub(",\\s*\\}", "}", cleaned_json, perl = TRUE)
-    cleaned_json <- gsub(",\\s*\\]", "]", cleaned_json, perl = TRUE)
-
-    # Remove any non-printable characters
-    cleaned_json <- gsub("[^[:print:]]", "", cleaned_json)
-
-    # Fix single quotes to double quotes (common LLM error)
-    # But be careful not to replace single quotes within the actual text
-    # This is a simple approach - may need refinement based on actual outputs
-    cleaned_json <- gsub("(\\{|,|:)\\s*'([^']*?)'\\s*(:|,|\\})", '\\1"\\2"\\3', cleaned_json, perl = TRUE)
-
-    # Try to parse the JSON
-    parsed_json <- NULL
-    try({
-      parsed_json <- jsonlite::fromJSON(cleaned_json, simplifyDataFrame = TRUE)
-    }, silent = TRUE)
-
-    # If parsing failed, try one more aggressive cleaning
-    if (is.null(parsed_json)) {
-      try({
-        # Remove any text before the first { and after the last }
-        cleaned_json <- sub("^[^\\[]*", "", cleaned_json)
-        cleaned_json <- sub("[^\\]]*$", "", cleaned_json)
-        parsed_json <- jsonlite::fromJSON(cleaned_json, simplifyDataFrame = TRUE)
-      }, silent = TRUE)
-    }
-
-    # If we successfully parsed JSON, extract the data
-    if (!is.null(parsed_json)) {
-
-      # Handle different JSON structures
-      if (is.data.frame(parsed_json)) {
-        # It's already a dataframe
-        temp_df <- parsed_json
-      } else if (is.list(parsed_json)) {
-        # Convert list to dataframe
-        try({
-          temp_df <- do.call(rbind.data.frame, lapply(parsed_json, as.data.frame, stringsAsFactors = FALSE))
-        }, silent = TRUE)
-      } else {
-        next  # Skip if we can't process this structure
-      }
-
-      # Check if required columns exist
-      if (exists("temp_df") && all(c("attribute", "statement") %in% names(temp_df))) {
-        # Add the type column
-        temp_df$type <- item_type
-
-        # Select only the columns we need in the right order
-        temp_df <- temp_df[, c("type", "attribute", "statement")]
-
-        # Ensure all columns are character type
-        temp_df$type <- as.character(temp_df$type)
-        temp_df$attribute <- as.character(temp_df$attribute)
-        temp_df$statement <- as.character(temp_df$statement)
-
-        # Remove any rows with NA or empty statements
-        temp_df <- temp_df[!is.na(temp_df$statement) & nchar(trimws(temp_df$statement)) > 0, ]
-
-        # Append to results
-        if (nrow(temp_df) > 0) {
-          result_df <- rbind(result_df, temp_df)
-        }
-      }
-    }
-  }
-
-  # Remove any duplicate statements within this batch
-  if (nrow(result_df) > 0) {
-    result_df <- result_df[!duplicated(result_df$statement), ]
-  }
-
-  return(result_df)
-}
-
-#### Embedding Items ----
-#' Embed Items Using OpenAI's Embedding API
-#'
-#' This function takes a data frame of items and creates embeddings using OpenAI's API.
-#' It returns a matrix where each column represents an item and each row represents
-#' an embedding dimension.
-#'
-#' @param embedding.model A string indicating which OpenAI embedding model to use
-#' @param openai.API A string containing the user's OpenAI API key
-#' @param items A data frame with 'ID' and 'statement' columns containing items to embed
-#' @param silently A flag that describes whether to issue progress statements
-#'
-#' @return A list containing:
-#'   \item{embeddings}{A matrix where columns are items (named by ID) and rows are embedding dimensions}
-#'   \item{success}{A logical indicating whether the embedding process was successful}
-#'
-embed_items <- function(embedding.model, openai.API, items, silently) {
-
-  # Ensure Python environment is ready
-  ensure_aigenie_python()
-
-  if(!silently){
-    cat("\n")
-    cat("Generating embeddings...")
-
-  }
-
-  # Initialize return structure
-  result <- list(
-    embeddings = NULL,
-    success = FALSE
-  )
-
-  # Initialize OpenAI API
-  tryCatch({
-    openai <- reticulate::import("openai")
-    openai$api_key <- openai.API
-
-    # Extract statements to embed
-    statements <- items$statement
-    item_ids <- items$ID
-
-    # Initialize list to store embeddings
-    all_embeddings <- list()
-
-    # Process each item statement
-    for (i in seq_along(statements)) {
-
-      # Create embedding for current statement
-      response <- openai$Embedding$create(
-        input = statements[i],
-        model = embedding.model
-      )
-
-      # Extract embedding vector
-      embedding_vector <- unlist(response$data[[1]]$embedding)
-      all_embeddings[[i]] <- embedding_vector
-    }
-
-    # Combine all embeddings into a matrix
-    # Each column is an item, each row is an embedding dimension
-    embedding_matrix <- do.call(cbind, all_embeddings)
-
-    # Set column names to item IDs
-    colnames(embedding_matrix) <- item_ids
-
-    # Update result
-    result$embeddings <- embedding_matrix
-    result$success <- TRUE
-
-    if(!silently){
-      cat(" Done.\n\n")
-
-    }
-
-  }, error = function(e) {
-    # Handle API errors gracefully
-    cat("Error occurred during embedding process:\n")
-    cat("Error message:", conditionMessage(e), "\n")
-    cat("Returning partial results with success = FALSE\n")
-
-    result$success <- FALSE
-    # result$embeddings remains NULL
-  })
-
-  return(result)
-}
-
-
-
-#' Generate Embeddings Using Hugging Face Models
-#'
-#' @description
-#' Generates dense vector embeddings for text items using open-source embedding models
-#' hosted on Hugging Face's Inference API. This function provides a free alternative
-#' to OpenAI's embedding models, with no API key required for public models.
-#'
-#' @param embedding.model Character string specifying the Hugging Face model to use.
-#'   Default is "BAAI/bge-base-en-v1.5". Compatible models include:
-#'   \itemize{
-#'     \item BAAI/bge series: "BAAI/bge-small-en-v1.5" (384 dims),
-#'           "BAAI/bge-base-en-v1.5" (768 dims), "BAAI/bge-large-en-v1.5" (1024 dims)
-#'     \item GTE series: "thenlper/gte-small" (384 dims), "thenlper/gte-base" (768 dims),
-#'           "thenlper/gte-large" (1024 dims)
-#'   }
-#'   Note: sentence-transformers models (e.g., all-MiniLM-L6-v2) are NOT compatible
-#'   as they are configured for sentence similarity, not feature extraction.
-#'
-#' @param hf.token Optional character string. Hugging Face API token for increased rate
-#'   limits and access to private models. Public models work without a token, but may
-#'   have lower rate limits. Get a free token at https://huggingface.co/settings/tokens
-#'
-#' @param items Data frame containing the items to embed. Must have two columns:
-#'   \itemize{
-#'     \item \code{statement}: Character vector of text to embed
-#'     \item \code{ID}: Unique identifiers for each statement
-#'   }
-#'
-#' @param silently Logical. If FALSE (default), displays progress messages during
-#'   embedding generation. Set to TRUE to suppress all messages except errors.
-#'
-#' @return A list with two elements:
-#'   \itemize{
-#'     \item \code{embeddings}: Numeric matrix where each column represents one item's
-#'           embedding vector and each row represents an embedding dimension. Column
-#'           names correspond to the item IDs. Returns NULL if embedding fails.
-#'     \item \code{success}: Logical indicating whether embedding generation was
-#'           successful (TRUE) or failed (FALSE).
-#'   }
-#'
-#' @details
-#' The function connects to Hugging Face's Inference API to generate embeddings.
-#' On first use of a model, there may be a 10-30 second delay while the model loads
-#' on Hugging Face's servers. Subsequent requests will be faster.
-#'
-#' The function automatically handles:
-#' \itemize{
-#'   \item Model loading delays (503 responses)
-#'   \item Rate limiting (429 responses)
-#'   \item Retry logic with exponential backoff
-#' }
-#'
-#' @note
-#' \itemize{
-#'   \item Free tier rate limits: ~100-1000 requests per hour (varies by model)
-#'   \item With HF token: Higher rate limits and priority queue access
-#'   \item Embedding dimensions vary by model (384, 768, or 1024 typically)
-#'   \item Internet connection required
-#' }
-#'
-#' @examples
-#' \dontrun{
-#' # Create sample items
-#' items <- data.frame(
-#'   statement = c("I enjoy social gatherings",
-#'                 "I prefer working alone"),
-#'   ID = c("item_1", "item_2")
-#' )
-#'
-#' # Generate embeddings with default model (no API key needed)
-#' result <- embed_items_huggingface(
-#'   items = items,
-#'   silently = FALSE
-#' )
-#'
-#' # Use a different model with HF token for better performance
-#' result <- embed_items_huggingface(
-#'   embedding.model = "BAAI/bge-large-en-v1.5",
-#'   hf.token = "hf_xxxxx",
-#'   items = items,
-#'   silently = FALSE
-#' )
-#'
-#' # Check success and examine embeddings
-#' if (result$success) {
-#'   dim(result$embeddings)  # rows = embedding dims, cols = number of items
-#'   colnames(result$embeddings)  # Should be item IDs
-#' }
-#' }
-#'
-embed_items_huggingface <- function(embedding.model = "BAAI/bge-base-en-v1.5",
-                                    hf.token = NULL, items, silently = FALSE) {
-
-  # Use the enhanced version that handles more models
-  return(embed_items_huggingface_enhanced(embedding.model, hf.token, items, silently))
 }

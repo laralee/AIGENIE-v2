@@ -63,7 +63,8 @@
 #'
 validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
                                         main.prompts,
-                                        groq.API, model, temperature,
+                                        groq.API, anthropic.API, jina.API,
+                                        model, temperature,
                                         top.p, embedding.model, target.N,
                                         domain, scale.title, item.examples,
                                         audience, item.type.definitions, response.options,
@@ -77,12 +78,13 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
   validate_booleans(items.only, adaptive, plot, keep.org, silently, embeddings.only)
 
   # Ensure all string objects are actually strings (or set to NULL)
-  validate_strings(openai.API, groq.API, hf.token, audience, scale.title,
+  validate_strings(openai.API, groq.API, anthropic.API, jina.API, hf.token,
+                   audience, scale.title,
                    system.role, domain, model, EGA.model, EGA.algorithm,
                    embedding.model, EGA.uni.method)
 
   # Check if the user forgot to add their API keys if using example code
-  check_for_default_APIs(hf.token, groq.API, openai.API)
+  check_for_default_APIs(hf.token, groq.API, openai.API, anthropic.API, jina.API)
 
   # Validate the `item.attributes` object
   item.attributes <- items.attributes_validate(item.attributes)
@@ -98,7 +100,9 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
   }
 
   # Validate the `model` string and replace it with a valid model string if necessary
-  model <- normalize_model_name(model, groq.API, openai.API, silently)
+  model_info <- normalize_model_name(model, groq.API, openai.API,
+                                 anthropic.API = anthropic.API, silently = silently)
+  model <- model_info$model
 
   # Validate the embedding model
   provider <- embedding.model_validate(embedding.model)
@@ -325,6 +329,7 @@ validate_user_input_GENIE <- function(
     openai.API,
     hf.token,
     groq.API,
+    jina.API,
     model,
     temperature,
     top.p,
@@ -341,11 +346,11 @@ validate_user_input_GENIE <- function(
   validate_booleans(embeddings.only, plot, silently)
 
   # 2. Validate string parameters (allowing NULL where appropriate)
-  validate_strings(openai.API, groq.API, hf.token, model,
+  validate_strings(openai.API, groq.API, jina.API, hf.token, model,
                    EGA.model, EGA.algorithm, EGA.uni.method, embedding.model)
 
   # Check if the user forgot to add their API keys if using example code
-  check_for_default_APIs(hf.token, groq.API, openai.API)
+  check_for_default_APIs(hf.token, groq.API, openai.API, jina.API = jina.API)
 
   # 3. Validate and clean the items data frame (GENIE-specific)
   items <- items_validate_GENIE(items)
@@ -361,7 +366,8 @@ validate_user_input_GENIE <- function(
   )
 
   # 6. Validate model string and resolve to canonical form
-  model <- normalize_model_name(model, silently)
+  model_info <- normalize_model_name(model, silently = silently)
+  model <- model_info$model
 
   # 7. Validate embedding model and detect provider
   provider <- embedding.model_validate(embedding.model)
@@ -384,7 +390,19 @@ validate_user_input_GENIE <- function(
         paste0(
           "GENIE requires an OpenAI API key to generate embeddings with model '",
           embedding.model, "'.\n",
-          "Please provide openai.API or use a HuggingFace model instead."
+          "Please provide openai.API or use a HuggingFace or Jina model instead."
+        ),
+        call. = FALSE
+      )
+    }
+
+    if (provider == "jina" && is.null(jina.API) &&
+        nchar(Sys.getenv("JINA_API_KEY", unset = "")) == 0) {
+      stop(
+        paste0(
+          "GENIE requires a Jina AI API key to generate embeddings with model '",
+          embedding.model, "'.\n",
+          "Please provide jina.API or set the JINA_API_KEY environment variable."
         ),
         call. = FALSE
       )

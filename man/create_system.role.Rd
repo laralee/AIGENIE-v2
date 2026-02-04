@@ -34,3 +34,4 @@ Constructs a system-level prompt to guide an LLM in behaving like an expert scal
 The prompt communicates role identity, domain expertise, scale context, audience constraints,
 and response option considerations.
 }
+\keyword{internal}

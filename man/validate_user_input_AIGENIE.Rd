@@ -10,6 +10,8 @@ validate_user_input_AIGENIE(
   hf.token,
   main.prompts,
   groq.API,
+  anthropic.API,
+  jina.API,
   model,
   temperature,
   top.p,

@@ -42,3 +42,4 @@ audience guidance, scale definitions, JSON formatting rules, and optionally exam
 critical author notes — but only if these elements are not already present in the prompt
 (checked case-insensitively and with whitespace trimmed).
 }
+\keyword{internal}

@@ -10,6 +10,7 @@ validate_user_input_GENIE(
   openai.API,
   hf.token,
   groq.API,
+  jina.API,
   model,
   temperature,
   top.p,
