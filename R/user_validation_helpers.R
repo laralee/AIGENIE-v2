@@ -838,11 +838,13 @@ embedding.model_validate <- function(embedding.model, provider = "auto") {
 #' Trims whitespace and performs case-insensitive matching. Returns canonical-cased values.
 #'
 #' @param EGA.algorithm A string: one of "leiden", "louvain", "walktrap"
+#'        (or NULL, in which case default behavior takes over)
 #' @param EGA.uni.method A string: one of "expand", "LE", "louvain"
 #' @param EGA_model A string or NULL: one of "glasso", "TMFG"
+#' @param item.attributes A named list of attributes and item types.
 #'
 #' @return A named list with cleaned and correctly-cased values.
-validate_ega_params <- function(EGA.algorithm, EGA.uni.method, EGA_model) {
+validate_ega_params <- function(EGA.algorithm, EGA.uni.method, EGA_model, item.attributes) {
   norm_str <- function(x) tolower(trimws(x))
 
   # Canonical sets
@@ -850,14 +852,29 @@ validate_ega_params <- function(EGA.algorithm, EGA.uni.method, EGA_model) {
   UNI_METHODS <- c("expand", "LE", "louvain")
   MODELS <- c("glasso", "TMFG")
 
-  # Build matchers: lowercase names → canonical casing
+  # Build matchers: lowercase names -> canonical casing
   algorithm_map <- setNames(ALGORITHMS, tolower(ALGORITHMS))
   uni_method_map <- setNames(UNI_METHODS, tolower(UNI_METHODS))
   model_map <- setNames(MODELS, tolower(MODELS))
 
-  # --- Validate algorithm ---
-  if (!is.character(EGA.algorithm) || length(EGA.algorithm) != 1 || is.na(EGA.algorithm)) {
-    stop("AI-GENIE expects EGA.algorithm to be a non-empty string.", call. = FALSE)
+  # set EGA model based on the number of traits
+  if (is.null(EGA.algorithm)){
+
+    n_traits <- length(names(item.attributes))
+
+    if(n_traits > 1){ # set to louvain when there is more than one trait
+      EGA.algorithm <- "louvain"
+    } else { # set to walktrap when there is only one trait
+      EGA.algorithm <- "walktrap"
+    }
+
+  } else {
+
+    # --- Validate algorithm if not the default ---
+    if (!is.character(EGA.algorithm) || length(EGA.algorithm) != 1 || is.na(EGA.algorithm)) {
+      stop("AI-GENIE expects EGA.algorithm to be a non-empty string.", call. = FALSE)
+    }
+
   }
 
   algo_key <- norm_str(EGA.algorithm)

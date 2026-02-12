@@ -12,7 +12,7 @@ local_GENIE(
   pooling.strategy = "mean",
   max.length = 512,
   EGA.model = NULL,
-  EGA.algorithm = "walktrap",
+  EGA.algorithm = NULL,
   EGA.uni.method = "louvain",
   embeddings.only = FALSE,
   plot = TRUE,

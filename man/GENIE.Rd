@@ -16,7 +16,7 @@ GENIE(
   top.p = 1,
   embedding.model = "text-embedding-3-small",
   EGA.model = NULL,
-  EGA.algorithm = "walktrap",
+  EGA.algorithm = NULL,
   EGA.uni.method = "louvain",
   embeddings.only = FALSE,
   plot = TRUE,

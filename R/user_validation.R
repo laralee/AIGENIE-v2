@@ -108,7 +108,7 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
   provider <- embedding.model_validate(embedding.model)
 
   # Validate the parameters to be passed to EGA
-  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
+  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model, item.attributes)
   EGA.algorithm <- EGA_params$EGA.algorithm
   EGA.uni.method <- EGA_params$EGA.uni.method
   EGA.model <- EGA_params$EGA.model
@@ -229,7 +229,7 @@ validate_user_input_local_AIGENIE <- function(
   }
 
   # 6. Validate EGA parameters
-  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
+  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model, item.attributes)
   EGA.algorithm <- EGA_params$EGA.algorithm
   EGA.uni.method <- EGA_params$EGA.uni.method
   EGA.model <- EGA_params$EGA.model
@@ -373,7 +373,7 @@ validate_user_input_GENIE <- function(
   provider <- embedding.model_validate(embedding.model)
 
   # 8. Validate EGA parameters
-  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
+  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model, item.attributes)
   EGA.algorithm <- EGA_params$EGA.algorithm
   EGA.uni.method <- EGA_params$EGA.uni.method
   EGA.model <- EGA_params$EGA_model
@@ -526,7 +526,7 @@ validate_user_input_local_GENIE <- function(
   )
 
   # 7. Validate EGA parameters
-  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
+  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model, item.attributes)
   EGA.algorithm <- EGA_params$EGA.algorithm
   EGA.uni.method <- EGA_params$EGA.uni.method
   EGA.model <- EGA_params$EGA_model

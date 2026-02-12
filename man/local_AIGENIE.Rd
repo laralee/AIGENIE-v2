@@ -21,7 +21,7 @@ local_AIGENIE(
   prompt.notes = NULL,
   system.role = NULL,
   EGA.model = NULL,
-  EGA.algorithm = "walktrap",
+  EGA.algorithm = NULL,
   EGA.uni.method = "louvain",
   n.ctx = 4096,
   n.gpu.layers = -1,
@@ -71,7 +71,7 @@ local_AIGENIE(
 
 \item{EGA.model}{Network model ("glasso", "TMFG", or NULL for auto)}
 
-\item{EGA.algorithm}{Community detection algorithm (default: "walktrap")}
+\item{EGA.algorithm}{Community detection algorithm (default: "walktrap" when there is one trait and "louvain" when there are multiple)}
 
 \item{EGA.uni.method}{Unidimensionality method (default: "louvain")}
 

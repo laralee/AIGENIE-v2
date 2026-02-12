@@ -26,7 +26,7 @@ AIGENIE(
   prompt.notes = NULL,
   system.role = NULL,
   EGA.model = NULL,
-  EGA.algorithm = "walktrap",
+  EGA.algorithm = NULL,
   EGA.uni.method = "louvain",
   keep.org = FALSE,
   items.only = FALSE,
@@ -179,11 +179,11 @@ TMFG is a greedy but speedy network-building algorithm that works well for many
 applications, especially text. EBICglasso is slower but non-greedy and may capture
 more nuanced relationships.}
 
-\item{EGA.algorithm}{A character string (optional, default: "walktrap"). Specifies
+\item{EGA.algorithm}{A character string (optional, default is "walktrap" when there is a
+single trait and "louvain" when there is more than one trait). Specifies
 which community detection algorithm to use within the EGA framework. Valid options
 are "louvain", "walktrap", or "leiden". The algorithm operates separately from the
-network building specified by \code{EGA.model}. Walktrap is generally the best performing
-option across most applications.}
+network building specified by \code{EGA.model}.}
 
 \item{EGA.uni.method}{A character string (optional, default: "louvain"). Specifies
 the method for handling unidimensional structures in EGA. Valid options are: "expand"

@@ -152,11 +152,11 @@
 #'   applications, especially text. EBICglasso is slower but non-greedy and may capture
 #'   more nuanced relationships.
 #'
-#' @param EGA.algorithm A character string (optional, default: "walktrap"). Specifies
+#' @param EGA.algorithm A character string (optional, default is "walktrap" when there is a
+#'   single trait and "louvain" when there is more than one trait). Specifies
 #'   which community detection algorithm to use within the EGA framework. Valid options
 #'   are "louvain", "walktrap", or "leiden". The algorithm operates separately from the
-#'   network building specified by `EGA.model`. Walktrap is generally the best performing
-#'   option across most applications.
+#'   network building specified by `EGA.model`.
 #'
 #' @param EGA.uni.method A character string (optional, default: "louvain"). Specifies
 #'   the method for handling unidimensional structures in EGA. Valid options are: "expand"
@@ -468,7 +468,7 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
                        response.options = NULL, prompt.notes = NULL, system.role = NULL,
 
                        # EGA parameters
-                       EGA.model = NULL, EGA.algorithm = "walktrap", EGA.uni.method = "louvain",
+                       EGA.model = NULL, EGA.algorithm = NULL, EGA.uni.method = "louvain",
 
                        # Flags
                        keep.org = FALSE, items.only = FALSE, embeddings.only = FALSE,
@@ -650,7 +650,7 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 #' @param prompt.notes Additional instructions for generation
 #' @param system.role Custom system prompt
 #' @param EGA.model Network model ("glasso", "TMFG", or NULL for auto)
-#' @param EGA.algorithm Community detection algorithm (default: "walktrap")
+#' @param EGA.algorithm Community detection algorithm (default: "walktrap" when there is one trait and "louvain" when there are multiple)
 #' @param EGA.uni.method Unidimensionality method (default: "louvain")
 #' @param n.ctx Context window size (default: 4096)
 #' @param n.gpu.layers GPU layers to use (-1 for all, default: -1)
@@ -764,7 +764,7 @@ local_AIGENIE <- function(
 
   # EGA parameters
   EGA.model = NULL,
-  EGA.algorithm = "walktrap",
+  EGA.algorithm = NULL,
   EGA.uni.method = "louvain",
 
   # Local model parameters
@@ -1225,7 +1225,7 @@ GENIE <- function(
 
     # EGA parameters
     EGA.model = NULL,
-    EGA.algorithm = "walktrap",
+    EGA.algorithm = NULL,
     EGA.uni.method = "louvain",
 
     # Control flags
@@ -1467,7 +1467,7 @@ local_GENIE <- function(
 
   # EGA parameters
   EGA.model = NULL,
-  EGA.algorithm = "walktrap",
+  EGA.algorithm = NULL,
   EGA.uni.method = "louvain",
 
   # Control flags
