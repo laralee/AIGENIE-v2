@@ -573,14 +573,10 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 
 
   # Generate item level results
-  try_item_level <- run_item_reduction_pipeline(embeddings,
-                                         items,
-                                         EGA.model,
-                                         EGA.algorithm,
-                                         EGA.uni.method,
-                                         keep.org,
-                                         silently,
-                                         plot)
+  try_item_level <- run_item_reduction_pipeline(embedding_matrix = embeddings,
+                    items=items, EGA.model = EGA.model, EGA.algorithm = EGA.algorithm,
+                    EGA.uni.method = EGA.uni.method, keep.org = keep.org,
+                    silently = silently, plot = plot)
 
   if(!try_item_level$success){
     return(try_item_level$item_level)
@@ -590,15 +586,10 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 
   if(length(names(item.attributes)) > 1) { # only run overall if you have to
     # If successful, generate results for items overall
-    try_overall_result <- run_pipeline_for_all(item_level,
-                                           items,
-                                           embeddings,
-                                           EGA.model,
-                                           EGA.algorithm,
-                                           EGA.uni.method,
-                                           keep.org,
-                                           silently,
-                                           plot)
+    try_overall_result <- run_pipeline_for_all(item_level = item_level, items = items,
+                            embeddings = embeddings, EGA.model = EGA.model,
+                            EGA.algorithm = EGA.algorithm, EGA.uni.method = EGA.uni.method,
+                            keep.org = keep.org, silently = silently, plot = plot)
 
     if(!try_overall_result$success){
       return(item_level)
@@ -895,8 +886,10 @@ local_AIGENIE <- function(
 
   # Item-level reduction
   try_item_level <- run_item_reduction_pipeline(
-    embeddings, items, EGA.model, EGA.algorithm,
-    EGA.uni.method, keep.org, silently, plot
+    embedding_matrix = embeddings, items=items,
+    EGA.model = EGA.model, EGA.algorithm = EGA.algorithm,
+    EGA.uni.method = EGA.uni.method, keep.org = keep.org, silently = silently,
+    plot = plot
   )
 
   if (!try_item_level$success) {
@@ -908,9 +901,10 @@ local_AIGENIE <- function(
   if(length(names(item.attributes)) > 1){
   # Overall reduction
     try_overall_result <- run_pipeline_for_all(
-      item_level, items, embeddings, EGA.model,
-      EGA.algorithm, EGA.uni.method, keep.org,
-      silently, plot
+      item_level = item_level, items = items, embeddings = embeddings,
+      EGA.model = EGA.model, EGA.algorithm = EGA.algorithm,
+      EGA.uni.method = EGA.uni.method, keep.org = keep.org,
+      silently = silently, plot = plot
     )
 
     if (!try_overall_result$success) {
