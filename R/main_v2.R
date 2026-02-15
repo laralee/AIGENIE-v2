@@ -213,53 +213,71 @@
 #'   or errors, only informational messages. Operates independently of the `plot` parameter.
 #'
 #' @return
-#' The return object varies based on parameter settings:
+#' The structure of the return value depends on the function flags.
 #'
-#' **When `items.only = TRUE`:** Returns a data frame with columns `ID`, `statement`,
-#' `type`, and `attribute` containing the generated items.
+#' **Defaults:** `items.only = FALSE`, `embeddings.only = FALSE`,
+#' `run.overall = FALSE`, `keep.org = FALSE`, `all.together = FALSE`.
 #'
-#' **When `embeddings.only = TRUE`:** Returns a named list with two elements:
-#' `embeddings` (the embedding matrix with column names corresponding to item IDs) and
-#' `items` (the items data frame described above).
+#' **When `items.only = TRUE`:**
+#' Returns a `data.frame` of generated items with columns:
+#' `ID`, `statement`, `type`, and `attribute`.
 #'
-#' **Default Behavior (`items.only = FALSE`, `embeddings.only = FALSE`, `run.overall = FALSE`):** Returns a named list where each element contains results for items of only one type:
-#'     \describe{
-#'       \item{`final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`,
-#'         `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`}{Same as overall object}
-#'       \item{`UVA`}{List with `n_removed` (number of redundant items removed by the Unique Variable Analysis (UVA) step), `n_sweeps`
-#'         (number of UVA iterations), `redundant_pairs` (data frame with sweep, items, keep, remove columns)}
-#'       \item{`bootEGA`}{List with `initial_boot` (first bootEGA object), `final_boot`
-#'         (final bootEGA object with all stable items), `n_removed` (number of unstable items),
-#'         `items_removed` (data frame of removed items with boot run information),
-#'         `initial_boot_with_redundancies` (boot EGA object for original item pool)}
-#'       \item{`stability_plot`}{ggplot/patchwork stability plot showing item stability before vs after reduction}
-#'     }
+#' **When `embeddings.only = TRUE`:**
+#' Returns a named `list` with two elements:
+#' \itemize{
+#'   \item `embeddings` — an embedding matrix/list (columns or rownames correspond to item IDs).
+#'   \item `items` — the items `data.frame` described above.
+#' }
 #'
-#' **If `run.overall = TRUE` (`items.only = FALSE`, `embeddings.only = FALSE`):** Returns a
-#' complex list with two primary components:
-#'
+#' **Default behaviour** (`items.only = FALSE`, `embeddings.only = FALSE`,
+#' `run.overall = FALSE`, `keep.org = FALSE`, `all.together = FALSE`):
+#' Returns a named `list` with two top-level elements:
 #' \describe{
-#'   \item{`overall`}{Results for all items considered agnostic of item type, containing:
+#'   \item{`item_type_level`}{A named list where each name is an item type and each element is a per-type named list containing:
 #'     \describe{
-#'       \item{`final_NMI`}{Final normalized mutual information (NMI) after all reduction steps}
-#'       \item{`initial_NMI`}{Initial NMI of the pre-reduced, full item pool}
-#'       \item{`embeddings`}{List with `full` (full embedding matrix of reduced items),
-#'         `sparse` (sparsified embeddings of reduced items), `selected` (string specifying
-#'         which embeddings were used). If `keep.org = TRUE`, also includes `full_org`
-#'         and `sparse_org` for complete pre-reduction item set}
-#'       \item{`EGA.model_selected`}{EGA model used for analysis (TMFG or Glasso)}
-#'       \item{`final_items`}{Data frame with final items after reduction (columns: ID,
-#'         statement, attribute, type, EGA_com)}
-#'       \item{`final_EGA`}{Final EGA object from EGAnet package post-reduction}
-#'       \item{`initial_EGA`}{Initial EGA object of all items in original pool}
-#'       \item{`start_N`}{Initial number of items pre-reduction}
-#'       \item{`final_N`}{Final number of items in reduced pool}
-#'       \item{`network_plot`}{ggplot/patchwork comparison plot showing EGA network before vs after reduction}
+#'       \item{`final_NMI`}{Numeric: final normalized mutual information after reduction.}
+#'       \item{`initial_NMI`}{Numeric: initial NMI of the pre-reduced item pool.}
+#'       \item{`embeddings`}{List or matrix of embeddings for this item type (see 'Notes on `embeddings`' below).}
+#'       \item{`UVA`}{List from Unique Variable Analysis (contains at least `n_removed`, `n_sweeps`, `redundant_pairs` data.frame).}
+#'       \item{`bootEGA`}{List with bootEGA results (e.g. `initial_boot`, `final_boot`, `n_removed`, `items_removed`, `initial_boot_with_redundancies`).}
+#'       \item{`EGA.model_selected`}{Character: chosen EGA model (e.g. `"TMFG"` or `"Glasso"`).}
+#'       \item{`final_items`}{`data.frame`: final items after reduction (columns include `ID`, `statement`, `attribute`, `type`, `EGA_com`).}
+#'       \item{`final_EGA`}{EGA object (from EGAnet) after reduction.}
+#'       \item{`initial_EGA`}{Initial EGA object computed on the pre-reduced item set.}
+#'       \item{`start_N`}{Integer: initial number of items in this type.}
+#'       \item{`final_N`}{Integer: final number of items in this type.}
+#'       \item{`network_plot`}{`ggplot` / `patchwork` object comparing networks before vs after reduction.}
+#'       \item{`stability_plot`}{`ggplot` / `patchwork` object showing item stability before vs after reduction.}
 #'     }
 #'   }
-#'   \item{`item_type_level`}{The named list where results are displayed at the item type level as described above.}
+#'
+#'   \item{`overall`}{Named list with aggregated results across all item types. Under the default this contains:
+#'     \describe{
+#'       \item{`final_items`}{`data.frame` of final items across all types (columns as above).}
+#'       \item{`embeddings`}{Embeddings for the full reduced item set (see 'Notes on `embeddings`' below). Note: `overall$embeddings` does **not** include `selected`.}
+#'     }
 #'   }
 #' }
+#'
+#' **When `keep.org = TRUE`** (in addition to defaults above):
+#' The top-level shape remains (`item_type_level` and `overall`) but includes original (pre-reduction) information:
+#' \describe{
+#'   \item{`item_type_level`}{Each per-type sublist contains:
+#'     `final_NMI`, `initial_NMI`, `embeddings`, `UVA`, `bootEGA`, `EGA.model_selected`, `final_items`, `initial_items`, `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`, `stability_plot`.}
+#'   \item{`overall`}{Contains `final_items`, `initial_items`, and `embeddings` for the full item pool.}
+#' }
+#' For `keep.org = TRUE`, per-type `embeddings` contains at least: `full_org`, `sparse_org`, `selected`, `full`, and `sparse`. (`overall$embeddings` contains the same subcomponents **except** `selected` is omitted.)
+#'
+#' **When `run.overall = TRUE`** (`items.only = FALSE`, `embeddings.only = FALSE`):
+#' \describe{
+#'   \item{`item_type_level`}{Same per-type structure as the default (see above).}
+#'   \item{`overall`}{A named list with aggregated results (not limited to `final_items` and `embeddings`) containing:
+#'     `final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`, `final_EGA`, `initial_EGA`, `start_N`, `final_N`, and `network_plot`.}
+#' }
+#'
+#' **When `all.together = TRUE`** (regardless of `run.overall`):
+#' Results are **not** split into `item_type_level` and `overall`. Instead the function returns a single named list (applies to the full — possibly `keep.org` modified — result set) containing:
+#' `final_NMI`, `initial_NMI`, `embeddings`, `UVA`, `bootEGA`, `EGA.model_selected`, `final_items`, `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`, and `stability_plot`.
 #'
 #'
 #' @examples
@@ -619,7 +637,7 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
       item_level[["All"]][["initial_items"]] <- items
     }
 
-    return(item_level[["All"]])
+    return(list(item_level[["All"]]))
 
   }
 
@@ -667,13 +685,8 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
     print_results(overall_result, item_level, run.overall)
   }
 
-  # prepare return object
-    if(run.overall){
-      return( list(overall = overall_result,
-                 item_type_level = item_level))
-    } else {
-      return(item_level)
-    }
+  return(build_return(item_level, overall_result,
+                      run.overall, keep.org))
 
 }
 
@@ -733,43 +746,73 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 #' @param plot Display network plots (default: TRUE)
 #' @param silently Suppress progress messages (default: FALSE)
 #'
-#' **Default behavior (`items.only = FALSE`, `embeddings.only = FALSE`):** Returns a
-#' complex list with two primary components:
+#' @return
+#' The structure of the return value depends on the function flags.
 #'
+#' **Defaults:** `items.only = FALSE`, `embeddings.only = FALSE`,
+#' `run.overall = FALSE`, `keep.org = FALSE`, `all.together = FALSE`.
+#'
+#' **When `items.only = TRUE`:**
+#' Returns a `data.frame` of generated items with columns:
+#' `ID`, `statement`, `type`, and `attribute`.
+#'
+#' **When `embeddings.only = TRUE`:**
+#' Returns a named `list` with two elements:
+#' \itemize{
+#'   \item `embeddings` — an embedding matrix/list (columns or rownames correspond to item IDs).
+#'   \item `items` — the items `data.frame` described above.
+#' }
+#'
+#' **Default behaviour** (`items.only = FALSE`, `embeddings.only = FALSE`,
+#' `run.overall = FALSE`, `keep.org = FALSE`, `all.together = FALSE`):
+#' Returns a named `list` with two top-level elements:
 #' \describe{
-#'   \item{`overall`}{Results for all items considered agnostic of item type, containing:
+#'   \item{`item_type_level`}{A named list where each name is an item type and each element is a per-type named list containing:
 #'     \describe{
-#'       \item{`final_NMI`}{Final normalized mutual information after all reduction steps}
-#'       \item{`initial_NMI`}{Initial NMI of the pre-reduced, full item pool}
-#'       \item{`embeddings`}{List with `full` (full embedding matrix of reduced items),
-#'         `sparse` (sparsified embeddings of reduced items), `selected` (string specifying
-#'         which embeddings were used). If `keep.org = TRUE`, also includes `full_org`
-#'         and `sparse_org` for complete pre-reduction item set}
-#'       \item{`EGA.model_selected`}{EGA model used for analysis (TMFG or Glasso)}
-#'       \item{`final_items`}{Data frame with final items after reduction (columns: ID,
-#'         statement, attribute, type, EGA_com)}
-#'       \item{`final_EGA`}{Final EGA object from EGAnet package post-reduction}
-#'       \item{`initial_EGA`}{Initial EGA object of all items in original pool}
-#'       \item{`start_N`}{Initial number of items pre-reduction}
-#'       \item{`final_N`}{Final number of items in reduced pool}
-#'       \item{`network_plot`}{ggplot/patchwork comparison plot showing EGA network before vs after reduction}
+#'       \item{`final_NMI`}{Numeric: final normalized mutual information after reduction.}
+#'       \item{`initial_NMI`}{Numeric: initial NMI of the pre-reduced item pool.}
+#'       \item{`embeddings`}{List or matrix of embeddings for this item type (see 'Notes on `embeddings`' below).}
+#'       \item{`UVA`}{List from Unique Variable Analysis (contains at least `n_removed`, `n_sweeps`, `redundant_pairs` data.frame).}
+#'       \item{`bootEGA`}{List with bootEGA results (e.g. `initial_boot`, `final_boot`, `n_removed`, `items_removed`, `initial_boot_with_redundancies`).}
+#'       \item{`EGA.model_selected`}{Character: chosen EGA model (e.g. `"TMFG"` or `"Glasso"`).}
+#'       \item{`final_items`}{`data.frame`: final items after reduction (columns include `ID`, `statement`, `attribute`, `type`, `EGA_com`).}
+#'       \item{`final_EGA`}{EGA object (from EGAnet) after reduction.}
+#'       \item{`initial_EGA`}{Initial EGA object computed on the pre-reduced item set.}
+#'       \item{`start_N`}{Integer: initial number of items in this type.}
+#'       \item{`final_N`}{Integer: final number of items in this type.}
+#'       \item{`network_plot`}{`ggplot` / `patchwork` object comparing networks before vs after reduction.}
+#'       \item{`stability_plot`}{`ggplot` / `patchwork` object showing item stability before vs after reduction.}
 #'     }
 #'   }
-#'   \item{`item_type_level`}{Named list where results are displayed at the item type level. Each element contains results
-#'     for items of only one type:
+#'
+#'   \item{`overall`}{Named list with aggregated results across all item types. Under the default this contains:
 #'     \describe{
-#'       \item{`final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`,
-#'         `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`}{Same as overall object}
-#'       \item{`UVA`}{List with `n_removed` (number of redundant items removed), `n_sweeps`
-#'         (number of UVA iterations), `redundant_pairs` (data frame with sweep, items, keep, remove columns)}
-#'       \item{`bootEGA`}{List with `initial_boot` (first bootEGA object), `final_boot`
-#'         (final bootEGA object with all stable items), `n_removed` (number of unstable items),
-#'         `items_removed` (data frame of removed items with boot run information),
-#'         `initial_boot_with_redundancies` (boot EGA object for original item pool)}
-#'       \item{`stability_plot`}{ggplot/patchwork stability plot showing item stability before vs after reduction}
+#'       \item{`final_items`}{`data.frame` of final items across all types (columns as above).}
+#'       \item{`embeddings`}{Embeddings for the full reduced item set (see 'Notes on `embeddings`' below). Note: `overall$embeddings` does **not** include `selected`.}
 #'     }
 #'   }
 #' }
+#'
+#' **When `keep.org = TRUE`** (in addition to defaults above):
+#' The top-level shape remains (`item_type_level` and `overall`) but includes original (pre-reduction) information:
+#' \describe{
+#'   \item{`item_type_level`}{Each per-type sublist contains:
+#'     `final_NMI`, `initial_NMI`, `embeddings`, `UVA`, `bootEGA`, `EGA.model_selected`, `final_items`, `initial_items`, `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`, `stability_plot`.}
+#'   \item{`overall`}{Contains `final_items`, `initial_items`, and `embeddings` for the full item pool.}
+#' }
+#' For `keep.org = TRUE`, per-type `embeddings` contains at least: `full_org`, `sparse_org`, `selected`, `full`, and `sparse`. (`overall$embeddings` contains the same subcomponents **except** `selected` is omitted.)
+#'
+#' **When `run.overall = TRUE`** (`items.only = FALSE`, `embeddings.only = FALSE`):
+#' \describe{
+#'   \item{`item_type_level`}{Same per-type structure as the default (see above).}
+#'   \item{`overall`}{A named list with aggregated results (not limited to `final_items` and `embeddings`) containing:
+#'     `final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`, `final_EGA`, `initial_EGA`, `start_N`, `final_N`, and `network_plot`.}
+#' }
+#'
+#' **When `all.together = TRUE`** (regardless of `run.overall`):
+#' Results are **not** split into `item_type_level` and `overall`. Instead the function returns a single named list (applies to the full — possibly `keep.org` modified — result set) containing:
+#' `final_NMI`, `initial_NMI`, `embeddings`, `UVA`, `bootEGA`, `EGA.model_selected`, `final_items`, `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`, and `stability_plot`.
+#'
 #'
 #' @examples
 #' \dontrun{
@@ -1027,23 +1070,19 @@ local_AIGENIE <- function(
     }
 
     overall_result <- try_overall_result$overall_result
-    only.one <- FALSE
   } else {
     overall_result <- item_level
     try_overall_result <- list(success = TRUE)
-    only.one <- TRUE
   }
 
   # Step 7: Print results summary
   if(!silently && try_overall_result$success && try_item_level$success){
-    print_results(overall_result, item_level, only.one)
+    print_results(overall_result, item_level, run.overall)
   }
 
   # Return results
-  return(list(
-    overall = overall_result,
-    item_type_level = item_level
-  ))
+  return(build_return(item_level, overall_result,
+  run.overall, keep.org))
 }
 
 
@@ -1105,43 +1144,65 @@ local_AIGENIE <- function(
 #' @param plot If `TRUE`, display network comparison plots
 #' @param silently If `TRUE`, suppress progress messages
 #'
-#' **Default behavior (`embeddings.only = FALSE`):** Returns a
-#' complex list with two primary components:
+#' @return
+#' The structure of the return value depends on the function flags.
 #'
+#' **Defaults:** `items.only = FALSE`, `embeddings.only = FALSE`,
+#' `run.overall = FALSE`, `all.together = FALSE`.
+#'
+#' **When `items.only = TRUE`:**
+#' Returns a `data.frame` of generated items with columns:
+#' `ID`, `statement`, `type`, and `attribute`.
+#'
+#' **When `embeddings.only = TRUE`:**
+#' Returns a named `list` with two elements:
+#' \itemize{
+#'   \item `embeddings` — an embedding matrix/list (columns or rownames correspond to item IDs).
+#'   \item `items` — the items `data.frame` described above.
+#' }
+#'
+#' **Default behaviour** (`items.only = FALSE`, `embeddings.only = FALSE`,
+#' `run.overall = FALSE`, `all.together = FALSE`):
+#' Returns a named `list` with two top-level elements:
 #' \describe{
-#'   \item{`overall`}{Results for all items considered agnostic of item type, containing:
+#'   \item{`item_type_level`}{A named list where each name is an item type and each element is a per-type named list containing:
 #'     \describe{
-#'       \item{`final_NMI`}{Final normalized mutual information after all reduction steps}
-#'       \item{`initial_NMI`}{Initial NMI of the pre-reduced, full item pool}
-#'       \item{`embeddings`}{List with `full` (full embedding matrix of reduced items),
-#'         `sparse` (sparsified embeddings of reduced items), `selected` (string specifying
-#'         which embeddings were used). If `keep.org = TRUE`, also includes `full_org`
-#'         and `sparse_org` for complete pre-reduction item set}
-#'       \item{`EGA.model_selected`}{EGA model used for analysis (TMFG or Glasso)}
-#'       \item{`final_items`}{Data frame with final items after reduction (columns: ID,
-#'         statement, attribute, type, EGA_com)}
-#'       \item{`final_EGA`}{Final EGA object from EGAnet package post-reduction}
-#'       \item{`initial_EGA`}{Initial EGA object of all items in original pool}
-#'       \item{`start_N`}{Initial number of items pre-reduction}
-#'       \item{`final_N`}{Final number of items in reduced pool}
-#'       \item{`network_plot`}{ggplot/patchwork comparison plot showing EGA network before vs after reduction}
+#'       \item{`final_NMI`}{Numeric: final normalized mutual information after reduction.}
+#'       \item{`initial_NMI`}{Numeric: initial NMI of the pre-reduced item pool.}
+#'       \item{`embeddings`}{List or matrix of embeddings for this item type (see 'Notes on `embeddings`' below).}
+#'       \item{`UVA`}{List from Unique Variable Analysis (contains at least `n_removed`, `n_sweeps`, `redundant_pairs` data.frame).}
+#'       \item{`bootEGA`}{List with bootEGA results (e.g. `initial_boot`, `final_boot`, `n_removed`, `items_removed`, `initial_boot_with_redundancies`).}
+#'       \item{`EGA.model_selected`}{Character: chosen EGA model (e.g. `"TMFG"` or `"Glasso"`).}
+#'       \item{`final_items`}{`data.frame`: final items after reduction (columns include `ID`, `statement`, `attribute`, `type`, `EGA_com`).}
+#'       \item{`final_EGA`}{EGA object (from EGAnet) after reduction.}
+#'       \item{`initial_EGA`}{Initial EGA object computed on the pre-reduced item set.}
+#'       \item{`start_N`}{Integer: initial number of items in this type.}
+#'       \item{`final_N`}{Integer: final number of items in this type.}
+#'       \item{`network_plot`}{`ggplot` / `patchwork` object comparing networks before vs after reduction.}
+#'       \item{`stability_plot`}{`ggplot` / `patchwork` object showing item stability before vs after reduction.}
 #'     }
 #'   }
-#'   \item{`item_type_level`}{Named list where results are displayed at the item type level. Each element contains results
-#'     for items of only one type:
+#'
+#'   \item{`overall`}{Named list with aggregated results across all item types. Under the default this contains:
 #'     \describe{
-#'       \item{`final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`,
-#'         `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`}{Same as overall object}
-#'       \item{`UVA`}{List with `n_removed` (number of redundant items removed), `n_sweeps`
-#'         (number of UVA iterations), `redundant_pairs` (data frame with sweep, items, keep, remove columns)}
-#'       \item{`bootEGA`}{List with `initial_boot` (first bootEGA object), `final_boot`
-#'         (final bootEGA object with all stable items), `n_removed` (number of unstable items),
-#'         `items_removed` (data frame of removed items with boot run information),
-#'         `initial_boot_with_redundancies` (boot EGA object for original item pool)}
-#'       \item{`stability_plot`}{ggplot/patchwork stability plot showing item stability before vs after reduction}
+#'       \item{`final_items`}{`data.frame` of final items across all types (columns as above).}
+#'       \item{`embeddings`}{Embeddings for the full reduced item set (see 'Notes on `embeddings`' below). Note: `overall$embeddings` does **not** include `selected`.}
 #'     }
 #'   }
 #' }
+#'
+#' **When `run.overall = TRUE`** (`items.only = FALSE`, `embeddings.only = FALSE`):
+#' \describe{
+#'   \item{`item_type_level`}{Same per-type structure as the default (see above).}
+#'   \item{`overall`}{A named list with aggregated results (not limited to `final_items` and `embeddings`) containing:
+#'     `final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`, `final_EGA`, `initial_EGA`, `start_N`, `final_N`, and `network_plot`.}
+#' }
+#'
+#' **When `all.together = TRUE`** (regardless of `run.overall`):
+#' Results are **not** split into `item_type_level` and `overall`. Instead the function returns a single named list containing:
+#' `final_NMI`, `initial_NMI`, `embeddings`, `UVA`, `bootEGA`, `EGA.model_selected`, `final_items`, `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`, and `stability_plot`.
+#'
+#'
 #'
 #' @examples
 #'  \dontrun{
@@ -1499,23 +1560,20 @@ GENIE <- function(
   }
 
   overall_result <- try_overall_result$overall_result
-  only.one <- FALSE
   } else {
     overall_result <- item_level
     try_overall_result <- list(success = TRUE)
-    only.one <- TRUE
   }
 
   # Step 5: Display results summary
   if(!silently && try_overall_result$success && try_item_level$success){
-    print_results(overall_result, item_level, only.one)
+    print_results(overall_result, item_level, run.overall)
   }
 
   # Step 6: Return comprehensive results
-  return(list(
-    overall = overall_result,
-    item_type_level = item_level
-  ))
+  # prepare return object
+  return(build_return(item_level, overall_result,
+                      run.overall, keep.org = FALSE))
 }
 
 
@@ -1586,43 +1644,61 @@ GENIE <- function(
 #' @param plot If `TRUE`, display network comparison plots
 #' @param silently If `TRUE`, suppress progress messages
 #'
-#' **Default behavior (`embeddings.only = FALSE`):** Returns a
-#' complex list with two primary components:
+#' **Defaults:** `items.only = FALSE`, `embeddings.only = FALSE`,
+#' `run.overall = FALSE`, `all.together = FALSE`.
 #'
+#' **When `items.only = TRUE`:**
+#' Returns a `data.frame` of generated items with columns:
+#' `ID`, `statement`, `type`, and `attribute`.
+#'
+#' **When `embeddings.only = TRUE`:**
+#' Returns a named `list` with two elements:
+#' \itemize{
+#'   \item `embeddings` — an embedding matrix/list (columns or rownames correspond to item IDs).
+#'   \item `items` — the items `data.frame` described above.
+#' }
+#'
+#' **Default behaviour** (`items.only = FALSE`, `embeddings.only = FALSE`,
+#' `run.overall = FALSE`, `all.together = FALSE`):
+#' Returns a named `list` with two top-level elements:
 #' \describe{
-#'   \item{`overall`}{Results for all items considered agnostic of item type, containing:
+#'   \item{`item_type_level`}{A named list where each name is an item type and each element is a per-type named list containing:
 #'     \describe{
-#'       \item{`final_NMI`}{Final normalized mutual information after all reduction steps}
-#'       \item{`initial_NMI`}{Initial NMI of the pre-reduced, full item pool}
-#'       \item{`embeddings`}{List with `full` (full embedding matrix of reduced items),
-#'         `sparse` (sparsified embeddings of reduced items), `selected` (string specifying
-#'         which embeddings were used). If `keep.org = TRUE`, also includes `full_org`
-#'         and `sparse_org` for complete pre-reduction item set}
-#'       \item{`EGA.model_selected`}{EGA model used for analysis (TMFG or Glasso)}
-#'       \item{`final_items`}{Data frame with final items after reduction (columns: ID,
-#'         statement, attribute, type, EGA_com)}
-#'       \item{`final_EGA`}{Final EGA object from EGAnet package post-reduction}
-#'       \item{`initial_EGA`}{Initial EGA object of all items in original pool}
-#'       \item{`start_N`}{Initial number of items pre-reduction}
-#'       \item{`final_N`}{Final number of items in reduced pool}
-#'       \item{`network_plot`}{ggplot/patchwork comparison plot showing EGA network before vs after reduction}
+#'       \item{`final_NMI`}{Numeric: final normalized mutual information after reduction.}
+#'       \item{`initial_NMI`}{Numeric: initial NMI of the pre-reduced item pool.}
+#'       \item{`embeddings`}{List or matrix of embeddings for this item type (see 'Notes on `embeddings`' below).}
+#'       \item{`UVA`}{List from Unique Variable Analysis (contains at least `n_removed`, `n_sweeps`, `redundant_pairs` data.frame).}
+#'       \item{`bootEGA`}{List with bootEGA results (e.g. `initial_boot`, `final_boot`, `n_removed`, `items_removed`, `initial_boot_with_redundancies`).}
+#'       \item{`EGA.model_selected`}{Character: chosen EGA model (e.g. `"TMFG"` or `"Glasso"`).}
+#'       \item{`final_items`}{`data.frame`: final items after reduction (columns include `ID`, `statement`, `attribute`, `type`, `EGA_com`).}
+#'       \item{`final_EGA`}{EGA object (from EGAnet) after reduction.}
+#'       \item{`initial_EGA`}{Initial EGA object computed on the pre-reduced item set.}
+#'       \item{`start_N`}{Integer: initial number of items in this type.}
+#'       \item{`final_N`}{Integer: final number of items in this type.}
+#'       \item{`network_plot`}{`ggplot` / `patchwork` object comparing networks before vs after reduction.}
+#'       \item{`stability_plot`}{`ggplot` / `patchwork` object showing item stability before vs after reduction.}
 #'     }
 #'   }
-#'   \item{`item_type_level`}{Named list where results are displayed at the item type level. Each element contains results
-#'     for items of only one type:
+#'
+#'   \item{`overall`}{Named list with aggregated results across all item types. Under the default this contains:
 #'     \describe{
-#'       \item{`final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`,
-#'         `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`}{Same as overall object}
-#'       \item{`UVA`}{List with `n_removed` (number of redundant items removed), `n_sweeps`
-#'         (number of UVA iterations), `redundant_pairs` (data frame with sweep, items, keep, remove columns)}
-#'       \item{`bootEGA`}{List with `initial_boot` (first bootEGA object), `final_boot`
-#'         (final bootEGA object with all stable items), `n_removed` (number of unstable items),
-#'         `items_removed` (data frame of removed items with boot run information),
-#'         `initial_boot_with_redundancies` (boot EGA object for original item pool)}
-#'       \item{`stability_plot`}{ggplot/patchwork stability plot showing item stability before vs after reduction}
+#'       \item{`final_items`}{`data.frame` of final items across all types (columns as above).}
+#'       \item{`embeddings`}{Embeddings for the full reduced item set (see 'Notes on `embeddings`' below). Note: `overall$embeddings` does **not** include `selected`.}
 #'     }
 #'   }
 #' }
+#'
+#' **When `run.overall = TRUE`** (`items.only = FALSE`, `embeddings.only = FALSE`):
+#' \describe{
+#'   \item{`item_type_level`}{Same per-type structure as the default (see above).}
+#'   \item{`overall`}{A named list with aggregated results (not limited to `final_items` and `embeddings`) containing:
+#'     `final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`, `final_EGA`, `initial_EGA`, `start_N`, `final_N`, and `network_plot`.}
+#' }
+#'
+#' **When `all.together = TRUE`** (regardless of `run.overall`):
+#' Results are **not** split into `item_type_level` and `overall`. Instead the function returns a single named list containing:
+#' `final_NMI`, `initial_NMI`, `embeddings`, `UVA`, `bootEGA`, `EGA.model_selected`, `final_items`, `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`, and `stability_plot`.
+#'
 #'
 #' @export
 local_GENIE <- function(
@@ -1782,21 +1858,18 @@ local_GENIE <- function(
   }
 
   overall_result <- try_overall_result$overall_result
-  only.one <- FALSE
   } else {
     overall_result <- item_level
     try_overall_result <- list(success = TRUE)
-    only.one <- TRUE
   }
 
   # Step 5: Display results summary
   if(!silently && try_overall_result$success && try_item_level$success){
-    print_results(overall_result, item_level, only.one)
+    print_results(overall_result, item_level, run.overall)
   }
 
   # Step 6: Return comprehensive results
-  return(list(
-    overall = overall_result,
-    item_type_level = item_level
-  ))
+  # prepare return object
+  return(build_return(item_level, overall_result,
+                      run.overall, keep.org = FALSE))
 }

@@ -115,45 +115,74 @@ If only one item type is present, this argument will be ignored.}
 
 \item{plot}{Display network plots (default: TRUE)}
 
-\item{silently}{Suppress progress messages (default: FALSE)
+\item{silently}{Suppress progress messages (default: FALSE)}
+}
+\value{
+The structure of the return value depends on the function flags.
 
-\strong{Default behavior (\code{items.only = FALSE}, \code{embeddings.only = FALSE}):} Returns a
-complex list with two primary components:
+\strong{Defaults:} \code{items.only = FALSE}, \code{embeddings.only = FALSE},
+\code{run.overall = FALSE}, \code{keep.org = FALSE}, \code{all.together = FALSE}.
 
+\strong{When \code{items.only = TRUE}:}
+Returns a \code{data.frame} of generated items with columns:
+\code{ID}, \code{statement}, \code{type}, and \code{attribute}.
+
+\strong{When \code{embeddings.only = TRUE}:}
+Returns a named \code{list} with two elements:
+\itemize{
+\item \code{embeddings} — an embedding matrix/list (columns or rownames correspond to item IDs).
+\item \code{items} — the items \code{data.frame} described above.
+}
+
+\strong{Default behaviour} (\code{items.only = FALSE}, \code{embeddings.only = FALSE},
+\code{run.overall = FALSE}, \code{keep.org = FALSE}, \code{all.together = FALSE}):
+Returns a named \code{list} with two top-level elements:
 \describe{
-\item{\code{overall}}{Results for all items considered agnostic of item type, containing:
+\item{\code{item_type_level}}{A named list where each name is an item type and each element is a per-type named list containing:
 \describe{
-\item{\code{final_NMI}}{Final normalized mutual information after all reduction steps}
-\item{\code{initial_NMI}}{Initial NMI of the pre-reduced, full item pool}
-\item{\code{embeddings}}{List with \code{full} (full embedding matrix of reduced items),
-\code{sparse} (sparsified embeddings of reduced items), \code{selected} (string specifying
-which embeddings were used). If \code{keep.org = TRUE}, also includes \code{full_org}
-and \code{sparse_org} for complete pre-reduction item set}
-\item{\code{EGA.model_selected}}{EGA model used for analysis (TMFG or Glasso)}
-\item{\code{final_items}}{Data frame with final items after reduction (columns: ID,
-statement, attribute, type, EGA_com)}
-\item{\code{final_EGA}}{Final EGA object from EGAnet package post-reduction}
-\item{\code{initial_EGA}}{Initial EGA object of all items in original pool}
-\item{\code{start_N}}{Initial number of items pre-reduction}
-\item{\code{final_N}}{Final number of items in reduced pool}
-\item{\code{network_plot}}{ggplot/patchwork comparison plot showing EGA network before vs after reduction}
+\item{\code{final_NMI}}{Numeric: final normalized mutual information after reduction.}
+\item{\code{initial_NMI}}{Numeric: initial NMI of the pre-reduced item pool.}
+\item{\code{embeddings}}{List or matrix of embeddings for this item type (see 'Notes on \code{embeddings}' below).}
+\item{\code{UVA}}{List from Unique Variable Analysis (contains at least \code{n_removed}, \code{n_sweeps}, \code{redundant_pairs} data.frame).}
+\item{\code{bootEGA}}{List with bootEGA results (e.g. \code{initial_boot}, \code{final_boot}, \code{n_removed}, \code{items_removed}, \code{initial_boot_with_redundancies}).}
+\item{\code{EGA.model_selected}}{Character: chosen EGA model (e.g. \code{"TMFG"} or \code{"Glasso"}).}
+\item{\code{final_items}}{\code{data.frame}: final items after reduction (columns include \code{ID}, \code{statement}, \code{attribute}, \code{type}, \code{EGA_com}).}
+\item{\code{final_EGA}}{EGA object (from EGAnet) after reduction.}
+\item{\code{initial_EGA}}{Initial EGA object computed on the pre-reduced item set.}
+\item{\code{start_N}}{Integer: initial number of items in this type.}
+\item{\code{final_N}}{Integer: final number of items in this type.}
+\item{\code{network_plot}}{\code{ggplot} / \code{patchwork} object comparing networks before vs after reduction.}
+\item{\code{stability_plot}}{\code{ggplot} / \code{patchwork} object showing item stability before vs after reduction.}
 }
 }
-\item{\code{item_type_level}}{Named list where results are displayed at the item type level. Each element contains results
-for items of only one type:
+
+\item{\code{overall}}{Named list with aggregated results across all item types. Under the default this contains:
 \describe{
-\item{\code{final_NMI}, \code{initial_NMI}, \code{embeddings}, \code{EGA.model_selected}, \code{final_items},
-\code{final_EGA}, \code{initial_EGA}, \code{start_N}, \code{final_N}, \code{network_plot}}{Same as overall object}
-\item{\code{UVA}}{List with \code{n_removed} (number of redundant items removed), \code{n_sweeps}
-(number of UVA iterations), \code{redundant_pairs} (data frame with sweep, items, keep, remove columns)}
-\item{\code{bootEGA}}{List with \code{initial_boot} (first bootEGA object), \code{final_boot}
-(final bootEGA object with all stable items), \code{n_removed} (number of unstable items),
-\code{items_removed} (data frame of removed items with boot run information),
-\code{initial_boot_with_redundancies} (boot EGA object for original item pool)}
-\item{\code{stability_plot}}{ggplot/patchwork stability plot showing item stability before vs after reduction}
+\item{\code{final_items}}{\code{data.frame} of final items across all types (columns as above).}
+\item{\code{embeddings}}{Embeddings for the full reduced item set (see 'Notes on \code{embeddings}' below). Note: \code{overall$embeddings} does \strong{not} include \code{selected}.}
 }
 }
-}}
+}
+
+\strong{When \code{keep.org = TRUE}} (in addition to defaults above):
+The top-level shape remains (\code{item_type_level} and \code{overall}) but includes original (pre-reduction) information:
+\describe{
+\item{\code{item_type_level}}{Each per-type sublist contains:
+\code{final_NMI}, \code{initial_NMI}, \code{embeddings}, \code{UVA}, \code{bootEGA}, \code{EGA.model_selected}, \code{final_items}, \code{initial_items}, \code{final_EGA}, \code{initial_EGA}, \code{start_N}, \code{final_N}, \code{network_plot}, \code{stability_plot}.}
+\item{\code{overall}}{Contains \code{final_items}, \code{initial_items}, and \code{embeddings} for the full item pool.}
+}
+For \code{keep.org = TRUE}, per-type \code{embeddings} contains at least: \code{full_org}, \code{sparse_org}, \code{selected}, \code{full}, and \code{sparse}. (\code{overall$embeddings} contains the same subcomponents \strong{except} \code{selected} is omitted.)
+
+\strong{When \code{run.overall = TRUE}} (\code{items.only = FALSE}, \code{embeddings.only = FALSE}):
+\describe{
+\item{\code{item_type_level}}{Same per-type structure as the default (see above).}
+\item{\code{overall}}{A named list with aggregated results (not limited to \code{final_items} and \code{embeddings}) containing:
+\code{final_NMI}, \code{initial_NMI}, \code{embeddings}, \code{EGA.model_selected}, \code{final_items}, \code{final_EGA}, \code{initial_EGA}, \code{start_N}, \code{final_N}, and \code{network_plot}.}
+}
+
+\strong{When \code{all.together = TRUE}} (regardless of \code{run.overall}):
+Results are \strong{not} split into \code{item_type_level} and \code{overall}. Instead the function returns a single named list (applies to the full — possibly \code{keep.org} modified — result set) containing:
+\code{final_NMI}, \code{initial_NMI}, \code{embeddings}, \code{UVA}, \code{bootEGA}, \code{EGA.model_selected}, \code{final_items}, \code{final_EGA}, \code{initial_EGA}, \code{start_N}, \code{final_N}, \code{network_plot}, and \code{stability_plot}.
 }
 \description{
 Local version of AI-GENIE that uses locally installed language models and
