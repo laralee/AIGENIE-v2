@@ -188,6 +188,20 @@
 #'   what has been generated to avoid repetition. Should always be enabled unless context
 #'   limitations are a concern.
 #'
+#' @param run.overall A logical value (optional, default: FALSE). Controls whether a *fit* analysis
+#'    on the complete item pool is run *post-reduction.*
+#'    By default, only type-level reduction analyses are run (i.e., items of like-type go through
+#'    the pipeline independent of the other items in the pool). When this flag is `TRUE`, an additional
+#'    analysis is run on the overall sample, but no further reductions at the overall level are made.
+#'    If only one item type is present, this argument will be ignored.
+#'
+#' @param all.together A logical value (optional, default: FALSE). Controls whether the *reduction* analysis
+#'    on the complete item pool is run.
+#'    By default, only type-level reduction analyses are run (i.e., items of like-type go through
+#'    the pipeline independent of the other items in the pool). When this flag is `TRUE`, reductions are made
+#'    at the overall level (i.e., all items go through the reduction pipeline together, agnostic of item type).
+#'    If only one item type is present, this argument will be ignored.
+#'
 #' @param plot A logical value (optional, default: TRUE). Controls whether visualizations
 #'   are generated and displayed. When TRUE, generates EGA network comparison plots (before
 #'   vs after reduction) for each item type and the sample overall. Plots are always saved
@@ -208,7 +222,20 @@
 #' `embeddings` (the embedding matrix with column names corresponding to item IDs) and
 #' `items` (the items data frame described above).
 #'
-#' **Default behavior (`items.only = FALSE`, `embeddings.only = FALSE`):** Returns a
+#' **Default Behavior (`items.only = FALSE`, `embeddings.only = FALSE`, `run.overall = FALSE`):** Returns a named list where each element contains results for items of only one type:
+#'     \describe{
+#'       \item{`final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`,
+#'         `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`}{Same as overall object}
+#'       \item{`UVA`}{List with `n_removed` (number of redundant items removed by the Unique Variable Analysis (UVA) step), `n_sweeps`
+#'         (number of UVA iterations), `redundant_pairs` (data frame with sweep, items, keep, remove columns)}
+#'       \item{`bootEGA`}{List with `initial_boot` (first bootEGA object), `final_boot`
+#'         (final bootEGA object with all stable items), `n_removed` (number of unstable items),
+#'         `items_removed` (data frame of removed items with boot run information),
+#'         `initial_boot_with_redundancies` (boot EGA object for original item pool)}
+#'       \item{`stability_plot`}{ggplot/patchwork stability plot showing item stability before vs after reduction}
+#'     }
+#'
+#' **If `run.overall = TRUE` (`items.only = FALSE`, `embeddings.only = FALSE`):** Returns a
 #' complex list with two primary components:
 #'
 #' \describe{
@@ -230,19 +257,7 @@
 #'       \item{`network_plot`}{ggplot/patchwork comparison plot showing EGA network before vs after reduction}
 #'     }
 #'   }
-#'   \item{`item_type_level`}{Named list where results are displayed at the item type level. Each element contains results
-#'     for items of only one type:
-#'     \describe{
-#'       \item{`final_NMI`, `initial_NMI`, `embeddings`, `EGA.model_selected`, `final_items`,
-#'         `final_EGA`, `initial_EGA`, `start_N`, `final_N`, `network_plot`}{Same as overall object}
-#'       \item{`UVA`}{List with `n_removed` (number of redundant items removed by the Unique Variable Analysis (UVA) step), `n_sweeps`
-#'         (number of UVA iterations), `redundant_pairs` (data frame with sweep, items, keep, remove columns)}
-#'       \item{`bootEGA`}{List with `initial_boot` (first bootEGA object), `final_boot`
-#'         (final bootEGA object with all stable items), `n_removed` (number of unstable items),
-#'         `items_removed` (data frame of removed items with boot run information),
-#'         `initial_boot_with_redundancies` (boot EGA object for original item pool)}
-#'       \item{`stability_plot`}{ggplot/patchwork stability plot showing item stability before vs after reduction}
-#'     }
+#'   \item{`item_type_level`}{The named list where results are displayed at the item type level as described above.}
 #'   }
 #' }
 #'
@@ -468,11 +483,12 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
                        response.options = NULL, prompt.notes = NULL, system.role = NULL,
 
                        # EGA parameters
-                       EGA.model = NULL, EGA.algorithm = NULL, EGA.uni.method = "louvain",
+                       EGA.model = NULL, EGA.algorithm = NULL, EGA.uni.method = NULL,
 
                        # Flags
                        keep.org = FALSE, items.only = FALSE, embeddings.only = FALSE,
-                       adaptive = TRUE, plot = TRUE, silently = FALSE
+                       adaptive = TRUE, run.overall = FALSE, all.together = FALSE,
+                       plot = TRUE, silently = FALSE
                        ){
 
 
@@ -487,8 +503,8 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
                                             response.options, prompt.notes,
                                             system.role, EGA.model, EGA.algorithm,
                                             EGA.uni.method, keep.org, items.only,
-                                            embeddings.only, adaptive, plot,
-                                            silently)
+                                            embeddings.only, adaptive, run.overall,
+                                            all.together, plot, silently)
 
 
   target.N <- validation$target.N
@@ -502,6 +518,9 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
   prompt.notes <- validation$prompt.notes
   main.prompts <- validation$main.prompts
   custom <- validation$custom
+  run.overall <- validation$run.overall
+  all.together <- validation$all.together
+
 
   # Begin constructing the prompts
   # first, the system role if one was not provided
@@ -571,49 +590,93 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
      return(list(embeddings = embeddings, items = items))
   }
 
+  # Run as a single sample if applicable
+  if(all.together){
+    items_to_run <- run_all_together(items)
+
+    # run the pipeline using the updated matrix
+    try_item_level <- run_item_reduction_pipeline(embedding_matrix = embeddings,
+                                                  items=items_to_run, EGA.model = EGA.model$overall,
+                                                  EGA.algorithm = EGA.algorithm$overall,
+                                                  EGA.uni.method = EGA.uni.method$overall, keep.org = keep.org,
+                                                  silently = silently, plot = plot)
+
+    if(!try_item_level$success){
+
+      if(!silently){
+        message("AI-GENIE reduction failed. Returning partial results.")
+      }
+
+      return(try_item_level$item_level)
+    }
+
+    item_level <- try_item_level$item_level
+
+    # Update the returned data frame appropriately
+    IDs <- item_level[["All"]][["final_items"]]$ID
+    item_level[["All"]][["final_items"]] <- items[items$ID %in% IDs,]
+    if(keep.org){
+      item_level[["All"]][["initial_items"]] <- items
+    }
+
+    return(item_level[["All"]])
+
+  }
+
+
 
   # Generate item level results
   try_item_level <- run_item_reduction_pipeline(embedding_matrix = embeddings,
-                    items=items, EGA.model = EGA.model, EGA.algorithm = EGA.algorithm,
-                    EGA.uni.method = EGA.uni.method, keep.org = keep.org,
+                    items=items, EGA.model = EGA.model$type,
+                    EGA.algorithm = EGA.algorithm$type,
+                    EGA.uni.method = EGA.uni.method$type, keep.org = keep.org,
                     silently = silently, plot = plot)
 
   if(!try_item_level$success){
+    if(!silently){
+      message("AI-GENIE reduction failed. Returning partial results.")
+    }
     return(try_item_level$item_level)
   }
 
   item_level <- try_item_level$item_level
 
-  if(length(names(item.attributes)) > 1) { # only run overall if you have to
+  if(run.overall && length(names(item.attributes)) > 1) { # only run overall if you have to
+
+
     # If successful, generate results for items overall
     try_overall_result <- run_pipeline_for_all(item_level = item_level, items = items,
-                            embeddings = embeddings, EGA.model = EGA.model,
-                            EGA.algorithm = EGA.algorithm, EGA.uni.method = EGA.uni.method,
+                            embeddings = embeddings, model = EGA.model$overall,
+                            algorithm = EGA.algorithm$overall,
+                            uni.method = EGA.uni.method$overall,
                             keep.org = keep.org, silently = silently, plot = plot)
 
-    if(!try_overall_result$success){
+    if(!try_overall_result$success && !silently){
+      message("Overall analyses has failed. Returning only type-level results.")
       return(item_level)
     }
 
     overall_result <- try_overall_result$overall_result
-    only.one <- FALSE
   } else {
     overall_result <- item_level
     try_overall_result <- list(success = TRUE)
-    only.one <- TRUE
   }
 
 
   if(!silently && try_overall_result$success && try_item_level$success){
-    print_results(overall_result, item_level, only.one)
+    print_results(overall_result, item_level, run.overall)
   }
 
-  return( list(overall = overall_result,
-               item_type_level = item_level))
-
-
+  # prepare return object
+    if(run.overall){
+      return( list(overall = overall_result,
+                 item_type_level = item_level))
+    } else {
+      return(item_level)
+    }
 
 }
+
 
 
 
@@ -654,6 +717,19 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 #' @param items.only Generate items only, skip reduction (default: FALSE)
 #' @param embeddings.only Generate embeddings only (default: FALSE)
 #' @param adaptive Use adaptive generation (default: TRUE)
+#' @param run.overall A logical value (optional, default: FALSE). Controls whether a *fit* analysis
+#'    on the complete item pool is run *post-reduction.*
+#'    By default, only type-level reduction analyses are run (i.e., items of like-type go through
+#'    the pipeline independent of the other items in the pool). When this flag is `TRUE`, an additional
+#'    analysis is run on the overall sample, but no further reductions at the overall level are made.
+#'    If only one item type is present, this argument will be ignored.
+#'
+#' @param all.together A logical value (optional, default: FALSE). Controls whether the *reduction* analysis
+#'    on the complete item pool is run.
+#'    By default, only type-level reduction analyses are run (i.e., items of like-type go through
+#'    the pipeline independent of the other items in the pool). When this flag is `TRUE`, reductions are made
+#'    at the overall level (i.e., all items go through the reduction pipeline together, agnostic of item type).
+#'    If only one item type is present, this argument will be ignored.
 #' @param plot Display network plots (default: TRUE)
 #' @param silently Suppress progress messages (default: FALSE)
 #'
@@ -756,7 +832,7 @@ local_AIGENIE <- function(
   # EGA parameters
   EGA.model = NULL,
   EGA.algorithm = NULL,
-  EGA.uni.method = "louvain",
+  EGA.uni.method = NULL,
 
   # Local model parameters
   n.ctx = 4096,
@@ -772,6 +848,8 @@ local_AIGENIE <- function(
   items.only = FALSE,
   embeddings.only = FALSE,
   adaptive = TRUE,
+  run.overall = FALSE,
+  all.together = FALSE,
   plot = TRUE,
   silently = FALSE
 ) {
@@ -785,7 +863,8 @@ local_AIGENIE <- function(
     system.role, EGA.model, EGA.algorithm, EGA.uni.method,
     n.ctx, n.gpu.layers, max.tokens,
     device, batch.size, pooling.strategy, max.length,
-    keep.org, items.only, embeddings.only, adaptive, plot, silently
+    keep.org, items.only, embeddings.only, adaptive, run.overall, all.together,
+    plot, silently
   )
 
   # Extract validated parameters
@@ -808,6 +887,8 @@ local_AIGENIE <- function(
   batch.size <- validation$batch.size
   pooling.strategy <- validation$pooling.strategy
   max.length <- validation$max.length
+  run.overall <- validation$run.overall
+  all.together <- validation$all.together
 
   # Step 2: Check local setup
   setup_ok <- check_local_llm_setup(model.path, silently)
@@ -883,12 +964,46 @@ local_AIGENIE <- function(
   }
 
   # Step 6: Run reduction pipeline
+  # Run as a single sample if applicable
+  if(all.together){
+    items_to_run <- run_all_together(items)
+
+    # run the pipeline using the updated matrix
+    try_item_level <- run_item_reduction_pipeline(embedding_matrix = embeddings,
+                                                  items=items_to_run, EGA.model = EGA.model$overall,
+                                                  EGA.algorithm = EGA.algorithm$overall,
+                                                  EGA.uni.method = EGA.uni.method$overall, keep.org = keep.org,
+                                                  silently = silently, plot = plot)
+
+    if(!try_item_level$success){
+
+      if(!silently){
+        message("AI-GENIE reduction failed. Returning partial results.")
+      }
+
+      return(try_item_level$item_level)
+    }
+
+    item_level <- try_item_level$item_level
+
+    # Update the returned data frame appropriately
+    IDs <- item_level[["All"]][["final_items"]]$ID
+    item_level[["All"]][["final_items"]] <- items[items$ID %in% IDs,]
+    if(keep.org){
+      item_level[["All"]][["initial_items"]] <- items
+    }
+
+    return(item_level[["All"]])
+
+  }
+
+
 
   # Item-level reduction
   try_item_level <- run_item_reduction_pipeline(
     embedding_matrix = embeddings, items=items,
-    EGA.model = EGA.model, EGA.algorithm = EGA.algorithm,
-    EGA.uni.method = EGA.uni.method, keep.org = keep.org, silently = silently,
+    EGA.model = EGA.model$type, EGA.algorithm = EGA.algorithm$type,
+    EGA.uni.method = EGA.uni.method$type, keep.org = keep.org, silently = silently,
     plot = plot
   )
 
@@ -898,13 +1013,13 @@ local_AIGENIE <- function(
 
   item_level <- try_item_level$item_level
 
-  if(length(names(item.attributes)) > 1){
+  if(run.overall && length(names(item.attributes)) > 1){
   # Overall reduction
     try_overall_result <- run_pipeline_for_all(
-      item_level = item_level, items = items, embeddings = embeddings,
-      EGA.model = EGA.model, EGA.algorithm = EGA.algorithm,
-      EGA.uni.method = EGA.uni.method, keep.org = keep.org,
-      silently = silently, plot = plot
+      item_level = item_level, items = items,
+      embeddings = embeddings, model = EGA.model$overall,
+      algorithm = EGA.algorithm$overall, uni.method = EGA.uni.method$overall,
+      keep.org = keep.org, silently = silently, plot = plot
     )
 
     if (!try_overall_result$success) {
@@ -974,6 +1089,19 @@ local_AIGENIE <- function(
 #' @param EGA.algorithm EGA community detection algorithm ("walktrap", "leiden", "louvain")
 #' @param EGA.uni.method Unidimensionality assessment method ("louvain", "expand", "LE")
 #' @param embeddings.only If `TRUE`, return embeddings and stop (skip network analysis)
+#' @param run.overall A logical value (optional, default: FALSE). Controls whether a *fit* analysis
+#'    on the complete item pool is run *post-reduction.*
+#'    By default, only type-level reduction analyses are run (i.e., items of like-type go through
+#'    the pipeline independent of the other items in the pool). When this flag is `TRUE`, an additional
+#'    analysis is run on the overall sample, but no further reductions at the overall level are made.
+#'    If only one item type is present, this argument will be ignored.
+#'
+#' @param all.together A logical value (optional, default: FALSE). Controls whether the *reduction* analysis
+#'    on the complete item pool is run.
+#'    By default, only type-level reduction analyses are run (i.e., items of like-type go through
+#'    the pipeline independent of the other items in the pool). When this flag is `TRUE`, reductions are made
+#'    at the overall level (i.e., all items go through the reduction pipeline together, agnostic of item type).
+#'    If only one item type is present, this argument will be ignored.
 #' @param plot If `TRUE`, display network comparison plots
 #' @param silently If `TRUE`, suppress progress messages
 #'
@@ -1220,10 +1348,12 @@ GENIE <- function(
     # EGA parameters
     EGA.model = NULL,
     EGA.algorithm = NULL,
-    EGA.uni.method = "louvain",
+    EGA.uni.method = NULL,
 
     # Control flags
     embeddings.only = FALSE,
+    run.overall = FALSE,
+    all.together = FALSE,
     plot = TRUE,
     silently = FALSE
 ) {
@@ -1244,6 +1374,8 @@ GENIE <- function(
     EGA.algorithm = EGA.algorithm,
     EGA.uni.method = EGA.uni.method,
     embeddings.only = embeddings.only,
+    run.overall = run.overall,
+    all.together = all.together,
     plot = plot,
     silently = silently
   )
@@ -1259,6 +1391,8 @@ GENIE <- function(
   provider <- validation$provider
   openai.API <- validation$openai.API
   hf.token <- validation$hf.token
+  run.overall <- validation$run.overall
+  all.together <- validation$all.together
 
   # Step 2: Handle embeddings (generate if not provided)
   if (is.null(embedding.matrix)) {
@@ -1296,13 +1430,43 @@ GENIE <- function(
 
   # Step 4: Run the network psychometric pipeline (same as AIGENIE)
 
+  # Run as a single sample if applicable
+  if(all.together){
+    items_to_run <- run_all_together(items)
+
+    # run the pipeline using the updated matrix
+    try_item_level <- run_item_reduction_pipeline(embedding_matrix = embeddings,
+                                                  items=items_to_run, EGA.model = EGA.model$overall,
+                                                  EGA.algorithm = EGA.algorithm$overall,
+                                                  EGA.uni.method = EGA.uni.method$overall, keep.org = FALSE,
+                                                  silently = silently, plot = plot)
+
+    if(!try_item_level$success){
+
+      if(!silently){
+        message("AI-GENIE reduction failed. Returning partial results.")
+      }
+
+      return(try_item_level$item_level)
+    }
+
+    item_level <- try_item_level$item_level
+
+    # Update the returned data frame appropriately
+    IDs <- item_level[["All"]][["final_items"]]$ID
+    item_level[["All"]][["final_items"]] <- items[items$ID %in% IDs,]
+
+    return(item_level[["All"]])
+
+  }
+
   # Item-level analysis
   try_item_level <- run_item_reduction_pipeline(
     embedding_matrix = embeddings,
     items = items,
-    EGA.model = EGA.model,
-    EGA.algorithm = EGA.algorithm,
-    EGA.uni.method = EGA.uni.method,
+    EGA.model = EGA.model$type,
+    EGA.algorithm = EGA.algorithm$type,
+    EGA.uni.method = EGA.uni.method$type,
     keep.org = FALSE,  # GENIE doesn't need to keep original embeddings
     silently = silently,
     plot = plot
@@ -1316,14 +1480,14 @@ GENIE <- function(
   item_level <- try_item_level$item_level
 
   # Overall analysis
-  if(length(names(item.attributes)) > 1){
+  if(run.overall && length(names(item.attributes)) > 1){
   try_overall_result <- run_pipeline_for_all(
     item_level = item_level,
     items = items,
     embeddings = embeddings,
-    model = EGA.model,
-    algorithm = EGA.algorithm,
-    uni.method = EGA.uni.method,
+    model = EGA.model$overall,
+    algorithm = EGA.algorithm$overall,
+    uni.method = EGA.uni.method$overall,
     keep.org = FALSE,  # GENIE doesn't need to keep original data
     silently = silently,
     plot = plot
@@ -1406,6 +1570,19 @@ GENIE <- function(
 #' @param EGA.uni.method Unidimensionality assessment method ("louvain", "expand", "LE")
 #'
 #' @param embeddings.only If `TRUE`, return embeddings and stop (skip network analysis)
+#' @param run.overall A logical value (optional, default: FALSE). Controls whether a *fit* analysis
+#'    on the complete item pool is run *post-reduction.*
+#'    By default, only type-level reduction analyses are run (i.e., items of like-type go through
+#'    the pipeline independent of the other items in the pool). When this flag is `TRUE`, an additional
+#'    analysis is run on the overall sample, but no further reductions at the overall level are made.
+#'    If only one item type is present, this argument will be ignored.
+#'
+#' @param all.together A logical value (optional, default: FALSE). Controls whether the *reduction* analysis
+#'    on the complete item pool is run.
+#'    By default, only type-level reduction analyses are run (i.e., items of like-type go through
+#'    the pipeline independent of the other items in the pool). When this flag is `TRUE`, reductions are made
+#'    at the overall level (i.e., all items go through the reduction pipeline together, agnostic of item type).
+#'    If only one item type is present, this argument will be ignored.
 #' @param plot If `TRUE`, display network comparison plots
 #' @param silently If `TRUE`, suppress progress messages
 #'
@@ -1462,10 +1639,12 @@ local_GENIE <- function(
   # EGA parameters
   EGA.model = NULL,
   EGA.algorithm = NULL,
-  EGA.uni.method = "louvain",
+  EGA.uni.method = NULL,
 
   # Control flags
   embeddings.only = FALSE,
+  run.overall = FALSE,
+  all.together = FALSE,
   plot = TRUE,
   silently = FALSE
 ) {
@@ -1482,6 +1661,8 @@ local_GENIE <- function(
     EGA.algorithm = EGA.algorithm,
     EGA.uni.method = EGA.uni.method,
     embeddings.only = embeddings.only,
+    run.overall = run.overall,
+    all.together = all.together,
     plot = plot,
     silently = silently
   )
@@ -1497,6 +1678,8 @@ local_GENIE <- function(
   EGA.model <- validation$EGA.model
   EGA.algorithm <- validation$EGA.algorithm
   EGA.uni.method <- validation$EGA.uni.method
+  all.together <- validation$all.together
+  run.overall <- validation$run.overall
 
   embedding_result <- embed_items_local(
     embedding.model = embedding.model,
@@ -1530,13 +1713,43 @@ local_GENIE <- function(
     cat("Running network psychometric analysis...\n")
   }
 
+  # Run as a single sample if applicable
+  if(all.together){
+    items_to_run <- run_all_together(items)
+
+    # run the pipeline using the updated matrix
+    try_item_level <- run_item_reduction_pipeline(embedding_matrix = embeddings,
+                                                  items=items_to_run, EGA.model = EGA.model$overall,
+                                                  EGA.algorithm = EGA.algorithm$overall,
+                                                  EGA.uni.method = EGA.uni.method$overall, keep.org = FALSE,
+                                                  silently = silently, plot = plot)
+
+    if(!try_item_level$success){
+
+      if(!silently){
+        message("AI-GENIE reduction failed. Returning partial results.")
+      }
+
+      return(try_item_level$item_level)
+    }
+
+    item_level <- try_item_level$item_level
+
+    # Update the returned data frame appropriately
+    IDs <- item_level[["All"]][["final_items"]]$ID
+    item_level[["All"]][["final_items"]] <- items[items$ID %in% IDs,]
+
+    return(item_level[["All"]])
+
+  }
+
   # Item-level analysis
   try_item_level <- run_item_reduction_pipeline(
     embedding_matrix = embeddings,
     items = items,
-    EGA.model = EGA.model,
-    EGA.algorithm = EGA.algorithm,
-    EGA.uni.method = EGA.uni.method,
+    EGA.model = EGA.model$type,
+    EGA.algorithm = EGA.algorithm$type,
+    EGA.uni.method = EGA.uni.method$type,
     keep.org = FALSE,  # local_GENIE doesn't need to keep original embeddings
     silently = silently,
     plot = plot
@@ -1549,15 +1762,15 @@ local_GENIE <- function(
 
   item_level <- try_item_level$item_level
 
-  if(length(names(item.attributes)) > 1){
+  if(run.overall && length(names(item.attributes)) > 1){
   # Overall analysis
   try_overall_result <- run_pipeline_for_all(
     item_level = item_level,
     items = items,
     embeddings = embeddings,
-    model = EGA.model,
-    algorithm = EGA.algorithm,
-    uni.method = EGA.uni.method,
+    model = EGA.model$overall,
+    algorithm = EGA.algorithm$overall,
+    uni.method = EGA.uni.method$overall,
     keep.org = FALSE,  # local_GENIE doesn't need to keep original data
     silently = silently,
     plot = plot

@@ -27,11 +27,13 @@ AIGENIE(
   system.role = NULL,
   EGA.model = NULL,
   EGA.algorithm = NULL,
-  EGA.uni.method = "louvain",
+  EGA.uni.method = NULL,
   keep.org = FALSE,
   items.only = FALSE,
   embeddings.only = FALSE,
   adaptive = TRUE,
+  run.overall = FALSE,
+  all.together = FALSE,
   plot = TRUE,
   silently = FALSE
 )
@@ -215,6 +217,20 @@ multiple API calls. When TRUE, appends previously generated items so the model k
 what has been generated to avoid repetition. Should always be enabled unless context
 limitations are a concern.}
 
+\item{run.overall}{A logical value (optional, default: FALSE). Controls whether a \emph{fit} analysis
+on the complete item pool is run \emph{post-reduction.}
+By default, only type-level reduction analyses are run (i.e., items of like-type go through
+the pipeline independent of the other items in the pool). When this flag is \code{TRUE}, an additional
+analysis is run on the overall sample, but no further reductions at the overall level are made.
+If only one item type is present, this argument will be ignored.}
+
+\item{all.together}{A logical value (optional, default: FALSE). Controls whether the \emph{reduction} analysis
+on the complete item pool is run.
+By default, only type-level reduction analyses are run (i.e., items of like-type go through
+the pipeline independent of the other items in the pool). When this flag is \code{TRUE}, reductions are made
+at the overall level (i.e., all items go through the reduction pipeline together, agnostic of item type).
+If only one item type is present, this argument will be ignored.}
+
 \item{plot}{A logical value (optional, default: TRUE). Controls whether visualizations
 are generated and displayed. When TRUE, generates EGA network comparison plots (before
 vs after reduction) for each item type and the sample overall. Plots are always saved
@@ -235,7 +251,20 @@ The return object varies based on parameter settings:
 \code{embeddings} (the embedding matrix with column names corresponding to item IDs) and
 \code{items} (the items data frame described above).
 
-\strong{Default behavior (\code{items.only = FALSE}, \code{embeddings.only = FALSE}):} Returns a
+\strong{Default Behavior (\code{items.only = FALSE}, \code{embeddings.only = FALSE}, \code{run.overall = FALSE}):} Returns a named list where each element contains results for items of only one type:
+\describe{
+\item{\code{final_NMI}, \code{initial_NMI}, \code{embeddings}, \code{EGA.model_selected}, \code{final_items},
+\code{final_EGA}, \code{initial_EGA}, \code{start_N}, \code{final_N}, \code{network_plot}}{Same as overall object}
+\item{\code{UVA}}{List with \code{n_removed} (number of redundant items removed by the Unique Variable Analysis (UVA) step), \code{n_sweeps}
+(number of UVA iterations), \code{redundant_pairs} (data frame with sweep, items, keep, remove columns)}
+\item{\code{bootEGA}}{List with \code{initial_boot} (first bootEGA object), \code{final_boot}
+(final bootEGA object with all stable items), \code{n_removed} (number of unstable items),
+\code{items_removed} (data frame of removed items with boot run information),
+\code{initial_boot_with_redundancies} (boot EGA object for original item pool)}
+\item{\code{stability_plot}}{ggplot/patchwork stability plot showing item stability before vs after reduction}
+}
+
+\strong{If \code{run.overall = TRUE} (\code{items.only = FALSE}, \code{embeddings.only = FALSE}):} Returns a
 complex list with two primary components:
 
 \describe{
@@ -257,19 +286,7 @@ statement, attribute, type, EGA_com)}
 \item{\code{network_plot}}{ggplot/patchwork comparison plot showing EGA network before vs after reduction}
 }
 }
-\item{\code{item_type_level}}{Named list where results are displayed at the item type level. Each element contains results
-for items of only one type:
-\describe{
-\item{\code{final_NMI}, \code{initial_NMI}, \code{embeddings}, \code{EGA.model_selected}, \code{final_items},
-\code{final_EGA}, \code{initial_EGA}, \code{start_N}, \code{final_N}, \code{network_plot}}{Same as overall object}
-\item{\code{UVA}}{List with \code{n_removed} (number of redundant items removed by the Unique Variable Analysis (UVA) step), \code{n_sweeps}
-(number of UVA iterations), \code{redundant_pairs} (data frame with sweep, items, keep, remove columns)}
-\item{\code{bootEGA}}{List with \code{initial_boot} (first bootEGA object), \code{final_boot}
-(final bootEGA object with all stable items), \code{n_removed} (number of unstable items),
-\code{items_removed} (data frame of removed items with boot run information),
-\code{initial_boot_with_redundancies} (boot EGA object for original item pool)}
-\item{\code{stability_plot}}{ggplot/patchwork stability plot showing item stability before vs after reduction}
-}
+\item{\code{item_type_level}}{The named list where results are displayed at the item type level as described above.}
 }
 }
 }

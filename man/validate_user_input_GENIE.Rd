@@ -19,6 +19,8 @@ validate_user_input_GENIE(
   EGA.algorithm,
   EGA.uni.method,
   embeddings.only,
+  run.overall,
+  all.together,
   plot,
   silently
 )

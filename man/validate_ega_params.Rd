@@ -4,7 +4,7 @@
 \alias{validate_ega_params}
 \title{Validate EGA Parameters}
 \usage{
-validate_ega_params(EGA.algorithm, EGA.uni.method, EGA_model, item.attributes)
+validate_ega_params(EGA.algorithm, EGA.uni.method, EGA_model)
 }
 \arguments{
 \item{EGA.algorithm}{A string: one of "leiden", "louvain", "walktrap"
@@ -13,8 +13,6 @@ validate_ega_params(EGA.algorithm, EGA.uni.method, EGA_model, item.attributes)
 \item{EGA.uni.method}{A string: one of "expand", "LE", "louvain"}
 
 \item{EGA_model}{A string or NULL: one of "glasso", "TMFG"}
-
-\item{item.attributes}{A named list of attributes and item types.}
 }
 \value{
 A named list with cleaned and correctly-cased values.

@@ -15,6 +15,8 @@ validate_user_input_local_GENIE(
   EGA.algorithm,
   EGA.uni.method,
   embeddings.only,
+  run.overall,
+  all.together,
   plot,
   silently
 )

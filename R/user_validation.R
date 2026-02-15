@@ -71,17 +71,19 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
                                         prompt.notes,
                                         system.role, EGA.model, EGA.algorithm,
                                         EGA.uni.method, keep.org, items.only,
-                                        embeddings.only, adaptive, plot,
-                                        silently) {
+                                        embeddings.only, adaptive, run.overall,
+                                        all.together,
+                                        plot, silently) {
 
   # Ensure all "TRUEs and FALSEs" are specified accordingly
-  validate_booleans(items.only, adaptive, plot, keep.org, silently, embeddings.only)
+  validate_booleans(items.only, adaptive, plot, keep.org, silently,
+                    run.overall, embeddings.only, all.together)
 
   # Ensure all string objects are actually strings (or set to NULL)
   validate_strings(openai.API, groq.API, anthropic.API, jina.API, hf.token,
                    audience, scale.title,
-                   system.role, domain, model, EGA.model, EGA.algorithm,
-                   embedding.model, EGA.uni.method)
+                   system.role, domain, model,
+                   embedding.model)
 
   # Check if the user forgot to add their API keys if using example code
   check_for_default_APIs(hf.token, groq.API, openai.API, anthropic.API, jina.API)
@@ -107,8 +109,14 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
   # Validate the embedding model
   provider <- embedding.model_validate(embedding.model)
 
+  # Validate the Run flags
+  run_flags <- run_flags_validate(run.overall, all.together, item.attributes,
+                                  silently)
+  run.overall <- run_flags$run.overall
+  all.together <- run_flags$all.together
+
   # Validate the parameters to be passed to EGA
-  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model, item.attributes)
+  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
   EGA.algorithm <- EGA_params$EGA.algorithm
   EGA.uni.method <- EGA_params$EGA.uni.method
   EGA.model <- EGA_params$EGA.model
@@ -149,7 +157,10 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
     prompt.notes = prompt.notes,
     main.prompts = main.prompts,
     custom = custom,
-    provider = provider
+    provider = provider,
+    all.together = all.together,
+    run.overall = run.overall
+
   ))
 
 }
@@ -202,11 +213,13 @@ validate_user_input_local_AIGENIE <- function(
     system.role, EGA.model, EGA.algorithm, EGA.uni.method,
     n.ctx, n.gpu.layers, max.tokens,
     device, batch.size, pooling.strategy, max.length,
-    keep.org, items.only, embeddings.only, adaptive, plot, silently
+    keep.org, items.only, embeddings.only, adaptive, run.overall, run.together,
+    plot, silently
 ) {
 
   # 1. Validate booleans
-  validate_booleans(items.only, adaptive, plot, keep.org, silently, embeddings.only)
+  validate_booleans(items.only, adaptive, plot, keep.org, silently,
+                    run.overall, run.together, embeddings.only)
 
   # 2. Validate strings
   validate_strings(audience, scale.title, system.role, domain,
@@ -228,8 +241,12 @@ validate_user_input_local_AIGENIE <- function(
     item.type.definitions <- item.type.definitions_validate(item.type.definitions, item.attributes)
   }
 
-  # 6. Validate EGA parameters
-  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model, item.attributes)
+  # 6. Validate EGA parameters (and run flags)
+  run_flags <- run_flags_validate(run.overall, all.together, item.attributes, silently)
+  run.overall <- run_flags$run.overall
+  all.together <- run_flags$all.together
+
+  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
   EGA.algorithm <- EGA_params$EGA.algorithm
   EGA.uni.method <- EGA_params$EGA.uni.method
   EGA.model <- EGA_params$EGA.model
@@ -298,7 +315,9 @@ validate_user_input_local_AIGENIE <- function(
     keep.org = keep.org,
     adaptive = adaptive,
     plot = plot,
-    silently = silently
+    silently = silently,
+    run.overall = run.overall,
+    all.together = all.together
   ))
 }
 
@@ -338,6 +357,8 @@ validate_user_input_GENIE <- function(
     EGA.algorithm,
     EGA.uni.method,
     embeddings.only,
+    run.overall,
+    all.together,
     plot,
     silently
 ) {
@@ -372,8 +393,12 @@ validate_user_input_GENIE <- function(
   # 7. Validate embedding model and detect provider
   provider <- embedding.model_validate(embedding.model)
 
-  # 8. Validate EGA parameters
-  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model, item.attributes)
+  # 8. Validate EGA parameters (and run flags)
+  run_flags <- run_flags_validate(run.overall, all.together, item.attributes, silently)
+  run.overall <- run_flags$run.overall
+  all.together <- run_flags$all.together
+
+  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
   EGA.algorithm <- EGA_params$EGA.algorithm
   EGA.uni.method <- EGA_params$EGA.uni.method
   EGA.model <- EGA_params$EGA_model
@@ -464,7 +489,9 @@ validate_user_input_GENIE <- function(
     # Flags
     embeddings.only = embeddings.only,
     plot = plot,
-    silently = silently
+    silently = silently,
+    run.overall = run.overall,
+    all.together = all.together
   ))
 }
 
@@ -498,12 +525,14 @@ validate_user_input_local_GENIE <- function(
     EGA.algorithm,
     EGA.uni.method,
     embeddings.only,
+    run.overall,
+    all.together,
     plot,
     silently
 ) {
 
   # 1. Validate boolean parameters
-  validate_booleans(embeddings.only, plot, silently)
+  validate_booleans(embeddings.only, plot, silently, run.overall, all.together)
 
   # 2. Validate string parameters
   validate_strings(embedding.model, EGA.model, EGA.algorithm, EGA.uni.method)
@@ -525,8 +554,12 @@ validate_user_input_local_GENIE <- function(
     max.length
   )
 
-  # 7. Validate EGA parameters
-  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model, item.attributes)
+  # 7. Validate EGA parameters (and run flags)
+  run_flags <- run_flags_validate(run.overall, all.together, item.attributes, silently)
+  run.overall <- run_flags$run.overall
+  all.together <- run_flags$all.together
+
+  EGA_params <- validate_ega_params(EGA.algorithm, EGA.uni.method, EGA.model)
   EGA.algorithm <- EGA_params$EGA.algorithm
   EGA.uni.method <- EGA_params$EGA.uni.method
   EGA.model <- EGA_params$EGA_model
@@ -577,6 +610,8 @@ validate_user_input_local_GENIE <- function(
     # Control flags
     embeddings.only = embeddings.only,
     plot = plot,
-    silently = silently
+    silently = silently,
+    run.overall = run.overall,
+    all.together = all.together
   ))
 }

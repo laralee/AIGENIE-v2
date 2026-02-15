@@ -22,7 +22,7 @@ local_AIGENIE(
   system.role = NULL,
   EGA.model = NULL,
   EGA.algorithm = NULL,
-  EGA.uni.method = "louvain",
+  EGA.uni.method = NULL,
   n.ctx = 4096,
   n.gpu.layers = -1,
   max.tokens = 1024,
@@ -34,6 +34,8 @@ local_AIGENIE(
   items.only = FALSE,
   embeddings.only = FALSE,
   adaptive = TRUE,
+  run.overall = FALSE,
+  all.together = FALSE,
   plot = TRUE,
   silently = FALSE
 )
@@ -96,6 +98,20 @@ local_AIGENIE(
 \item{embeddings.only}{Generate embeddings only (default: FALSE)}
 
 \item{adaptive}{Use adaptive generation (default: TRUE)}
+
+\item{run.overall}{A logical value (optional, default: FALSE). Controls whether a \emph{fit} analysis
+on the complete item pool is run \emph{post-reduction.}
+By default, only type-level reduction analyses are run (i.e., items of like-type go through
+the pipeline independent of the other items in the pool). When this flag is \code{TRUE}, an additional
+analysis is run on the overall sample, but no further reductions at the overall level are made.
+If only one item type is present, this argument will be ignored.}
+
+\item{all.together}{A logical value (optional, default: FALSE). Controls whether the \emph{reduction} analysis
+on the complete item pool is run.
+By default, only type-level reduction analyses are run (i.e., items of like-type go through
+the pipeline independent of the other items in the pool). When this flag is \code{TRUE}, reductions are made
+at the overall level (i.e., all items go through the reduction pipeline together, agnostic of item type).
+If only one item type is present, this argument will be ignored.}
 
 \item{plot}{Display network plots (default: TRUE)}
 

@@ -841,99 +841,173 @@ embedding.model_validate <- function(embedding.model, provider = "auto") {
 #'        (or NULL, in which case default behavior takes over)
 #' @param EGA.uni.method A string: one of "expand", "LE", "louvain"
 #' @param EGA_model A string or NULL: one of "glasso", "TMFG"
-#' @param item.attributes A named list of attributes and item types.
 #'
 #' @return A named list with cleaned and correctly-cased values.
-validate_ega_params <- function(EGA.algorithm, EGA.uni.method, EGA_model, item.attributes) {
-  norm_str <- function(x) tolower(trimws(x))
+validate_ega_params <- function(EGA.algorithm, EGA.uni.method, EGA_model) {
 
-  # Canonical sets
+  norm_str <- function(x) {
+    if (is.null(x)) return(NULL)
+    if (!is.character(x)) return(NA_character_)
+    tolower(trimws(x))
+  }
+
+  # Canonical sets (values on the right are canonical casing we will return)
   ALGORITHMS <- c("leiden", "louvain", "walktrap")
   UNI_METHODS <- c("expand", "LE", "louvain")
   MODELS <- c("glasso", "TMFG")
 
-  # Build matchers: lowercase names -> canonical casing
   algorithm_map <- setNames(ALGORITHMS, tolower(ALGORITHMS))
   uni_method_map <- setNames(UNI_METHODS, tolower(UNI_METHODS))
   model_map <- setNames(MODELS, tolower(MODELS))
 
-  # set EGA model based on the number of traits
-  if (is.null(EGA.algorithm)){
+  # Helper: normalize an input that may be NULL, a single string, or a named list
+  # Returns a list(type = <value or NULL>, overall = <value or NULL>)
+  expand_to_pair <- function(x, param_name) {
+    # Default return skeleton
+    out <- list(type = NULL, overall = NULL)
 
-    n_traits <- length(names(item.attributes))
-
-    if(n_traits > 1){ # set to louvain when there is more than one trait
-      EGA.algorithm <- "louvain"
-    } else { # set to walktrap when there is only one trait
-      EGA.algorithm <- "walktrap"
+    if (is.null(x)) {
+      return(out)
     }
 
-  } else {
-
-    # --- Validate algorithm if not the default ---
-    if (!is.character(EGA.algorithm) || length(EGA.algorithm) != 1 || is.na(EGA.algorithm)) {
-      stop("AI-GENIE expects EGA.algorithm to be a non-empty string.", call. = FALSE)
+    # Single string: replicate to both
+    if (is.character(x) && length(x) == 1 && !is.na(x)) {
+      out$type <- x
+      out$overall <- x
+      return(out)
     }
 
+    # Named list (or named vector)
+    if (is.list(x) || (is.atomic(x) && !is.null(names(x)))) {
+      # Coerce to list for easy handling
+      xl <- as.list(x)
+      nms <- names(xl)
+      if (is.null(nms) || !any(nms %in% c("type", "overall"))) {
+        stop(sprintf("If passing a list for `%s`, it must be named with `type` and/or `overall`.", param_name),
+             call. = FALSE)
+      }
+      # Accept missing keys, fill with NULL
+      if ("type" %in% nms) out$type <- xl[["type"]]
+      if ("overall" %in% nms) out$overall <- xl[["overall"]]
+      return(out)
+    }
+
+    stop(sprintf("`%s` must be NULL, a single string, or a named list with `type` and/or `overall`.", param_name),
+         call. = FALSE)
   }
 
-  algo_key <- norm_str(EGA.algorithm)
-  if (!algo_key %in% names(algorithm_map)) {
-    stop(
-      paste0(
-        "AI-GENIE expects EGA.algorithm to be one of: ",
-        paste(sprintf("`%s`", ALGORITHMS), collapse = ", "),
-        ". Received: `", EGA.algorithm, "`."
-      ),
-      call. = FALSE
-    )
-  }
+  # Helper: validate individual value (string or NULL) against a map; returns canonical value or NULL
+  validate_single_value <- function(val, map, param_name, sub_name) {
+    # val may be NULL or a character
+    if (is.null(val)) return(NULL)
 
-  # --- Validate uni_method ---
-  if (!is.character(EGA.uni.method) || length(EGA.uni.method) != 1 || is.na(EGA.uni.method)) {
-    stop("AI-GENIE expects EGA.uni.method to be a non-empty string.", call. = FALSE)
-  }
+    if (!is.character(val) || length(val) != 1 || is.na(val)) {
+      stop(sprintf("AI-GENIE expects `%s$%s` to be a non-empty string or NULL.", param_name, sub_name),
+           call. = FALSE)
+    }
 
-  uni_key <- norm_str(EGA.uni.method)
-  if (!uni_key %in% names(uni_method_map)) {
-    stop(
-      paste0(
-        "AI-GENIE expects EGA.uni.method to be one of: ",
-        paste(sprintf("`%s`", UNI_METHODS), collapse = ", "),
-        ". Received: `", EGA.uni.method, "`."
-      ),
-      call. = FALSE
-    )
-  }
-
-  # --- Validate model ---
-  model_cleaned <- NULL
-  if (is.null(EGA_model)) {
-    model_cleaned <- NULL
-  } else if (!is.character(EGA_model) || length(EGA_model) != 1 || is.na(EGA_model)) {
-    stop("AI-GENIE expects EGA_model to be a string or NULL.", call. = FALSE)
-  } else {
-    model_key <- norm_str(EGA_model)
-    if (!model_key %in% names(model_map)) {
+    key <- norm_str(val)
+    if (!key %in% names(map)) {
       stop(
         paste0(
-          "AI-GENIE expects EGA_model to be one of: ",
-          paste(sprintf("`%s`", MODELS), collapse = ", "),
-          ", or NULL. Received: `", EGA_model, "`."
+          "AI-GENIE expects `", param_name, "` (", sub_name, ") to be one of: ",
+          paste(sprintf("`%s`", unname(map)), collapse = ", "),
+          if (param_name == "EGA_model") ", or NULL." else ".",
+          " Received: `", val, "`."
         ),
         call. = FALSE
       )
     }
-    model_cleaned <- model_map[[model_key]]
+    return(map[[key]])
   }
 
+  # --- Expand inputs to (type, overall) pairs ---
+  algo_pair <- expand_to_pair(EGA.algorithm, "EGA.algorithm")
+  uni_pair  <- expand_to_pair(EGA.uni.method, "EGA.uni.method")
+  model_pair <- expand_to_pair(EGA_model, "EGA_model")
+
+  # --- Default behavior when inputs are NULL (per your new spec) ---
+  # If user passed NULL for the whole parameter (not for individual type/overall),
+  # the function-level expand_to_pair returned type=NULL & overall=NULL.
+  # Spec says:
+  #  - EGA.algorithm default when NULL: list(type = "walktrap", overall = "louvain")
+  #  - EGA.uni.method default when NULL: list(type = "louvain", overall = "louvain")
+  #  - EGA_model : continue existing procedure (so leave both NULL here)
+  if (is.null(EGA.algorithm)) {
+    algo_pair$type <- "walktrap"
+    algo_pair$overall <- "louvain"
+  }
+  if (is.null(EGA.uni.method)) {
+    uni_pair$type <- "louvain"
+    uni_pair$overall <- "louvain"
+  }
+  # If EGA_model is NULL: leave model_pair as type=NULL & overall=NULL (downstream handles it)
+
+  # --- Validate and canonicalize each element ---
+  algo_clean <- list(
+    type = validate_single_value(algo_pair$type, algorithm_map, "EGA.algorithm", "type"),
+    overall = validate_single_value(algo_pair$overall, algorithm_map, "EGA.algorithm", "overall")
+  )
+
+  uni_clean <- list(
+    type = validate_single_value(uni_pair$type, uni_method_map, "EGA.uni.method", "type"),
+    overall = validate_single_value(uni_pair$overall, uni_method_map, "EGA.uni.method", "overall")
+  )
+
+  model_clean <- list(
+    type = validate_single_value(model_pair$type, model_map, "EGA_model", "type"),
+    overall = validate_single_value(model_pair$overall, model_map, "EGA_model", "overall")
+  )
+
+  # Return
   return(list(
-    EGA.algorithm = algorithm_map[[algo_key]],
-    EGA.uni.method = uni_method_map[[uni_key]],
-    EGA_model = model_cleaned
+    EGA.algorithm = algo_clean,
+    EGA.uni.method = uni_clean,
+    EGA_model = model_clean
   ))
 }
 
+
+# Validate the Run Flags ----
+#' Check that the `run.overall` and `all.together` flags are logically consistent with the number of item types.
+#' @param run.overall If a final quality analysis should be run on the overall sample
+#' @param all.together If the reduction analysis should be run on all of the items agnostic of item type
+#' @param silently whether the print statements should appear
+#' @param item.attributes A named list of attributes and item types.
+#'
+#' @return a named list with the updated `all.together` and `run.overall` flags
+run_flags_validate <- function(run.overall, all.together, item.attributes,
+                               silently){
+
+  # No need to run an overall analysis if only 1 trait
+  if(run.overall && length(names(item.attributes)) == 1){
+    if(!silently){
+      message("Only one item type detected. The flag `run.overall` will be ignored.")
+    }
+    run.overall <- FALSE
+  }
+
+  # No need to run all item types together if there is only one item type
+  if(all.together && length(names(item.attributes)) == 1){
+    if(!silently){
+      message("Only one item type detected. The flag `all.together` will be ignored.")
+    }
+    all.together <- FALSE
+  }
+
+  # No need to "run.overall" if "all.together" is TRUE
+  if(all.together && run.overall){
+    if(!silently){
+      message("No need to run an overall fit analysis when doing the reduction analysis on the full sample. The flag `run.overall` will be ignored.")
+    }
+    run.overall <- FALSE
+  }
+
+
+  return(list(all.together = all.together,
+              run.overall = run.overall))
+
+}
 
 # Validate target N ----
 #' Validate and Expand `target.N` for Each Item Attribute

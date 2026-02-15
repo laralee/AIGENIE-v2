@@ -4,14 +4,14 @@
 \alias{print_results}
 \title{Print Results}
 \usage{
-print_results(obj, obj2, only.one)
+print_results(obj, obj2, run.overall)
 }
 \arguments{
 \item{obj}{A list object containing the OVERALL analysis results returned by \code{get_results}.}
 
 \item{obj2}{A list object containing the ITEM-TYPE LEVEL analysis results returned by \code{get_results}.}
 
-\item{only.one}{A flag denoting if overall results should be printed}
+\item{run.overall}{A flag denoting if overall results should be printed}
 }
 \value{
 No return value; the function prints the results to the console.

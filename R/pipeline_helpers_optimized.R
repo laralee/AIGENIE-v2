@@ -454,7 +454,7 @@ iterative_stability_check <- function(embedding_matrix,
     verbose = !silently,
     seed = 123
   )
-  
+
   # Add ncores only if specified (otherwise use EGAnet default)
   if (!is.null(ncores)) {
     boot_args$ncores <- ncores
@@ -487,7 +487,7 @@ iterative_stability_check <- function(embedding_matrix,
     emp_dims <- tryCatch({
       bootstrap$stability$item.stability$item.stability$empirical.dimensions
     }, error = function(e) NULL)
-    
+
     # Check if emp_dims is valid
     if (is.null(emp_dims) || length(emp_dims) == 0) {
       warning("Could not extract item stability. Returning current results.")
@@ -507,7 +507,7 @@ iterative_stability_check <- function(embedding_matrix,
       current_embedding <- current_embedding[, valid_idx, drop = FALSE]
       emp_dims <- emp_dims[valid_idx]
     }
-    
+
     # Check minimum items for analysis
     if (ncol(current_embedding) < 3) {
       warning("Too few items remaining for stability analysis. Returning current results.")
@@ -623,7 +623,7 @@ calc_final_stability <- function(result,
     verbose = !silently,
     seed = 123
   )
-  
+
   # Add ncores only if specified
   if (!is.null(ncores)) {
     boot_args$ncores <- ncores
@@ -660,9 +660,9 @@ calc_final_stability <- function(result,
 #'
 #' @param obj A list object containing the OVERALL analysis results returned by \code{get_results}.
 #' @param obj2 A list object containing the ITEM-TYPE LEVEL analysis results returned by \code{get_results}.
-#' @param only.one A flag denoting if overall results should be printed
+#' @param run.overall A flag denoting if overall results should be printed
 #' @return No return value; the function prints the results to the console.
-print_results<-function(obj, obj2, only.one){
+print_results<-function(obj, obj2, run.overall){
 
   # Print the title
   cat("\n")
@@ -698,7 +698,7 @@ print_results<-function(obj, obj2, only.one){
                "           Final NMI: ", round(after_genie,4) * 100))
   }
 
-  if(!only.one){ # only print overall results if you have them
+  if(run.overall){ # only print overall results if you have them
 
     cat("\n")
     cat("\n")
@@ -841,3 +841,19 @@ final_community_detection <- function(embedding_matrix,
 
   return(result)
 }
+
+
+run_all_together <- function(items){
+
+  temp <- paste(items$type, items$attribute)
+  items$attribute <- temp
+  items$type <- rep("All", nrow(items))
+
+  return(items)
+
+}
+
+
+
+
+
