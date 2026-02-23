@@ -83,8 +83,9 @@ If only one item type is present, this argument will be ignored.}
 
 \item{plot}{If \code{TRUE}, display network comparison plots}
 
-\item{silently}{If \code{TRUE}, suppress progress messages
-
+\item{silently}{If \code{TRUE}, suppress progress messages}
+}
+\value{
 \strong{Defaults:} \code{items.only = FALSE}, \code{embeddings.only = FALSE},
 \code{run.overall = FALSE}, \code{all.together = FALSE}.
 
@@ -138,7 +139,7 @@ Returns a named \code{list} with two top-level elements:
 
 \strong{When \code{all.together = TRUE}} (regardless of \code{run.overall}):
 Results are \strong{not} split into \code{item_type_level} and \code{overall}. Instead the function returns a single named list containing:
-\code{final_NMI}, \code{initial_NMI}, \code{embeddings}, \code{UVA}, \code{bootEGA}, \code{EGA.model_selected}, \code{final_items}, \code{final_EGA}, \code{initial_EGA}, \code{start_N}, \code{final_N}, \code{network_plot}, and \code{stability_plot}.}
+\code{final_NMI}, \code{initial_NMI}, \code{embeddings}, \code{UVA}, \code{bootEGA}, \code{EGA.model_selected}, \code{final_items}, \code{final_EGA}, \code{initial_EGA}, \code{start_N}, \code{final_N}, \code{network_plot}, and \code{stability_plot}.
 }
 \description{
 Local version of GENIE that uses locally installed embedding models for complete

@@ -1644,6 +1644,7 @@ GENIE <- function(
 #' @param plot If `TRUE`, display network comparison plots
 #' @param silently If `TRUE`, suppress progress messages
 #'
+#' @return
 #' **Defaults:** `items.only = FALSE`, `embeddings.only = FALSE`,
 #' `run.overall = FALSE`, `all.together = FALSE`.
 #'
