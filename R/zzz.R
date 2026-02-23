@@ -103,6 +103,7 @@ create_aigenie_env <- function(env_path) {
     dir.create(dirname(env_path), recursive = TRUE, showWarnings = FALSE)
 
     # Create virtual environment
+    check_uv_available()
     result <- system2("uv", args = c("venv", shQuote(env_path)),
                       stdout = TRUE, stderr = TRUE)
 
@@ -177,6 +178,7 @@ install_aigenie_packages <- function(env_path,
   message("Installing core Python packages...")
 
   # Install main packages
+  check_uv_available()
   result <- system2("uv",
                     args = c("pip", "install",
                              "--python", shQuote(python_path),
@@ -194,6 +196,7 @@ install_aigenie_packages <- function(env_path,
     message("Installing HuggingFace packages...")
 
     hf_packages <- get_huggingface_packages()
+    check_uv_available()
     hf_result <- system2("uv",
                          args = c("pip", "install",
                                   "--python", shQuote(python_path),
@@ -676,6 +679,8 @@ set_huggingface_token <- function(token, save = TRUE) {
     "For local LLM support, run: AIGENIE::install_local_llm_support()"
   )
 }
+
+
 
 #' @keywords internal
 .onUnload <- function(libpath) {

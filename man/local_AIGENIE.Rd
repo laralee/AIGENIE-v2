@@ -212,7 +212,7 @@ aspects.of.personality.traits <- list(
 domain <- "Personality Measurement"
 
 # Name the Inventory being created
-scale.title <- "Three of 'Big Five:' A Streamlined Personality Inventory"
+scale.title <- "Two of 'Big Five:' A Streamlined Personality Inventory"
 
 # Add a file path name to a local text generation model downloaded on your computer
 model.path <- "ADD FILE PATH TO DOWNLOADED MODEL HERE"

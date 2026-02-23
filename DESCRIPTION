@@ -13,6 +13,6 @@ Authors@R: c(
 Description: AIGENIE is an R package for automated psychological scale development and structural validation using large language models (LLMs) and network psychometric methods. The package implements the AI-GENIE framework (Automatic Item Generation and Validation via Network-Integrated Evaluation) to generate candidate items, compute embedding representations, and estimate dimensional structure using Exploratory Graph Analysis (EGA). Item quality is further evaluated using Unique Variable Analysis to identify redundant items and Bootstrap EGA to assess item and dimension stability. AI-GENIE supports both fully automated item generation and analysis of user-provided item sets, facilitating efficient, theory-informed measurement development prior to empirical data collection. 
 License: AGPL (>= 3.0)
 Encoding: UTF-8
-Depends: R (>= 3.6.0), EGAnet, ggplot2, igraph, patchwork, tm, R.utils, jsonlite
+Depends: R (>= 3.6.0), reticulate, EGAnet, ggplot2, igraph, patchwork, tm, R.utils, jsonlite
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
