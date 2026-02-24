@@ -129,7 +129,7 @@ get_core_packages <- function() {
     "openai==0.28",
     "groq",
     "requests",
-    "'numpy<2.0'"
+    "numpy<2.0"
   )
 }
 
