@@ -97,21 +97,26 @@ check_uv_available <- function() {
 #' @keywords internal
 create_aigenie_env <- function(env_path) {
   if (!dir.exists(env_path)) {
-    message("Creating AI-GENIE Python environment with UV...")
+    message("Creating AI-GENIE Python 3.11 environment with UV...")
 
     # Create parent directory if needed
     dir.create(dirname(env_path), recursive = TRUE, showWarnings = FALSE)
 
-    # Create virtual environment
+    # Create virtual environment with Python 3.11 explicitly
     check_uv_available()
-    result <- system2("uv", args = c("venv", shQuote(env_path)),
+    result <- system2("uv",
+                      args = c("venv",
+                               "--python", "3.11",
+                               shQuote(env_path)),
                       stdout = TRUE, stderr = TRUE)
 
     if (!dir.exists(env_path)) {
-      stop("Failed to create virtual environment: ", paste(result, collapse = "\n"),
+      stop("Failed to create Python 3.11 virtual environment: ",
+           paste(result, collapse = "\n"),
            call. = FALSE)
     }
-    message("Virtual environment created at: ", env_path)
+
+    message("Python 3.11 virtual environment created at: ", env_path)
   }
   invisible(TRUE)
 }
