@@ -102,21 +102,67 @@ create_aigenie_env <- function(env_path) {
     # Create parent directory if needed
     dir.create(dirname(env_path), recursive = TRUE, showWarnings = FALSE)
 
-    # Create virtual environment with Python 3.11 explicitly
-    check_uv_available()
-    result <- system2("uv",
-                      args = c("venv",
-                               "--python", "3.11",
-                               shQuote(env_path)),
-                      stdout = TRUE, stderr = TRUE)
-
-    if (!dir.exists(env_path)) {
-      stop("Failed to create Python 3.11 virtual environment: ",
-           paste(result, collapse = "\n"),
-           call. = FALSE)
+    # Try uv venv first (preferred)
+    uv_path <- Sys.which("uv")
+    created <- FALSE
+    if (nzchar(uv_path)) {
+      res_uv <- tryCatch(
+        system2("uv", args = c("venv", "--python", "3.11", shQuote(env_path)), stdout = TRUE, stderr = TRUE),
+        error = function(e) structure(list(error = conditionMessage(e)), class = "system2_error")
+      )
+      if (!inherits(res_uv, "system2_error")) {
+        status_uv <- attr(res_uv, "status")
+        if (is.null(status_uv) || status_uv == 0) {
+          if (dir.exists(env_path)) {
+            created <- TRUE
+            message("Python 3.11 virtual environment created at: ", env_path)
+          }
+        } else {
+          warning("`uv venv` returned non-zero status: ", status_uv, "\nOutput:\n", paste(res_uv, collapse = "\n"),
+                  "\nFalling back to python -m venv.")
+        }
+      } else {
+        warning("Running `uv venv` failed: ", res_uv$error, "\nFalling back to python -m venv.")
+      }
+    } else {
+      message("`uv` not found on PATH; falling back to python -m venv.")
     }
 
-    message("Python 3.11 virtual environment created at: ", env_path)
+    # Fallback: python -m venv
+    if (!created) {
+      # Try candidate python executables (prefer python3)
+      python_candidates <- c("python3", "python")
+      python_found <- NULL
+      for (p in python_candidates) {
+        ppath <- Sys.which(p)
+        if (nzchar(ppath)) {
+          python_found <- ppath
+          break
+        }
+      }
+
+      if (is.null(python_found) || !nzchar(python_found)) {
+        stop("Failed to create Python virtual environment: neither 'uv' nor 'python' found on PATH. ",
+             "Install 'uv' or ensure Python 3 is available.", call. = FALSE)
+      }
+
+      res_py <- tryCatch(
+        system2(python_found, args = c("-m", "venv", shQuote(env_path)), stdout = TRUE, stderr = TRUE),
+        error = function(e) structure(list(error = conditionMessage(e)), class = "system2_error")
+      )
+      if (inherits(res_py, "system2_error")) {
+        stop("Failed to create Python 3.11 virtual environment using python -m venv: ", res_py$error, call. = FALSE)
+      }
+      status_py <- attr(res_py, "status")
+      if (!is.null(status_py) && status_py != 0) {
+        stop("python -m venv returned non-zero status: ", status_py, "\nOutput:\n", paste(res_py, collapse = "\n"), call. = FALSE)
+      }
+      if (!dir.exists(env_path)) {
+        stop("Failed to create Python 3.11 virtual environment (env directory not found) after python -m venv.",
+             call. = FALSE)
+      }
+      message("Python 3.11 virtual environment created at: ", env_path)
+    }
   }
   invisible(TRUE)
 }
@@ -163,6 +209,39 @@ get_local_llm_packages <- function() {
   c("llama-cpp-python")
 }
 
+# internal helper to safely call uv pip install (quotes package specs)
+.aigenie_uv_pip_install <- function(python_path, packages) {
+  packages <- as.character(packages)
+  if (length(packages) == 0) return(invisible(TRUE))
+
+  # Quote each package spec so tokens like 'numpy<2.0' are safe
+  packages_quoted <- vapply(packages, shQuote, FUN.VALUE = character(1))
+
+  uv_path <- Sys.which("uv")
+  if (!nzchar(uv_path)) stop("uv not found on PATH; cannot run uv pip install.")
+
+  args <- c("pip", "install", "--python", shQuote(python_path), packages_quoted)
+
+  res <- tryCatch(
+    system2("uv", args = args, stdout = TRUE, stderr = TRUE),
+    error = function(e) structure(list(error = conditionMessage(e)), class = "system2_error")
+  )
+
+  if (inherits(res, "system2_error")) {
+    stop("Running `uv pip install` failed: ", res$error,
+         "\nCommand attempted: uv ", paste(args, collapse = " "),
+         "\nEnsure 'uv' is installed and on PATH (see python_env_info()).", call. = FALSE)
+  }
+
+  status <- attr(res, "status")
+  if (!is.null(status) && status != 0) {
+    stop("`uv pip install` returned non-zero status: ", status,
+         "\nOutput:\n", paste(res, collapse = "\n"), call. = FALSE)
+  }
+
+  invisible(res)
+}
+
 #' Install AI-GENIE Python Packages Using UV
 #'
 #' @param env_path Path to the virtual environment
@@ -172,9 +251,9 @@ get_local_llm_packages <- function() {
 #' @return TRUE invisibly on success
 #' @keywords internal
 install_aigenie_packages <- function(env_path,
-                                      include_huggingface = TRUE,
-                                      include_local_llm = FALSE,
-                                      gpu = FALSE) {
+                                     include_huggingface = TRUE,
+                                     include_local_llm = FALSE,
+                                     gpu = FALSE) {
   python_path <- get_python_path(env_path)
 
   # Start with core packages
@@ -183,17 +262,33 @@ install_aigenie_packages <- function(env_path,
   message("Installing core Python packages...")
 
   # Install main packages
-  check_uv_available()
-  result <- system2("uv",
-                    args = c("pip", "install",
-                             "--python", shQuote(python_path),
-                             packages_to_install),
-                    stdout = TRUE, stderr = TRUE)
-
-  exit_status <- attr(result, "status")
-  if (!is.null(exit_status) && exit_status != 0) {
-    stop("Failed to install core packages: ", paste(result, collapse = "\n"),
-         call. = FALSE)
+  # prefer uv, but fall back to python -m pip if necessary
+  uv_path <- Sys.which("uv")
+  if (nzchar(uv_path)) {
+    # attempt via uv (safe quoting inside helper)
+    tryCatch({
+      .aigenie_uv_pip_install(python_path = python_path, packages = packages_to_install)
+      message("Core Python packages installed via uv.")
+    }, error = function(e) {
+      warning("uv-based install failed: ", conditionMessage(e), "\nFalling back to python -m pip install.")
+      # fallback via python -m pip
+      pkgs_quoted <- vapply(packages_to_install, shQuote, FUN.VALUE = character(1))
+      res <- tryCatch(system2(python_path, args = c("-m", "pip", "install", pkgs_quoted), stdout = TRUE, stderr = TRUE),
+                      error = function(e) structure(list(error = conditionMessage(e)), class = "system2_error"))
+      if (inherits(res, "system2_error")) stop("Failed to install core packages via python -m pip: ", res$error, call. = FALSE)
+      status <- attr(res, "status")
+      if (!is.null(status) && status != 0) stop("python -m pip install returned non-zero status: ", status, "\nOutput:\n", paste(res, collapse = "\n"), call. = FALSE)
+      message("Core Python packages installed via python -m pip.")
+    })
+  } else {
+    # uv not available: use python -m pip
+    pkgs_quoted <- vapply(packages_to_install, shQuote, FUN.VALUE = character(1))
+    res <- tryCatch(system2(python_path, args = c("-m", "pip", "install", pkgs_quoted), stdout = TRUE, stderr = TRUE),
+                    error = function(e) structure(list(error = conditionMessage(e)), class = "system2_error"))
+    if (inherits(res, "system2_error")) stop("Failed to install core packages via python -m pip: ", res$error, call. = FALSE)
+    status <- attr(res, "status")
+    if (!is.null(status) && status != 0) stop("python -m pip install returned non-zero status: ", status, "\nOutput:\n", paste(res, collapse = "\n"), call. = FALSE)
+    message("Core Python packages installed via python -m pip.")
   }
 
   # Install HuggingFace packages if requested
@@ -201,40 +296,78 @@ install_aigenie_packages <- function(env_path,
     message("Installing HuggingFace packages...")
 
     hf_packages <- get_huggingface_packages()
-    check_uv_available()
-    hf_result <- system2("uv",
-                         args = c("pip", "install",
-                                  "--python", shQuote(python_path),
-                                  hf_packages),
-                         stdout = TRUE, stderr = TRUE)
+    uv_path <- Sys.which("uv")
+    if (nzchar(uv_path)) {
+      hf_try <- tryCatch({
+        .aigenie_uv_pip_install(python_path = python_path, packages = hf_packages)
+        TRUE
+      }, error = function(e) {
+        warning("uv-based HF install failed: ", conditionMessage(e)); FALSE
+      })
 
-    exit_status <- attr(hf_result, "status")
-    if (!is.null(exit_status) && exit_status != 0) {
-      warning("Some HuggingFace packages may not have installed correctly: ",
-              paste(hf_result, collapse = "\n"))
+      if (!hf_try) {
+        # fallback to python -m pip
+        hf_quoted <- vapply(hf_packages, shQuote, FUN.VALUE = character(1))
+        res_hf <- tryCatch(system2(python_path, args = c("-m", "pip", "install", hf_quoted), stdout = TRUE, stderr = TRUE),
+                           error = function(e) structure(list(error = conditionMessage(e)), class = "system2_error"))
+        if (inherits(res_hf, "system2_error")) warning("HuggingFace install failed: ", res_hf$error)
+        else {
+          status_hf <- attr(res_hf, "status")
+          if (!is.null(status_hf) && status_hf != 0) warning("HuggingFace install returned non-zero status: ", status_hf)
+        }
+      } else {
+        message("HuggingFace packages installed via uv.")
+      }
+    } else {
+      # uv not present
+      hf_quoted <- vapply(hf_packages, shQuote, FUN.VALUE = character(1))
+      res_hf <- tryCatch(system2(python_path, args = c("-m", "pip", "install", hf_quoted), stdout = TRUE, stderr = TRUE),
+                         error = function(e) structure(list(error = conditionMessage(e)), class = "system2_error"))
+      if (inherits(res_hf, "system2_error")) warning("HuggingFace install failed: ", res_hf$error)
+      else {
+        status_hf <- attr(res_hf, "status")
+        if (!is.null(status_hf) && status_hf != 0) warning("HuggingFace install returned non-zero status: ", status_hf)
+        else message("HuggingFace packages installed via python -m pip.")
+      }
     }
 
     # Install PyTorch
     message("Installing PyTorch (", ifelse(gpu, "GPU", "CPU"), " version)...")
 
-    if (gpu) {
-      torch_result <- system2("uv",
-                              args = c("pip", "install",
-                                       "--python", shQuote(python_path),
-                                       "torch", "torchvision", "torchaudio"),
-                              stdout = TRUE, stderr = TRUE)
+    torch_pkgs <- c("torch", "torchvision", "torchaudio")
+    uv_path <- Sys.which("uv")
+    if (nzchar(uv_path)) {
+      try({
+        if (gpu) {
+          .aigenie_uv_pip_install(python_path = python_path, packages = torch_pkgs)
+        } else {
+          args_extra <- c("--index-url", "https://download.pytorch.org/whl/cpu")
+          # For uv, supply index url as separate arg and quoted package names
+          args_uv <- c("pip", "install", "--python", shQuote(python_path), args_extra, vapply(torch_pkgs, shQuote, FUN.VALUE = character(1)))
+          res_t <- tryCatch(system2("uv", args = args_uv, stdout = TRUE, stderr = TRUE),
+                            error = function(e) structure(list(error = conditionMessage(e)), class = "system2_error"))
+          if (inherits(res_t, "system2_error")) stop("PyTorch uv install failed: ", res_t$error, call. = FALSE)
+          status_t <- attr(res_t, "status")
+          if (!is.null(status_t) && status_t != 0) stop("PyTorch uv install returned non-zero status: ", status_t, call. = FALSE)
+        }
+        message("PyTorch installed via uv.")
+      }, silent = TRUE)
+      # if errors occurred above they will be handled by the outer flow
     } else {
-      torch_result <- system2("uv",
-                              args = c("pip", "install",
-                                       "--python", shQuote(python_path),
-                                       "--index-url", "https://download.pytorch.org/whl/cpu",
-                                       "torch", "torchvision", "torchaudio"),
-                              stdout = TRUE, stderr = TRUE)
-    }
-
-    exit_status <- attr(torch_result, "status")
-    if (!is.null(exit_status) && exit_status != 0) {
-      warning("PyTorch installation may have issues: ", paste(torch_result, collapse = "\n"))
+      # fallback to python -m pip with index-url for CPU
+      if (gpu) {
+        res_t <- tryCatch(system2(python_path, args = c("-m", "pip", "install", vapply(torch_pkgs, shQuote, FUN.VALUE = character(1))), stdout = TRUE, stderr = TRUE),
+                          error = function(e) structure(list(error = conditionMessage(e)), class = "system2_error"))
+      } else {
+        res_t <- tryCatch(system2(python_path, args = c("-m", "pip", "install", "--index-url", "https://download.pytorch.org/whl/cpu", vapply(torch_pkgs, shQuote, FUN.VALUE = character(1))), stdout = TRUE, stderr = TRUE),
+                          error = function(e) structure(list(error = conditionMessage(e)), class = "system2_error"))
+      }
+      if (inherits(res_t, "system2_error")) warning("PyTorch installation may have issues: ", res_t$error)
+      else {
+        status_t <- attr(res_t, "status")
+        if (!is.null(status_t) && status_t != 0) warning("PyTorch installation may have issues: ", paste(res_t, collapse = "\n"))
+        else message("PyTorch installed via python -m pip.")
+      }
     }
   }
 
@@ -244,23 +377,46 @@ install_aigenie_packages <- function(env_path,
 
     # Check for Apple Silicon
     sys_info <- Sys.info()
-    if (sys_info["sysname"] == "Darwin" && grepl("arm64|aarch64", sys_info["machine"])) {
+    if (!is.null(sys_info) && sys_info["sysname"] == "Darwin" && grepl("arm64|aarch64", sys_info["machine"])) {
       Sys.setenv(CMAKE_ARGS = "-DLLAMA_METAL=on")
     }
 
-    llm_result <- system2("uv",
-                          args = c("pip", "install",
-                                   "--python", shQuote(python_path),
-                                   get_local_llm_packages()),
-                          stdout = TRUE, stderr = TRUE)
+    llm_pkgs <- get_local_llm_packages()
+    uv_path <- Sys.which("uv")
+    if (nzchar(uv_path)) {
+      llm_try <- tryCatch({
+        .aigenie_uv_pip_install(python_path = python_path, packages = llm_pkgs)
+        TRUE
+      }, error = function(e) {
+        warning("uv-based llm install failed: ", conditionMessage(e)); FALSE
+      })
+
+      if (!llm_try) {
+        llm_quoted <- vapply(llm_pkgs, shQuote, FUN.VALUE = character(1))
+        res_llm <- tryCatch(system2(python_path, args = c("-m", "pip", "install", llm_quoted), stdout = TRUE, stderr = TRUE),
+                            error = function(e) structure(list(error = conditionMessage(e)), class = "system2_error"))
+        if (inherits(res_llm, "system2_error")) warning("llama-cpp-python installation may have issues: ", res_llm$error)
+        else {
+          status_llm <- attr(res_llm, "status")
+          if (!is.null(status_llm) && status_llm != 0) warning("llama-cpp-python installation may have issues: ", paste(res_llm, collapse = "\n"))
+          else message("llama-cpp-python installed via python -m pip.")
+        }
+      } else {
+        message("llama-cpp-python installed via uv.")
+      }
+    } else {
+      llm_quoted <- vapply(llm_pkgs, shQuote, FUN.VALUE = character(1))
+      res_llm <- tryCatch(system2(python_path, args = c("-m", "pip", "install", llm_quoted), stdout = TRUE, stderr = TRUE),
+                          error = function(e) structure(list(error = conditionMessage(e)), class = "system2_error"))
+      if (inherits(res_llm, "system2_error")) warning("llama-cpp-python installation may have issues: ", res_llm$error)
+      else {
+        status_llm <- attr(res_llm, "status")
+        if (!is.null(status_llm) && status_llm != 0) warning("llama-cpp-python installation may have issues: ", paste(res_llm, collapse = "\n"))
+        else message("llama-cpp-python installed via python -m pip.")
+      }
+    }
 
     Sys.unsetenv("CMAKE_ARGS")
-
-    exit_status <- attr(llm_result, "status")
-    if (!is.null(exit_status) && exit_status != 0) {
-      warning("llama-cpp-python installation may have issues: ",
-              paste(llm_result, collapse = "\n"))
-    }
   }
 
   message("Python packages installed successfully!")
@@ -286,9 +442,9 @@ install_aigenie_packages <- function(env_path,
 #' @return TRUE invisibly on success
 #' @export
 ensure_aigenie_python <- function(force_reinstall = FALSE,
-                                   include_huggingface = TRUE,
-                                   include_local_llm = FALSE,
-                                   gpu = FALSE) {
+                                  include_huggingface = TRUE,
+                                  include_local_llm = FALSE,
+                                  gpu = FALSE) {
 
   # Check if already initialized in this session
   if (isTRUE(getOption("aigenie.python_initialized", FALSE)) && !force_reinstall) {
@@ -297,8 +453,12 @@ ensure_aigenie_python <- function(force_reinstall = FALSE,
 
   message("Setting up AI-GENIE Python environment...")
 
-  # Check UV is available
-  check_uv_available()
+  # Check UV is available (this will stop with an informative message if not)
+  # We allow the creation flow to fall back to python -m venv, so do not strictly stop here.
+  # But keep the function for informative error text if user intends to use uv.
+  # We'll not call check_uv_available() here to allow fallback behavior in create_aigenie_env().
+  # (The existing docstring describes UV usage; we still support that.)
+  # check_uv_available()
 
   # Get environment paths
 
@@ -321,6 +481,7 @@ ensure_aigenie_python <- function(force_reinstall = FALSE,
   }
 
   # Configure reticulate to use our environment
+  # Use the exact python path in the virtualenv
   reticulate::use_python(python_path, required = TRUE)
 
   # Initialize Python
@@ -344,9 +505,9 @@ ensure_aigenie_python <- function(force_reinstall = FALSE,
     if (!force_reinstall) {
       message("Package verification failed. Attempting reinstall...")
       return(ensure_aigenie_python(force_reinstall = TRUE,
-                                    include_huggingface = include_huggingface,
-                                    include_local_llm = include_local_llm,
-                                    gpu = gpu))
+                                   include_huggingface = include_huggingface,
+                                   include_local_llm = include_local_llm,
+                                   gpu = gpu))
     }
     stop("Failed to set up Python packages: ", e$message,
          "\nPlease try restarting R or run: AIGENIE::reinstall_python_env()",
@@ -429,8 +590,8 @@ ensure_aigenie_python_local <- function(force = FALSE, silently = FALSE) {
 #'
 #' @export
 reinstall_python_env <- function(include_huggingface = TRUE,
-                                  include_local_llm = FALSE,
-                                  gpu = FALSE) {
+                                 include_local_llm = FALSE,
+                                 gpu = FALSE) {
   options(aigenie.python_initialized = FALSE)
   ensure_aigenie_python(force_reinstall = TRUE,
                         include_huggingface = include_huggingface,
@@ -574,12 +735,19 @@ python_env_info <- function() {
   # Check installed packages if environment exists
   if (info$python_exists) {
     tryCatch({
+      # Use quoted package listing to avoid shell parsing issues
       result <- system2("uv",
                         args = c("pip", "list", "--python", shQuote(python_path)),
                         stdout = TRUE, stderr = TRUE)
       info$installed_packages <- result
     }, error = function(e) {
-      info$installed_packages <- "Unable to list packages"
+      # Try fallback with python -m pip list
+      tryCatch({
+        res2 <- system2(python_path, args = c("-m", "pip", "list"), stdout = TRUE, stderr = TRUE)
+        info$installed_packages <- res2
+      }, error = function(e2) {
+        info$installed_packages <- "Unable to list packages"
+      })
     })
   }
 
