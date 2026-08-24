@@ -370,9 +370,9 @@ select_optimal_embedding <- function(embedding_matrix,
         ))
 
         if (this_nmi > best_nmi ||
-            (this_nmi == best_nmi && m == "TMFG" && best_result$model != "TMFG") ||
-            (this_nmi == best_nmi && m == best_result$model && etype == "sparse" && best_result$embedding_type != "sparse"))
-        {
+            (this_nmi == best_nmi && m == "TMFG" && best_result$model != "TMFG"))
+          {
+
           best_nmi <- this_nmi
           best_result <- list(
             best_embedding_matrix = emb[, names(wc), drop = FALSE],
