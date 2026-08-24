@@ -2,8 +2,8 @@ Package: AIGENIE
 Type: Package
 Title: Automatic Item Generation and Validation via Network-Integrated
     Evaluation
-Version: 2.1.0
-Date: 2026-03-10
+Version: 2.1.1
+Date: 2026-08-24
 Authors@R: c(
     person("Lara", "Russell-Lasalandra", email = "llr7cb@virginia.edu",
            role = "cre", comment = c(ORCID = "0009-0000-3014-1937")),

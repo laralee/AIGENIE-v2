@@ -203,7 +203,7 @@ reduce_redundancy_uva <- function(embedding_matrix, items, corr = "auto",
         reduce = TRUE,
         reduce.method = "remove",
         auto = TRUE,
-        plot = FALSE
+        verbose = TRUE
       )
     }, error = function(e) {
       warning(paste("UVA failed at iteration", count, ":", conditionMessage(e)))
