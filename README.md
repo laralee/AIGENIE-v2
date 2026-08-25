@@ -10,6 +10,8 @@
 
 # AI-GENIE: Automatic Item Generation and Validation via Network-Integrated Evaluation
 
+[![pkgdown](https://github.com/laralee/AIGENIE/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/laralee/AIGENIE/actions/workflows/pkgdown.yaml)
+
 **AI-GENIE** is an R package for automated psychological scale development and structural validation using **large language models (LLMs)** and **network psychometric methods**.
 
 The AI-GENIE framework integrates:
@@ -30,6 +32,23 @@ AI-GENIE supports:
 ```
 Item attributes → LLM generation → Embeddings → EGA → UVA → bootEGA → Final scale
 ```
+
+---
+
+## Documentation
+
+Full package documentation, function reference, articles, and changelog are
+available on the **AIGENIE documentation website**:
+
+**[https://laralee.github.io/AIGENIE/](https://laralee.github.io/AIGENIE/)**
+
+### Guides
+
+- [Understanding the AIGENIE / GENIE Filtering Audit](https://laralee.github.io/AIGENIE/articles/understanding-filtering-audit.html)
+
+The filtering-audit guide explains every item-removal field returned by
+AIGENIE and GENIE, including UVA redundancy evidence, bootEGA item stability,
+and pre-reduction network-loading diagnostics.
 
 ---
 

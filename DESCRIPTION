@@ -40,7 +40,7 @@ Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
-URL: https://github.com/laralee/AIGENIE
+URL: https://laralee.github.io/AIGENIE/, https://github.com/laralee/AIGENIE
 BugReports: https://github.com/laralee/AIGENIE/issues
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3

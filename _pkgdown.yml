@@ -1,0 +1,23 @@
+url: https://laralee.github.io/AIGENIE/
+
+template:
+  bootstrap: 5
+  light-switch: true
+  theme: github-light
+  theme-dark: github-dark
+
+navbar:
+  structure:
+    left:  [reference, articles, news]
+    right: [search, github, lightswitch]
+
+home:
+  title: "AIGENIE"
+  description: >
+    Automatic Item Generation and Validation via Network-Integrated
+    Evaluation for generative psychometrics.
+
+footer:
+  structure:
+    left: developed_by
+    right: built_with

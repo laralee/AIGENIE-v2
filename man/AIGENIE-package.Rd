@@ -176,6 +176,7 @@ A simulation and tutorial.
 \seealso{
 Useful links:
 \itemize{
+  \item \url{https://laralee.github.io/AIGENIE/}
   \item \url{https://github.com/laralee/AIGENIE}
   \item Report bugs at \url{https://github.com/laralee/AIGENIE/issues}
 }

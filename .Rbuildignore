@@ -5,3 +5,9 @@
 ^README\.md$
 ^\.github$
 ^fix_repo_structure\.R$
+^\.positai$
+^\.claude$
+^data-raw$
+^COMMERCIAL-LICENSE\.Rmd$
+^_pkgdown\.yml$
+^docs$
