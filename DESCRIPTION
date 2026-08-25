@@ -36,7 +36,10 @@ Imports:
     jsonlite
 Suggests:
     testthat (>= 3.0.0),
-    tictoc
+    tictoc,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
 URL: https://github.com/laralee/AIGENIE
 BugReports: https://github.com/laralee/AIGENIE/issues
 Roxygen: list(markdown = TRUE)
