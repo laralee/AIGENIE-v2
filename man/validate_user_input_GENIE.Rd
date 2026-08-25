@@ -42,6 +42,12 @@ validate_user_input_GENIE(
 
 \item{embeddings.only}{Whether to stop after embeddings (boolean)}
 
+\item{run.overall}{Logical. Whether to fit an additional pooled EGA to items retained
+after item-type-level reduction.}
+
+\item{all.together}{Logical. Whether to run the reduction pipeline on all item types
+together rather than separately.}
+
 \item{plot}{Whether to show plots (boolean)}
 
 \item{silently}{Whether to suppress messages (boolean)}

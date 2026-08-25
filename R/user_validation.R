@@ -61,6 +61,14 @@
 #'   \item{custom}{A flag signaling whether we are in custom mode or not}
 #' }
 #'
+#' @param anthropic.API Character. Anthropic API key. Can be NULL when Anthropic models are
+#'   not used.
+#' @param jina.API Character. Jina AI API key. Can be NULL when Jina embeddings are not
+#'   used.
+#' @param run.overall Logical. Whether to fit an additional pooled EGA to items retained
+#'   after item-type-level reduction.
+#' @param all.together Logical. Whether to run the reduction pipeline on all item types
+#'   together rather than separately.
 validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
                                         main.prompts,
                                         groq.API, anthropic.API, jina.API,
@@ -209,6 +217,10 @@ validate_user_input_AIGENIE <- function(item.attributes, openai.API, hf.token,
 #'
 #' @return A list of all validated parameters
 #'
+#' @param run.overall Logical. Whether to fit an additional pooled EGA to items retained
+#'   after item-type-level reduction.
+#' @param all.together Logical. Whether to run the reduction pipeline on all item types
+#'   together rather than separately.
 validate_user_input_local_AIGENIE <- function(
   item.attributes, model.path, embedding.model, main.prompts,
   temperature, top.p, target.N, domain, scale.title, item.examples,
@@ -341,6 +353,10 @@ validate_user_input_local_AIGENIE <- function(
 #'
 #' @return A named list containing all validated and normalized parameters
 #'
+#' @param run.overall Logical. Whether to fit an additional pooled EGA to items retained
+#'   after item-type-level reduction.
+#' @param all.together Logical. Whether to run the reduction pipeline on all item types
+#'   together rather than separately.
 validate_user_input_GENIE <- function(
     items,
     embedding.matrix,
@@ -500,6 +516,12 @@ validate_user_input_GENIE <- function(
 #'
 #' @return A list of all validated parameters ready for local GENIE execution
 #'
+#' @param embedding.matrix Optional numeric matrix of pre-computed item embeddings, with
+#'   embedding dimensions in rows and items in columns.
+#' @param run.overall Logical. Whether to fit an additional pooled EGA to items retained
+#'   after item-type-level reduction.
+#' @param all.together Logical. Whether to run the reduction pipeline on all item types
+#'   together rather than separately.
 validate_user_input_local_GENIE <- function(
     items,
     embedding.matrix,

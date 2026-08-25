@@ -40,3 +40,8 @@ A list with best embedding, model, communities, NMI, and comparison log.
 \description{
 Select Optimal Embedding and EGA Model Based on NMI
 }
+\details{
+Full embeddings are evaluated before sparse embeddings. Therefore, exact
+within-model NMI ties retain the full representation. When \code{model = NULL},
+exact cross-model NMI ties prefer TMFG.
+}

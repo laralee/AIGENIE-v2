@@ -13,7 +13,7 @@ iterative_stability_check(
   uni.method,
   corr = "auto",
   ncores = NULL,
-  boot.iter = 100,
+  boot.iter = 500,
   EGA.type = "EGA.fit",
   silently
 )
@@ -35,14 +35,17 @@ iterative_stability_check(
 
 \item{ncores}{Numeric. Number of cores for parallel processing. Default NULL uses EGAnet default.}
 
-\item{boot.iter}{Numeric. Number of bootstrap iterations. Default 100.}
+\item{boot.iter}{Numeric. Number of bootstrap iterations. Default 500.}
 
 \item{EGA.type}{Type of EGA (default "EGA.fit").}
 
 \item{silently}{Logical. Suppress output.}
 }
 \value{
-A list containing the final embedding, boot objects, items removed per iteration, etc.
+A list containing the final embedding, initial/final bootEGA objects,
+and an \code{items_removed} data frame. For each removed item, the table retains
+the bootstrap run, empirical item stability, cutoff, stability deficit, and
+removal reason. Zero-removal runs return an empty data frame, not \code{NULL}.
 }
 \description{
 Iteratively run BootEGA to ensure structural stability of items

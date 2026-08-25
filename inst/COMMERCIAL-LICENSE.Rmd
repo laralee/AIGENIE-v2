@@ -1,0 +1,17 @@
+# Commercial Licensing
+
+AIGENIE is available under AGPL-3.0-or-later for open-source use.
+
+Organizations seeking to use AIGENIE, modified versions of AIGENIE, or derivative implementations in proprietary, closed-source, SaaS, enterprise, or production environments may request a separate commercial license.
+
+Commercial licensing may include:
+
+- proprietary deployment rights;
+- integration support;
+- validation and scientific advisory support;
+- sponsored development;
+- compliance review;
+- enterprise support;
+- co-development of generative psychometric infrastructure.
+
+Commercial licensing inquiries should be directed to the copyright holders.

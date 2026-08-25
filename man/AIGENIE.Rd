@@ -335,9 +335,20 @@ key <- "INSERT YOUR KEY HERE"
 
 # Item type definitions
 trait.definitions <- list(
-  neuroticism = "Neuroticism is a personality trait that describes one's tendency to experience negative emotions like anxiety, depression, irritability, anger, and self-consciousness.",
-  openness = "Openness is a personality trait that describes how open-minded, creative, and imaginative a person is.",
-  extraversion = "Extraversion is a personality trait that describes people who are more focused on the external world than their internal experience."
+  neuroticism = paste0(
+    "Neuroticism is a personality trait that describes one's ",
+    "tendency to experience negative emotions like anxiety, ",
+    "depression, irritability, anger, and self-consciousness."
+  ),
+  openness = paste0(
+    "Openness is a personality trait that describes how ",
+    "open-minded, creative, and imaginative a person is."
+  ),
+  extraversion = paste0(
+    "Extraversion is a personality trait that describes people ",
+    "who are more focused on the external world than their ",
+    "internal experience."
+  )
 )
 
 # Item attributes
@@ -372,7 +383,12 @@ View(personality.inventory.results)
 
 
 # Define a custom system role
-system.role <- "You are an expert methodologist who specializes in scale development for personality measurement. You are especially equipped to create novel personality items that mimic the style of popular 'Big Five' assessments."
+system.role <- paste0(
+  "You are an expert methodologist who specializes in scale ",
+  "development for personality measurement. You are especially ",
+  "equipped to create novel personality items that mimic the ",
+  "style of popular 'Big Five' assessments."
+)
 
 # Define custom prompts for each personality trait
 custom.personality.prompts <- list(
@@ -381,21 +397,30 @@ custom.personality.prompts <- list(
   neuroticism = paste0(
     "Generate unique, psychometrically robust single-statement items designed to assess ",
     "the Big Five personality trait neuroticism.",
-    "Neuroticism has the following characteristics: anxious, depressed, insecure, and emotional. "
+    paste0(
+      "Neuroticism has the following characteristics: anxious, ",
+      "depressed, insecure, and emotional. "
+    )
   ),
 
   # Prompt for generating openness traits
   openness = paste0(
     "Generate unique, psychometrically robust single-statement items designed to assess ",
     "the Big Five personality trait openness.",
-    "Openness has the following characteristics: creative, perceptual, curious, and philosophical"
+    paste0(
+      "Openness has the following characteristics: creative, ",
+      "perceptual, curious, and philosophical"
+    )
   ),
 
   # Prompt for generating extraversion traits
   extraversion = paste0(
     "Generate unique, psychometrically robust single-statement items designed to assess ",
     "the Big Five personality trait extraversion.",
-    "Extraversion has the following characteristics: friendly, positive, assertive, and energetic."
+    paste0(
+      "Extraversion has the following characteristics: friendly, ",
+      "positive, assertive, and energetic."
+    )
   )
 
 )

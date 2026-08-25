@@ -25,6 +25,9 @@ validate_user_input_local_GENIE(
 \arguments{
 \item{items}{Data frame with columns: statement, attribute, type, ID}
 
+\item{embedding.matrix}{Optional numeric matrix of pre-computed item embeddings, with
+embedding dimensions in rows and items in columns.}
+
 \item{embedding.model}{Local embedding model identifier or path}
 
 \item{device}{Device for embeddings ("auto", "cpu", "cuda", "mps")}
@@ -42,6 +45,12 @@ validate_user_input_local_GENIE(
 \item{EGA.uni.method}{EGA unidimensionality method ("louvain", "expand", "LE")}
 
 \item{embeddings.only}{Whether to stop after embeddings}
+
+\item{run.overall}{Logical. Whether to fit an additional pooled EGA to items retained
+after item-type-level reduction.}
+
+\item{all.together}{Logical. Whether to run the reduction pipeline on all item types
+together rather than separately.}
 
 \item{plot}{Whether to show plots}
 

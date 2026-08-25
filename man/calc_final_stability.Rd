@@ -11,33 +11,35 @@ calc_final_stability(
   EGA.uni.method,
   corr = "auto",
   ncores = NULL,
-  boot.iter = 100,
+  boot.iter = 500,
   silently,
   EGA.type = "EGA.fit"
 )
 }
 \arguments{
-\item{result}{The running results of the item type level so far.}
+\item{result}{The running results object for one item type.}
 
-\item{data}{The embedding matrix to be used (either the sparse or full)}
+\item{data}{Numeric embedding matrix used for the pre-reduction stability fit.}
 
-\item{EGA.algorithm}{The EGA algorithm to be used}
+\item{EGA.algorithm}{Community detection algorithm.}
 
-\item{EGA.uni.method}{The EGA unidensinoality that should be used}
+\item{EGA.uni.method}{Unidimensionality method.}
 
 \item{corr}{Character. Correlation method. Default "auto".}
 
-\item{ncores}{Numeric. Number of cores for parallel processing.}
+\item{ncores}{Numeric or NULL. Number of cores for parallel processing.}
 
-\item{boot.iter}{Numeric. Number of bootstrap iterations.}
+\item{boot.iter}{Numeric. Number of bootstrap iterations. Default 500.}
 
-\item{silently}{A logical flag that decides whether to print output}
+\item{silently}{Logical. Whether to suppress progress output.}
 
-\item{EGA.type}{Type of EGA (default "EGA.fit").}
+\item{EGA.type}{Type of EGA passed to \code{EGAnet::bootEGA}. Default "EGA.fit".}
 }
 \value{
-An updated \code{results} object with the initial stability object added
+A list with \code{successful} and the updated \code{result}.
 }
 \description{
-Run bootstrapped EGA on the initial set of items
+Computes a pre-reduction bootEGA baseline for stability plots using the same
+EGA settings and bootstrap count as the reduction pipeline.
 }
+\keyword{internal}

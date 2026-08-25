@@ -24,7 +24,9 @@ threshold passed to \code{EGAnet::UVA}. Items with pairwise wTO at or above
 this value are flagged as redundant. Default \code{0.20}.}
 }
 \value{
-A list with the reduced matrix, sweep metadata, and redundancy log.
+A list with the reduced matrix, sweep metadata, human-readable
+redundancy groups, and \code{removal_log}, a tidy item-level table containing
+removed IDs, retained redundant partners, and wTO statistics.
 }
 \description{
 Applies EGAnet::UVA iteratively and logs human-readable redundant item sets.

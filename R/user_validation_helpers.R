@@ -1400,6 +1400,10 @@ main.prompts_validate <- function(main.prompts, items.attributes, silently) {
 #' @param groq.API The Groq API key provided
 #' @param openai.API The OpenAI API key provided
 #'
+#' @param anthropic.API Character. Anthropic API key. Can be NULL when Anthropic models are
+#'   not used.
+#' @param jina.API Character. Jina AI API key. Can be NULL when Jina embeddings are not
+#'   used.
 check_for_default_APIs <- function(hf.token, groq.API=NULL, openai.API,
                                     anthropic.API = NULL, jina.API = NULL){
 

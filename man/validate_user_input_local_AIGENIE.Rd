@@ -99,6 +99,12 @@ validate_user_input_local_AIGENIE(
 
 \item{adaptive}{Use adaptive generation}
 
+\item{run.overall}{Logical. Whether to fit an additional pooled EGA to items retained
+after item-type-level reduction.}
+
+\item{all.together}{Logical. Whether to run the reduction pipeline on all item types
+together rather than separately.}
+
 \item{plot}{Show plots}
 
 \item{silently}{Suppress messages}

@@ -12,7 +12,7 @@ run_item_reduction_pipeline(
   EGA.uni.method = "louvain",
   corr = "auto",
   ncores = NULL,
-  boot.iter = 100,
+  boot.iter = 500,
   uva.cut.off = 0.2,
   keep.org,
   silently,
@@ -34,7 +34,7 @@ run_item_reduction_pipeline(
 
 \item{ncores}{Numeric. Number of cores for parallel processing.}
 
-\item{boot.iter}{Numeric. Number of bootstrap iterations.}
+\item{boot.iter}{Numeric. Number of bootstrap iterations. Default 500.}
 
 \item{uva.cut.off}{Numeric in \verb{[0, 1)}. wTO threshold for \code{EGAnet::UVA}. Default \code{0.20}.}
 

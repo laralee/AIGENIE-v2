@@ -202,8 +202,16 @@ on the user's machine.
 
 # Item type definitions
 trait.definitions <- list(
- neuroticism = "Neuroticism is a personality trait that describes one's tendency to experience negative emotions like anxiety, depression, irritability, anger, and self-consciousness.",
- extraversion = "Extraversion is a personality trait that describes people who are more focused on the external world than their internal experience."
+ neuroticism = paste0(
+   "Neuroticism is a personality trait that describes one's ",
+   "tendency to experience negative emotions like anxiety, ",
+   "depression, irritability, anger, and self-consciousness."
+ ),
+ extraversion = paste0(
+   "Extraversion is a personality trait that describes people ",
+   "who are more focused on the external world than their ",
+   "internal experience."
+ )
 )
 
 # Item attributes

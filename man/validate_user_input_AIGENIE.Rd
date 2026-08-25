@@ -50,6 +50,12 @@ validate_user_input_AIGENIE(
 
 \item{groq.API}{A string or NULL. Groq API key.}
 
+\item{anthropic.API}{Character. Anthropic API key. Can be NULL when Anthropic models are
+not used.}
+
+\item{jina.API}{Character. Jina AI API key. Can be NULL when Jina embeddings are not
+used.}
+
 \item{model}{A string. The user-specified language model. Will be resolved to a
 canonical model name using \code{normalize_model_name()}.}
 
@@ -95,6 +101,12 @@ Optional.}
 \item{embeddings.only}{A boolean. Whether to run in embedding-only mode.}
 
 \item{adaptive}{A boolean. Whether adaptive design logic should be applied.}
+
+\item{run.overall}{Logical. Whether to fit an additional pooled EGA to items retained
+after item-type-level reduction.}
+
+\item{all.together}{Logical. Whether to run the reduction pipeline on all item types
+together rather than separately.}
 
 \item{plot}{A boolean. Whether to display plots for visual diagnostics.}
 

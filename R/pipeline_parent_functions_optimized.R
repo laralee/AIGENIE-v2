@@ -8,13 +8,15 @@
 #' @param uni.method EGA uni.method
 #' @param corr Character. Correlation method. Default "auto" uses EGAnet's automatic detection.
 #' @param ncores Numeric. Number of cores for parallel processing. Default NULL uses EGAnet default.
-#' @param boot.iter Numeric. Number of bootstrap iterations. Default 100.
+#' @param boot.iter Numeric. Number of bootstrap iterations. Default 500.
 #' @param uva.cut.off Numeric in `[0, 1)`. wTO threshold for `EGAnet::UVA`. Default `0.20`.
 #' @param keep.org Logical. Whether to include original items and embeddings
 #' @param silently Logical. Whether to print progress statements
-#' @param plot Logicial. Whether to plot the network plots at the end
+#' @param plot Logical. Whether to plot the network plots at the end
 #'
-#' @return A named list containing pipeline results for this type
+#' @return A named list containing pipeline results for this type, including a
+#'   `filtering_audit` table with one row per removed item and a
+#'   `reduction_summary` table describing NMI and item-count changes by stage.
 run_pipeline_for_item_type <- function(embedding_matrix,
                                        items,
                                        type_name,
@@ -23,7 +25,7 @@ run_pipeline_for_item_type <- function(embedding_matrix,
                                        uni.method = "louvain",
                                        corr = "auto",
                                        ncores = NULL,
-                                       boot.iter = 100,
+                                       boot.iter = 500,
                                        uva.cut.off = 0.20,
                                        keep.org = FALSE,
                                        silently,
@@ -45,7 +47,9 @@ run_pipeline_for_item_type <- function(embedding_matrix,
       start_N = nrow(items),
       final_N = NULL,
       network_plot = NULL,
-      stability_plot = NULL
+      stability_plot = NULL,
+      filtering_audit = data.frame(),
+      reduction_summary = data.frame()
     )} else {
       result <- list(
         final_NMI = NULL,
@@ -60,7 +64,9 @@ run_pipeline_for_item_type <- function(embedding_matrix,
         start_N = nrow(items),
         final_N = NULL,
         network_plot = NULL,
-        stability_plot = NULL
+        stability_plot = NULL,
+        filtering_audit = data.frame(),
+        reduction_summary = data.frame()
       )
   }
 
@@ -109,6 +115,8 @@ run_pipeline_for_item_type <- function(embedding_matrix,
   result$UVA$n_sweeps <- uva_res$iterations
   result$UVA$redundant_pairs <- uva_res$redundant_pairs
 
+  # NEW
+  result$UVA$removal_log <- uva_res$removal_log
   # Apply UVA's surviving IDs to BOTH the full and sparse representations
   reduced_sparse <- uva_res$embedding_matrix
   kept_ids       <- colnames(reduced_sparse)
@@ -160,13 +168,14 @@ run_pipeline_for_item_type <- function(embedding_matrix,
 
   selected_embedding <- select_res$best_embedding_matrix
   result$embeddings$selected <- select_res$embedding_type
+  result$embeddings$selection_log <- select_res$log
   result$EGA.model_selected <- select_res$model
   post_uva_initial_nmi <- select_res$nmi
 
   # 5. BootEGA filtering
   boot_res <- iterative_stability_check(
     embedding_matrix = selected_embedding,
-    items = items,
+    items = reduced_items,
     cut.off = 0.75,
     model = select_res$model,
     algorithm = select_res$algorithm,
@@ -261,6 +270,55 @@ run_pipeline_for_item_type <- function(embedding_matrix,
   result$initial_EGA <- initial_res$ega
   result$initial_NMI <- initial_res$final_nmi
 
+  # ============================================================
+  # Filtering audit
+  # ============================================================
+
+  result$filtering_audit <- build_filtering_audit(
+    items = items,
+    type_name = type_name,
+    uva_log = uva_res$removal_log,
+    boot_removed = boot_res$items_removed,
+    initial_ega = result$initial_EGA,
+    selection_dropped = select_res$dropped_items,
+    final_dropped = final_res$items_dropped,
+    uva.cut.off = uva.cut.off,
+    stability.cut.off = 0.75
+  )
+
+  result$reduction_summary <- data.frame(
+
+    stage = c(
+      "Initial",
+      "Post-UVA / selected embedding",
+      "Post-bootEGA / final"
+    ),
+
+    N = c(
+      nrow(items),
+      ncol(selected_embedding),
+      nrow(result$final_items)
+    ),
+
+    NMI = c(
+      result$initial_NMI,
+      post_uva_initial_nmi,
+      result$final_NMI
+    ),
+
+    n_removed_at_stage = c(
+      0L,
+      nrow(items) - ncol(selected_embedding),
+      ncol(selected_embedding) - nrow(result$final_items)
+    ),
+
+    stringsAsFactors = FALSE
+  )
+
+  result$reduction_summary$delta_NMI <-
+    result$reduction_summary$NMI -
+    result$initial_NMI
+
   # For the stability plot's "pre-reduction" bootEGA baseline, keep the
   # SAME representation that was selected as optimal so the stability
   # comparison is apples-to-apples with the post-UVA bootEGA. (This is
@@ -342,7 +400,7 @@ run_pipeline_for_item_type <- function(embedding_matrix,
 #' @param EGA.uni.method EGA uni.method
 #' @param corr Character. Correlation method. Default "auto" uses EGAnet's automatic detection.
 #' @param ncores Numeric. Number of cores for parallel processing.
-#' @param boot.iter Numeric. Number of bootstrap iterations.
+#' @param boot.iter Numeric. Number of bootstrap iterations. Default 500.
 #' @param uva.cut.off Numeric in `[0, 1)`. wTO threshold for `EGAnet::UVA`. Default `0.20`.
 #' @param keep.org Logical. Whether to include original items and embeddings
 #' @param silently Logical. Whether to print progress statements
@@ -356,7 +414,7 @@ run_item_reduction_pipeline <- function(embedding_matrix,
                                         EGA.uni.method = "louvain",
                                         corr = "auto",
                                         ncores = NULL,
-                                        boot.iter = 100,
+                                        boot.iter = 500,
                                         uva.cut.off = 0.20,
                                         keep.org,
                                         silently,
@@ -410,23 +468,37 @@ run_item_reduction_pipeline <- function(embedding_matrix,
 
 
 
-#' Run full pipeline for all items in the sample
+#' Run a pooled post-reduction fit across all item types
 #'
-#' @param item_level AIGENIE results on the item level
-#' @param items all items generated for the initial item pool
-#' @param embeddings all embeddings created for the initial item pool
-#' @param model NULL, "glasso", or "TMFG"
-#' @param algorithm EGA algorithm
-#' @param uni.method EGA uni.method
-#' @param corr Character. Correlation method. Default "auto" uses EGAnet's automatic detection.
-#' @param ncores Numeric. Number of cores for parallel processing.
-#' @param boot.iter Numeric. Number of bootstrap iterations.
-#' @param uva.cut.off Numeric in `[0, 1)`. wTO threshold for `EGAnet::UVA`. Default `0.20`.
-#' @param keep.org Logical. Whether to include original items and embeddings
-#' @param silently Logical. Whether to print progress statements
-#' @param plot logical. Whether to plot the network plot
+#' `run.overall = TRUE` is a fit-only analysis: it takes the union of items that
+#' survived the type-level GENIE reductions and evaluates the pooled structure
+#' without applying additional UVA or bootEGA filtering. This is intentionally
+#' distinct from `all.together = TRUE`, which performs reduction on the entire
+#' item pool jointly.
 #'
-#' @return A named list containing pipeline results for this type
+#' @param item_level Named list of completed type-level GENIE results.
+#' @param items Original item data frame.
+#' @param embeddings Original full embedding matrix (columns = item IDs).
+#' @param model NULL, "glasso", or "TMFG". If NULL, the model with the highest
+#'   pooled post-reduction NMI on the full embeddings is selected; exact ties
+#'   prefer TMFG.
+#' @param algorithm EGA community detection algorithm.
+#' @param uni.method EGA unidimensionality method.
+#' @param corr Character. Correlation method. Default "auto".
+#' @param ncores Retained for backward compatibility; no additional bootEGA is
+#'   run in the fit-only overall analysis.
+#' @param boot.iter Retained for backward compatibility; no additional bootEGA
+#'   is run in the fit-only overall analysis. Default 500.
+#' @param uva.cut.off Retained for backward compatibility; no additional UVA is
+#'   run in the fit-only overall analysis.
+#' @param keep.org Logical. Whether to retain original items/embeddings.
+#' @param silently Logical. Whether to suppress progress output.
+#' @param plot Logical. Whether to print the pooled pre/post network comparison.
+#'
+#' @return A list with `overall_result` and `success`. `overall_result` contains
+#'   pooled pre/post EGA fits, NMI values, the union of type-level survivors, a
+#'   pooled filtering audit, and a pooled reduction summary.
+#' @keywords internal
 run_pipeline_for_all <- function(item_level,
                                  items,
                                  embeddings,
@@ -435,67 +507,189 @@ run_pipeline_for_all <- function(item_level,
                                  uni.method = "louvain",
                                  corr = "auto",
                                  ncores = NULL,
-                                 boot.iter = 100,
+                                 boot.iter = 500,
                                  uva.cut.off = 0.20,
                                  keep.org = FALSE,
                                  silently,
                                  plot) {
 
-  # Collapse all item types into a single "All" type so the same pipeline
-  # used per-type can be applied to the entire item pool. This guarantees
-  # that run_pipeline_for_all and run_pipeline_for_item_type execute the
-  # exact same steps (UVA -> select_optimal_embedding -> bootEGA filter ->
-  # final EGA -> initial EGA -> calc_final_stability -> network/stability plots).
-  items_all <- run_all_together(items)
+  # Union of the items retained by the independent type-level reductions.
+  surviving_ids <- unique(unlist(lapply(item_level, function(x) {
+    if (is.null(x) || is.null(x$final_items) || !"ID" %in% names(x$final_items)) {
+      return(character(0))
+    }
+    as.character(x$final_items$ID)
+  }), use.names = FALSE))
 
-  # Make sure embeddings columns are aligned to items$ID
-  if (!is.null(colnames(embeddings))) {
-    embeddings_all <- embeddings[, items_all$ID, drop = FALSE]
-  } else {
-    embeddings_all <- embeddings
-    colnames(embeddings_all) <- items_all$ID
+  if (length(surviving_ids) < 3L) {
+    warning("Overall fit requires at least three type-level surviving items.")
+    return(list(overall_result = NULL, success = FALSE))
   }
 
-  overall_result <- run_pipeline_for_item_type(
-    embedding_matrix = embeddings_all,
-    items            = items_all,
-    type_name        = "All",
-    model            = model,
-    algorithm        = algorithm,
-    uni.method       = uni.method,
-    corr             = corr,
-    ncores           = ncores,
-    boot.iter        = boot.iter,
-    uva.cut.off      = uva.cut.off,
-    keep.org         = keep.org,
-    silently         = silently,
-    plot             = plot
+  item_ids <- as.character(items$ID)
+  surviving_ids <- item_ids[item_ids %in% surviving_ids]
+  post_items <- items[match(surviving_ids, item_ids), , drop = FALSE]
+
+  if (!is.null(colnames(embeddings))) {
+    embeddings_pre <- embeddings[, item_ids, drop = FALSE]
+    embeddings_post <- embeddings_pre[, surviving_ids, drop = FALSE]
+  } else {
+    embeddings_pre <- embeddings
+    colnames(embeddings_pre) <- item_ids
+    embeddings_post <- embeddings_pre[, surviving_ids, drop = FALSE]
+  }
+
+  # Overall truth labels must distinguish the same attribute name appearing in
+  # different item types.
+  overall_labels_pre <- paste(items$type, items$attribute, sep = "::")
+  true_pre <- as.factor(as.integer(factor(overall_labels_pre)))
+  names(true_pre) <- item_ids
+
+  overall_labels_post <- paste(post_items$type, post_items$attribute, sep = "::")
+  true_post <- as.factor(as.integer(factor(overall_labels_post)))
+  names(true_post) <- as.character(post_items$ID)
+
+  # Select the overall network model using only the full post-reduction matrix.
+  models <- if (is.null(model)) c("glasso", "TMFG") else model
+  model_fits <- lapply(models, function(m) {
+    fit <- final_community_detection(
+      embedding_matrix = embeddings_post,
+      true_communities = true_post,
+      model = m,
+      algorithm = algorithm,
+      uni.method = uni.method,
+      corr = corr
+    )
+    list(model = m, fit = fit)
+  })
+
+  valid <- vapply(model_fits, function(z) isTRUE(z$fit$success), logical(1))
+  if (!any(valid)) {
+    warning("Overall post-reduction EGA failed for all candidate models.")
+    return(list(overall_result = NULL, success = FALSE))
+  }
+
+  model_fits <- model_fits[valid]
+  best <- model_fits[[1L]]
+  if (length(model_fits) > 1L) {
+    for (z in model_fits[-1L]) {
+      if (z$fit$final_nmi > best$fit$final_nmi ||
+          (z$fit$final_nmi == best$fit$final_nmi &&
+           z$model == "TMFG" && best$model != "TMFG")) {
+        best <- z
+      }
+    }
+  }
+
+  model_selected <- best$model
+  final_res <- best$fit
+
+  initial_res <- final_community_detection(
+    embedding_matrix = embeddings_pre,
+    true_communities = true_pre,
+    model = model_selected,
+    algorithm = algorithm,
+    uni.method = uni.method,
+    corr = corr
   )
 
-  # Restore the original (non-collapsed) attribute / type columns on the
-  # surviving items so downstream code that joins on real attributes works.
-  if (!is.null(overall_result$final_items) &&
-      "ID" %in% names(overall_result$final_items)) {
-    keep_ids <- overall_result$final_items$ID
-    restored <- items[items$ID %in% keep_ids, , drop = FALSE]
-    if ("EGA_com" %in% names(overall_result$final_items)) {
-      restored <- merge(
-        restored,
-        overall_result$final_items[, c("ID", "EGA_com"), drop = FALSE],
-        by = "ID", all.x = TRUE
-      )
-    }
-    overall_result$final_items <- restored
+  if (!isTRUE(initial_res$success)) {
+    warning("Overall pre-reduction EGA failed.")
+    return(list(overall_result = NULL, success = FALSE))
   }
+
+  final_com <- data.frame(
+    ID = names(final_res$communities),
+    EGA_com = final_res$communities,
+    stringsAsFactors = FALSE
+  )
+  final_items <- merge(post_items, final_com, by = "ID", all.x = TRUE, sort = FALSE)
+
+  # Combined type-level audit, but replace the within-type loading diagnostics
+  # with pooled pre-reduction network loadings when an overall fit is available.
+  filtering_audit <- combine_filtering_audits(item_level)
+  if (nrow(filtering_audit) > 0L) {
+    pooled_net <- network_loading_diagnostics(initial_res$ega, items)
+    net_cols <- grep("^pre_reduction_", names(filtering_audit), value = TRUE)
+    if (length(net_cols) > 0L) {
+      filtering_audit[net_cols] <- NULL
+    }
+    filtering_audit$.audit_order <- seq_len(nrow(filtering_audit))
+    filtering_audit <- merge(
+      filtering_audit,
+      pooled_net,
+      by = "ID",
+      all.x = TRUE,
+      sort = FALSE
+    )
+    filtering_audit <- filtering_audit[order(filtering_audit$.audit_order), , drop = FALSE]
+    filtering_audit$.audit_order <- NULL
+    rownames(filtering_audit) <- NULL
+  }
+
+  reduction_summary <- data.frame(
+    stage = c("Initial pooled", "Post-type-reduction pooled"),
+    N = c(nrow(items), nrow(final_items)),
+    NMI = c(initial_res$final_nmi, final_res$final_nmi),
+    n_removed_at_stage = c(0L, nrow(items) - nrow(post_items)),
+    stringsAsFactors = FALSE
+  )
+  reduction_summary$delta_NMI <- reduction_summary$NMI - initial_res$final_nmi
+
+  overall_result <- list(
+    final_NMI = final_res$final_nmi,
+    initial_NMI = initial_res$final_nmi,
+    embeddings = list(
+      selected = "full",
+      full = embeddings_post,
+      sparse = sparsify_embeddings(embeddings_pre)[, surviving_ids, drop = FALSE]
+    ),
+    EGA.model_selected = model_selected,
+    final_items = final_items,
+    final_EGA = final_res$ega,
+    initial_EGA = initial_res$ega,
+    start_N = nrow(items),
+    final_N = nrow(final_items),
+    network_plot = NULL,
+    stability_plot = NULL,
+    filtering_audit = filtering_audit,
+    reduction_summary = reduction_summary
+  )
 
   if (keep.org) {
-    overall_result$initial_items <- items
+    initial_com <- data.frame(
+      ID = names(initial_res$communities),
+      EGA_com = initial_res$communities,
+      stringsAsFactors = FALSE
+    )
+    overall_result$initial_items <- merge(items, initial_com, by = "ID", all.x = TRUE, sort = FALSE)
+    overall_result$embeddings$full_org <- embeddings_pre
+    overall_result$embeddings$sparse_org <- sparsify_embeddings(embeddings_pre)
   }
 
-  success <- !is.null(overall_result) &&
-             !is.null(overall_result$final_EGA) &&
-             !is.null(overall_result$initial_EGA)
+  overall_result$network_plot <- tryCatch(
+    plot_comparison(
+      p1 = overall_result$initial_EGA,
+      p2 = overall_result$final_EGA,
+      caption1 = "Network Plot for Items Pre-Reduction",
+      caption2 = "Network Plot for Items Post-Reduction",
+      nmi1 = overall_result$initial_NMI,
+      nmi2 = overall_result$final_NMI,
+      title = "Overall Network Before vs After Type-Level AIGENIE Reduction"
+    ),
+    error = function(e) {
+      warning("Failed to create overall network plot: ", conditionMessage(e))
+      NULL
+    }
+  )
 
-  return(list(overall_result = overall_result,
-              success        = success))
+  if (isTRUE(plot) && !is.null(overall_result$network_plot)) {
+    print(overall_result$network_plot)
+  }
+
+  if (!silently) {
+    cat("\nOverall post-reduction fit complete.")
+  }
+
+  list(overall_result = overall_result, success = TRUE)
 }

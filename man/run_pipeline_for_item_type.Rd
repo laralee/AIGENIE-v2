@@ -13,7 +13,7 @@ run_pipeline_for_item_type(
   uni.method = "louvain",
   corr = "auto",
   ncores = NULL,
-  boot.iter = 100,
+  boot.iter = 500,
   uva.cut.off = 0.2,
   keep.org = FALSE,
   silently,
@@ -37,7 +37,7 @@ run_pipeline_for_item_type(
 
 \item{ncores}{Numeric. Number of cores for parallel processing. Default NULL uses EGAnet default.}
 
-\item{boot.iter}{Numeric. Number of bootstrap iterations. Default 100.}
+\item{boot.iter}{Numeric. Number of bootstrap iterations. Default 500.}
 
 \item{uva.cut.off}{Numeric in \verb{[0, 1)}. wTO threshold for \code{EGAnet::UVA}. Default \code{0.20}.}
 
@@ -45,10 +45,12 @@ run_pipeline_for_item_type(
 
 \item{silently}{Logical. Whether to print progress statements}
 
-\item{plot}{Logicial. Whether to plot the network plots at the end}
+\item{plot}{Logical. Whether to plot the network plots at the end}
 }
 \value{
-A named list containing pipeline results for this type
+A named list containing pipeline results for this type, including a
+\code{filtering_audit} table with one row per removed item and a
+\code{reduction_summary} table describing NMI and item-count changes by stage.
 }
 \description{
 Run full pipeline for a single item type

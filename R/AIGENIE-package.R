@@ -121,17 +121,28 @@
 #' @author  Lara Lee Russell-Lasalandra, Hudson Golino, Alexander P. Christensen
 #' @references
 #'
-#' Russell-Lasalandra, L. L., Christensen, A. P., & Golino, H. (2025).
-#' Generative Psychometrics via AI-GENIE: Automatic Item Generation with Network-Integrated Evaluation.
-#' \emph{PsyArXiv}. \url{https://doi.org/10.31234/osf.io/fgbj4}
+#' Russell-Lasalandra, L. L., Christensen, A. P., & Golino, H. (2026).
+#' Generative psychometrics via AI-GENIE: Automatic item generation and validation with network-integrated evaluation.
+#' \emph{Behavior Research Methods}, \emph{58}(8), 217.
+#' \url{https://doi.org/10.3758/s13428-026-03082-1}
+#'
+#' Russell-Lasalandra, L. L., & Golino, H. (2026).
+#' Prompt engineering for scale development in generative psychometrics.
+#' \emph{PsyArXiv}. \url{https://osf.io/preprints/psyarxiv/znqkm_v2}
+#'
+#' Russell-Lasalandra, L. L., Golino, H., Garrido, L. E., & Christensen, A. P. (2026).
+#' The ultimate tutorial for AI-driven scale development in generative psychometrics:
+#' Releasing AIGENIE from its bottle.
+#' \emph{PsyArXiv}. \url{https://osf.io/preprints/psyarxiv/arfg3_v1}
+#'
+#' Garrido, L. E., Russell-Lasalandra, L. L., & Golino, H. (2025).
+#' Estimating dimensional structure in generative psychometrics:
+#' Comparing PCA and network methods using large language model item embeddings.
+#' \emph{PsyArXiv}. \url{https://osf.io/preprints/psyarxiv/2s7pw_v1}
 #'
 #' Golino, H., & Christensen, A. P. (2024).
 #' \emph{EGAnet: Exploratory Graph Analysis}.
 #' R package. \url{https://r-ega.net}
-#'
-#' Garrido, L., Russell-Lasalandra, L. L., & Golino, H. (2025).
-#' Estimating Dimensional Structure in Generative Psychometrics: Comparing PCA and Network Methods Using Large Language Model Item Embeddings.
-#' \emph{PsyArXiv} \url{https://doi.org/10.31234/osf.io/2s7pw}
 #'
 #' Golino, H. (2025).
 #' What I Learned with John: On the Depth of Language and How to Measure It with Large Language Models and Algorithm (Kolmogorov) Complexity.

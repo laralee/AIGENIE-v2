@@ -2,22 +2,26 @@
 % Please edit documentation in R/pipeline_helpers_optimized.R
 \name{build_return}
 \alias{build_return}
-\title{Build the proper return object based on if the initial items should be kept and if an overall analysis was run}
+\title{Build the final GENIE/AIGENIE return object}
 \usage{
 build_return(item_type_level, overall_result, run.overall, keep.org)
 }
 \arguments{
-\item{item_type_level}{A named list containing the results at the item type level}
+\item{item_type_level}{Named list containing results at the item-type level.}
 
-\item{overall_result}{A named list containing the results at the overall level}
+\item{overall_result}{Named list containing results at the overall level when
+\code{run.overall = TRUE}.}
 
-\item{run.overall}{A flag saying if a fit analysis should be run on the items overall}
+\item{run.overall}{Logical. Whether an overall post-reduction fit was run.}
 
-\item{keep.org}{A flag saying if the original items generated should be kept}
+\item{keep.org}{Logical. Retained for compatibility with callers; original
+items are already handled inside each pipeline result.}
 }
 \value{
-A named list of lists containing the appropriately formated return object
+A named list containing \code{item_type_level} and a combined
+\code{filtering_audit}; when \code{run.overall = TRUE}, also includes \code{overall}.
 }
 \description{
-Build the proper return object based on if the initial items should be kept and if an overall analysis was run
+Build the final GENIE/AIGENIE return object
 }
+\keyword{internal}

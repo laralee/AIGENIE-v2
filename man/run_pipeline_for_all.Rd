@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline_parent_functions_optimized.R
 \name{run_pipeline_for_all}
 \alias{run_pipeline_for_all}
-\title{Run full pipeline for all items in the sample}
+\title{Run a pooled post-reduction fit across all item types}
 \usage{
 run_pipeline_for_all(
   item_level,
@@ -13,7 +13,7 @@ run_pipeline_for_all(
   uni.method = "louvain",
   corr = "auto",
   ncores = NULL,
-  boot.iter = 100,
+  boot.iter = 500,
   uva.cut.off = 0.2,
   keep.org = FALSE,
   silently,
@@ -21,35 +21,47 @@ run_pipeline_for_all(
 )
 }
 \arguments{
-\item{item_level}{AIGENIE results on the item level}
+\item{item_level}{Named list of completed type-level GENIE results.}
 
-\item{items}{all items generated for the initial item pool}
+\item{items}{Original item data frame.}
 
-\item{embeddings}{all embeddings created for the initial item pool}
+\item{embeddings}{Original full embedding matrix (columns = item IDs).}
 
-\item{model}{NULL, "glasso", or "TMFG"}
+\item{model}{NULL, "glasso", or "TMFG". If NULL, the model with the highest
+pooled post-reduction NMI on the full embeddings is selected; exact ties
+prefer TMFG.}
 
-\item{algorithm}{EGA algorithm}
+\item{algorithm}{EGA community detection algorithm.}
 
-\item{uni.method}{EGA uni.method}
+\item{uni.method}{EGA unidimensionality method.}
 
-\item{corr}{Character. Correlation method. Default "auto" uses EGAnet's automatic detection.}
+\item{corr}{Character. Correlation method. Default "auto".}
 
-\item{ncores}{Numeric. Number of cores for parallel processing.}
+\item{ncores}{Retained for backward compatibility; no additional bootEGA is
+run in the fit-only overall analysis.}
 
-\item{boot.iter}{Numeric. Number of bootstrap iterations.}
+\item{boot.iter}{Retained for backward compatibility; no additional bootEGA
+is run in the fit-only overall analysis. Default 500.}
 
-\item{uva.cut.off}{Numeric in \verb{[0, 1)}. wTO threshold for \code{EGAnet::UVA}. Default \code{0.20}.}
+\item{uva.cut.off}{Retained for backward compatibility; no additional UVA is
+run in the fit-only overall analysis.}
 
-\item{keep.org}{Logical. Whether to include original items and embeddings}
+\item{keep.org}{Logical. Whether to retain original items/embeddings.}
 
-\item{silently}{Logical. Whether to print progress statements}
+\item{silently}{Logical. Whether to suppress progress output.}
 
-\item{plot}{logical. Whether to plot the network plot}
+\item{plot}{Logical. Whether to print the pooled pre/post network comparison.}
 }
 \value{
-A named list containing pipeline results for this type
+A list with \code{overall_result} and \code{success}. \code{overall_result} contains
+pooled pre/post EGA fits, NMI values, the union of type-level survivors, a
+pooled filtering audit, and a pooled reduction summary.
 }
 \description{
-Run full pipeline for all items in the sample
+\code{run.overall = TRUE} is a fit-only analysis: it takes the union of items that
+survived the type-level GENIE reductions and evaluates the pooled structure
+without applying additional UVA or bootEGA filtering. This is intentionally
+distinct from \code{all.together = TRUE}, which performs reduction on the entire
+item pool jointly.
 }
+\keyword{internal}

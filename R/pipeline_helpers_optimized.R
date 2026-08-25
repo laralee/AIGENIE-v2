@@ -72,7 +72,152 @@ sparsify_embeddings <- function(embedding_matrix,
 }
 
 
+#' Extract item-level UVA removal evidence
+#'
+#' Creates one row per item removed by UVA, retaining the strongest
+#' redundant relationship as the primary diagnostic and all redundant
+#' partners for auditability.
+#'
+#' @keywords internal
+extract_uva_removal_details <- function(
+    uva_object,
+    removed_ids,
+    remaining_ids,
+    items,
+    sweep,
+    cut.off
+) {
 
+  empty <- data.frame(
+    ID = character(),
+    uva_sweep = integer(),
+    redundant_with_ID = character(),
+    redundant_with_statement = character(),
+    wTO = numeric(),
+    all_redundant_with_IDs = character(),
+    all_redundant_wTO = character(),
+    stringsAsFactors = FALSE
+  )
+
+  pairwise <- tryCatch(
+    uva_object$wto$pairwise,
+    error = function(e) NULL
+  )
+
+  if (is.null(pairwise) || nrow(pairwise) == 0) {
+    return(empty)
+  }
+
+  required <- c("node_i", "node_j", "wto")
+
+  if (!all(required %in% names(pairwise))) {
+    return(empty)
+  }
+
+  removed_ids   <- as.character(removed_ids)
+  remaining_ids <- as.character(remaining_ids)
+  item_ids      <- as.character(items$ID)
+
+  out <- lapply(removed_ids, function(rid) {
+
+    hits <- pairwise[
+      as.character(pairwise$node_i) == rid |
+        as.character(pairwise$node_j) == rid,
+      ,
+      drop = FALSE
+    ]
+
+    if (nrow(hits) == 0) {
+      return(NULL)
+    }
+
+    hits$partner <- ifelse(
+      as.character(hits$node_i) == rid,
+      as.character(hits$node_j),
+      as.character(hits$node_i)
+    )
+
+    # Only relationships that actually exceed the UVA threshold
+    hits <- hits[
+      !is.na(hits$wto) &
+        hits$wto >= cut.off,
+      ,
+      drop = FALSE
+    ]
+
+    if (nrow(hits) == 0) {
+      return(NULL)
+    }
+
+    # Prefer a redundant partner that survived the current sweep.
+    # This gives the most interpretable "removed because redundant with X".
+    kept_hits <- hits[
+      hits$partner %in% remaining_ids,
+      ,
+      drop = FALSE
+    ]
+
+    candidates <- if (nrow(kept_hits) > 0) {
+      kept_hits
+    } else {
+      hits
+    }
+
+    best <- candidates[
+      which.max(candidates$wto),
+      ,
+      drop = FALSE
+    ]
+
+    all_hits <- hits[
+      order(hits$wto, decreasing = TRUE),
+      ,
+      drop = FALSE
+    ]
+
+    partner <- as.character(best$partner[1])
+
+    data.frame(
+      ID = rid,
+      uva_sweep = as.integer(sweep),
+
+      redundant_with_ID = partner,
+
+      redundant_with_statement =
+        items$statement[
+          match(partner, item_ids)
+        ],
+
+      wTO = as.numeric(best$wto[1]),
+
+      all_redundant_with_IDs =
+        paste(
+          unique(as.character(all_hits$partner)),
+          collapse = "; "
+        ),
+
+      all_redundant_wTO =
+        paste(
+          sprintf(
+            "%s=%.3f",
+            as.character(all_hits$partner),
+            as.numeric(all_hits$wto)
+          ),
+          collapse = "; "
+        ),
+
+      stringsAsFactors = FALSE
+    )
+  })
+
+  out <- out[!vapply(out, is.null, logical(1))]
+
+  if (length(out) == 0) {
+    return(empty)
+  }
+
+  do.call(rbind, out)
+}
 
 #' Reduce Redundancy via Iterative UVA (with Redundant Pair Logging)
 #'
@@ -86,10 +231,13 @@ sparsify_embeddings <- function(embedding_matrix,
 #'   threshold passed to `EGAnet::UVA`. Items with pairwise wTO at or above
 #'   this value are flagged as redundant. Default `0.20`.
 #'
-#' @return A list with the reduced matrix, sweep metadata, and redundancy log.
+#' @return A list with the reduced matrix, sweep metadata, human-readable
+#'   redundancy groups, and `removal_log`, a tidy item-level table containing
+#'   removed IDs, retained redundant partners, and wTO statistics.
 reduce_redundancy_uva <- function(embedding_matrix, items, corr = "auto",
                                   uva.cut.off = 0.20) {
 
+  all_removal_details <- list()
   original_embedding <- embedding_matrix
   current_matrix <- embedding_matrix
   count <- 1
@@ -203,7 +351,7 @@ reduce_redundancy_uva <- function(embedding_matrix, items, corr = "auto",
         reduce = TRUE,
         reduce.method = "remove",
         auto = TRUE,
-        verbose = TRUE
+        verbose = FALSE
       )
     }, error = function(e) {
       warning(paste("UVA failed at iteration", count, ":", conditionMessage(e)))
@@ -234,7 +382,19 @@ reduce_redundancy_uva <- function(embedding_matrix, items, corr = "auto",
     reduced_ids <- colnames(uva$reduced_data)
     removed_this_sweep <- setdiff(current_ids, reduced_ids)
     all_removed_items <- c(all_removed_items, removed_this_sweep)
+    removal_details <- extract_uva_removal_details(
+      uva_object = uva,
+      removed_ids = removed_this_sweep,
+      remaining_ids = reduced_ids,
+      items = items,
+      sweep = count,
+      cut.off = uva.cut.off
+    )
 
+    if (nrow(removal_details) > 0) {
+      all_removal_details[[length(all_removal_details) + 1L]] <-
+        removal_details
+    }
     # Update current matrix for next iteration
     current_matrix <- uva$reduced_data
     count <- count + 1
@@ -259,12 +419,31 @@ reduce_redundancy_uva <- function(embedding_matrix, items, corr = "auto",
     attr(current_matrix, "UVA_count") <- count - 1
     attr(current_matrix, "items_removed") <- length(all_removed_items)
 
+    removal_log <- if (length(all_removal_details) > 0) {
+      do.call(rbind, all_removal_details)
+    } else {
+      data.frame(
+        ID = character(),
+        uva_sweep = integer(),
+        redundant_with_ID = character(),
+        redundant_with_statement = character(),
+        wTO = numeric(),
+        all_redundant_with_IDs = character(),
+        all_redundant_wTO = character(),
+        stringsAsFactors = FALSE
+      )
+    }
+
     return(list(
       embedding_matrix = current_matrix,
       iterations = count - 1,
       items_removed = length(all_removed_items),
       removed_items = all_removed_items,
       redundant_pairs = redundant_df,
+
+      # NEW
+      removal_log = removal_log,
+
       success = success
     ))
   } else {
@@ -274,9 +453,19 @@ reduce_redundancy_uva <- function(embedding_matrix, items, corr = "auto",
     return(list(
       embedding_matrix = original_embedding,
       iterations = 0,
-      items_removed = 0,
+      items_removed = 0L,
       removed_items = character(0),
       redundant_pairs = redundant_df,
+      removal_log = data.frame(
+        ID = character(),
+        uva_sweep = integer(),
+        redundant_with_ID = character(),
+        redundant_with_statement = character(),
+        wTO = numeric(),
+        all_redundant_with_IDs = character(),
+        all_redundant_wTO = character(),
+        stringsAsFactors = FALSE
+      ),
       success = FALSE
     ))
   }
@@ -299,6 +488,11 @@ reduce_redundancy_uva <- function(embedding_matrix, items, corr = "auto",
 #' @param algorithm Community detection algorithm (e.g., "walktrap").
 #' @param uni.method Unidimensionality method (e.g., "louvain").
 #' @param corr Character. Correlation method. Default "auto" uses EGAnet's automatic detection.
+#'
+#' @details
+#' Full embeddings are evaluated before sparse embeddings. Therefore, exact
+#' within-model NMI ties retain the full representation. When `model = NULL`,
+#' exact cross-model NMI ties prefer TMFG.
 #'
 #' @return A list with best embedding, model, communities, NMI, and comparison log.
 select_optimal_embedding <- function(embedding_matrix,
@@ -419,11 +613,14 @@ select_optimal_embedding <- function(embedding_matrix,
 #' @param uni.method Unidimensionality method.
 #' @param corr Character. Correlation method. Default "auto" uses EGAnet's automatic detection.
 #' @param ncores Numeric. Number of cores for parallel processing. Default NULL uses EGAnet default.
-#' @param boot.iter Numeric. Number of bootstrap iterations. Default 100.
+#' @param boot.iter Numeric. Number of bootstrap iterations. Default 500.
 #' @param EGA.type Type of EGA (default "EGA.fit").
 #' @param silently Logical. Suppress output.
 #'
-#' @return A list containing the final embedding, boot objects, items removed per iteration, etc.
+#' @return A list containing the final embedding, initial/final bootEGA objects,
+#'   and an `items_removed` data frame. For each removed item, the table retains
+#'   the bootstrap run, empirical item stability, cutoff, stability deficit, and
+#'   removal reason. Zero-removal runs return an empty data frame, not `NULL`.
 iterative_stability_check <- function(embedding_matrix,
                                       items,
                                       cut.off = 0.75,
@@ -432,14 +629,20 @@ iterative_stability_check <- function(embedding_matrix,
                                       uni.method,
                                       corr = "auto",
                                       ncores = NULL,
-                                      boot.iter = 100,
+                                      boot.iter = 500,
                                       EGA.type = "EGA.fit",
                                       silently) {
 
   successful <- TRUE
   count <- 1
   current_embedding <- embedding_matrix
-  all_removed <- data.frame()
+  # Stable empty schema so zero-removal runs return a data frame rather than NULL.
+  all_removed <- items[0, , drop = FALSE]
+  all_removed$boot_run_removed <- integer(0)
+  all_removed$item_stability <- numeric(0)
+  all_removed$stability_cutoff <- numeric(0)
+  all_removed$stability_deficit <- numeric(0)
+  all_removed$boot_removal_reason <- character(0)
 
   if(!silently){
     cat("Beginning BootEGA stability check... ")
@@ -480,7 +683,7 @@ iterative_stability_check <- function(embedding_matrix,
       boot1 = NULL,
       boot2 = NULL,
       iterations = 0,
-      items_removed = NULL,
+      items_removed = all_removed,
       successful = FALSE
     ))
   }
@@ -501,15 +704,31 @@ iterative_stability_check <- function(embedding_matrix,
       break
     }
 
-    # Remove NA - with safe check
+    # Treat missing item-stability estimates as explicit removals so every
+    # filtered item has an auditable reason.
     na_check <- is.na(emp_dims)
     if (any(na_check, na.rm = TRUE)) {
+      na_ids <- colnames(current_embedding)[na_check]
+      na_removed <- items[
+        as.character(items$ID) %in% na_ids,
+        ,
+        drop = FALSE
+      ]
+      na_removed$boot_run_removed <- count
+      na_removed$item_stability <- NA_real_
+      na_removed$stability_cutoff <- cut.off
+      na_removed$stability_deficit <- NA_real_
+      na_removed$boot_removal_reason <- "missing_stability"
+      all_removed <- rbind(all_removed, na_removed)
+
       valid_idx <- which(!na_check)
-      if (length(valid_idx) == 0) {
+      if (length(valid_idx) == 0L) {
         warning("All items have NA stability. Returning current results.")
+        current_embedding <- current_embedding[, FALSE, drop = FALSE]
         successful <- FALSE
         break
       }
+
       current_embedding <- current_embedding[, valid_idx, drop = FALSE]
       emp_dims <- emp_dims[valid_idx]
     }
@@ -531,9 +750,36 @@ iterative_stability_check <- function(embedding_matrix,
     }
 
     # Log removed items for this run
-    removed_df <- items[items$ID %in% unstable_ids, , drop = FALSE]
+    # Map empirical stability to item ID BEFORE changing the matrix
+    stability_by_id <- stats::setNames(
+      as.numeric(emp_dims),
+      colnames(current_embedding)
+    )
+
+    removed_df <- items[
+      as.character(items$ID) %in% unstable_ids,
+      ,
+      drop = FALSE
+    ]
+
     removed_df$boot_run_removed <- count
-    all_removed <- rbind(all_removed, removed_df)
+
+    removed_df$item_stability <- unname(
+      stability_by_id[
+        as.character(removed_df$ID)
+      ]
+    )
+
+    removed_df$stability_cutoff <- cut.off
+
+    removed_df$stability_deficit <-
+      cut.off - removed_df$item_stability
+    removed_df$boot_removal_reason <- "below_cutoff"
+
+    all_removed <- rbind(
+      all_removed,
+      removed_df
+    )
 
     # Filter matrix
     current_embedding <- current_embedding[, -unstable_idx, drop = FALSE]
@@ -576,7 +822,7 @@ iterative_stability_check <- function(embedding_matrix,
     boot1 = boot1,
     boot2 = current_boot,
     iterations = count,
-    items_removed = if (nrow(all_removed) > 0) all_removed else NULL,
+    items_removed = all_removed,
     successful = successful
   ))
 }
@@ -586,36 +832,38 @@ iterative_stability_check <- function(embedding_matrix,
 
 #' Run bootstrapped EGA on the initial set of items
 #'
-#' @param result The running results of the item type level so far.
-#' @param data The embedding matrix to be used (either the sparse or full)
-#' @param EGA.algorithm The EGA algorithm to be used
-#' @param EGA.uni.method The EGA unidensinoality that should be used
-#' @param corr Character. Correlation method. Default "auto".
-#' @param ncores Numeric. Number of cores for parallel processing.
-#' @param boot.iter Numeric. Number of bootstrap iterations.
-#' @param silently A logical flag that decides whether to print output
-#' @param EGA.type Type of EGA (default "EGA.fit").
+#' Computes a pre-reduction bootEGA baseline for stability plots using the same
+#' EGA settings and bootstrap count as the reduction pipeline.
 #'
-#' @return An updated `results` object with the initial stability object added
+#' @param result The running results object for one item type.
+#' @param data Numeric embedding matrix used for the pre-reduction stability fit.
+#' @param EGA.algorithm Community detection algorithm.
+#' @param EGA.uni.method Unidimensionality method.
+#' @param corr Character. Correlation method. Default "auto".
+#' @param ncores Numeric or NULL. Number of cores for parallel processing.
+#' @param boot.iter Numeric. Number of bootstrap iterations. Default 500.
+#' @param silently Logical. Whether to suppress progress output.
+#' @param EGA.type Type of EGA passed to `EGAnet::bootEGA`. Default "EGA.fit".
+#'
+#' @return A list with `successful` and the updated `result`.
+#' @keywords internal
 calc_final_stability <- function(result,
                                  data,
                                  EGA.algorithm,
                                  EGA.uni.method,
                                  corr = "auto",
                                  ncores = NULL,
-                                 boot.iter = 100,
+                                 boot.iter = 500,
                                  silently,
-                                 EGA.type = "EGA.fit"){
-  if(!silently){
-    cat("\n")
-    cat(paste0("Finding network stability of the original item pool...\n"))
-  }
+                                 EGA.type = "EGA.fit") {
 
-  successful <- TRUE
+  if (!silently) {
+    cat("\n")
+    cat("Finding network stability of the original item pool...\n")
+  }
 
   x <- result
 
-  # Build bootEGA arguments
   boot_args <- list(
     data = data,
     corr = corr,
@@ -630,34 +878,34 @@ calc_final_stability <- function(result,
     seed = 123
   )
 
-  # Add ncores only if specified
   if (!is.null(ncores)) {
     boot_args$ncores <- ncores
   }
 
-  try_stab <- tryCatch({
-    do.call(EGAnet::bootEGA, boot_args)
-  }, error = function(e) {
-    warning("Stability check failed. Returning partial results.")
-    return(list(successful=FALSE))
-  })
+  boot_obj <- tryCatch(
+    do.call(EGAnet::bootEGA, boot_args),
+    error = function(e) {
+      warning(
+        "Stability check failed: ",
+        conditionMessage(e),
+        ". Returning partial results."
+      )
+      NULL
+    }
+  )
 
+  if (is.null(boot_obj)) {
+    return(list(successful = FALSE, result = x))
+  }
 
-  # Add the initial stability
-  x$bootEGA$initial_boot_with_redundancies <- try_stab
+  x$bootEGA$initial_boot_with_redundancies <- boot_obj
 
-
-  if(!silently){
+  if (!silently) {
     cat("Done.")
   }
 
-
-  return(list(successful = successful,
-              result = x))
+  list(successful = TRUE, result = x)
 }
-
-
-
 
 
 #' Print Results
@@ -890,42 +1138,405 @@ final_community_detection <- function(embedding_matrix,
 
 #' Modify the items data frame to run the reduction on all items together
 #'
-#' @param items A data frame containing the items either generated by AI or supplied by the user
+#' @param items A data frame containing the items either generated by AI or supplied by the user.
 #'
-#' @return A data frame whose "attribute" and "type" columns have been modifies so that the entire sample runs together
-run_all_together <- function(items){
+#' @return A data frame whose `attribute` and `type` columns are modified so the
+#'   entire sample can be analyzed as one item type.
+#' @keywords internal
+run_all_together <- function(items) {
 
   temp <- paste(items$type, items$attribute)
   items$attribute <- temp
   items$type <- rep("All", nrow(items))
 
-  return(items)
-
+  items
 }
 
 
-#' Build the proper return object based on if the initial items should be kept and if an overall analysis was run
+#' Compute pre-reduction item-level network-loading diagnostics
 #'
-#' @param item_type_level A named list containing the results at the item type level
-#' @param overall_result A named list containing the results at the overall level
-#' @param run.overall A flag saying if a fit analysis should be run on the items overall
-#' @param keep.org A flag saying if the original items generated should be kept
+#' Uses `EGAnet::net.loads()` on an EGA solution and reports, for each item, the
+#' loading on its assigned EGA community, its strongest loading on another
+#' community, and the absolute primary-to-cross-loading gap. These statistics
+#' are descriptive audit information; they are not item-removal criteria.
 #'
-#' @return A named list of lists containing the appropriately formated return object
-build_return <- function(item_type_level, overall_result,
-                         run.overall, keep.org) {
+#' @param ega_object An `EGAnet::EGA.fit` object or a standard EGA object.
+#' @param items Data frame containing at least `ID`.
+#'
+#' @return A data frame with one row per item represented in the EGA network.
+#' @keywords internal
+network_loading_diagnostics <- function(ega_object, items) {
 
-  # When run.overall = FALSE, GENIE should NOT return an overall result.
-  # (This branch is only reached when all.together = FALSE -- the
-  # all.together = TRUE path returns earlier in main_v2.R and never
-  # calls build_return.)
-  if(!run.overall){
-    return(list(item_type_level = item_type_level))
+  empty <- data.frame(
+    ID = character(),
+    pre_reduction_EGA_community = integer(),
+    pre_reduction_primary_network_loading = numeric(),
+    pre_reduction_primary_network_loading_abs = numeric(),
+    pre_reduction_strongest_cross_community = character(),
+    pre_reduction_strongest_cross_loading = numeric(),
+    pre_reduction_strongest_cross_loading_abs = numeric(),
+    pre_reduction_loading_gap = numeric(),
+    stringsAsFactors = FALSE
+  )
+
+  if (is.null(ega_object)) {
+    return(empty)
   }
 
-  return(list(item_type_level = item_type_level,
-              overall = overall_result))
+  ega <- if (!is.null(ega_object$EGA)) ega_object$EGA else ega_object
+
+  if (is.null(ega$network) || is.null(ega$wc)) {
+    return(empty)
+  }
+
+  network <- ega$network
+  wc <- ega$wc
+  ids <- colnames(network)
+
+  if (is.null(ids)) {
+    ids <- rownames(network)
+  }
+
+  if (is.null(ids)) {
+    return(empty)
+  }
+
+  netloads <- tryCatch(
+    EGAnet::net.loads(network, wc = wc),
+    error = function(e) NULL
+  )
+
+  if (is.null(netloads) || is.null(netloads$std)) {
+    return(empty)
+  }
+
+  L <- as.matrix(netloads$std)
+
+  # Align loading rows to the network item IDs.
+  if (!is.null(rownames(L))) {
+    keep <- ids %in% rownames(L)
+    ids <- ids[keep]
+    if (length(ids) == 0L) return(empty)
+    L <- L[ids, , drop = FALSE]
+  } else {
+    if (nrow(L) != length(ids)) return(empty)
+    rownames(L) <- ids
+  }
+
+  # Align community memberships to the same IDs.
+  if (!is.null(names(wc))) {
+    wc <- wc[ids]
+  } else {
+    if (length(wc) != nrow(L)) return(empty)
+    names(wc) <- ids
+  }
+
+  get_loading_column <- function(community) {
+    if (is.na(community)) return(NA_integer_)
+
+    if (!is.null(colnames(L)) && as.character(community) %in% colnames(L)) {
+      return(match(as.character(community), colnames(L)))
+    }
+
+    idx <- suppressWarnings(as.integer(community))
+    if (is.na(idx) || idx < 1L || idx > ncol(L)) NA_integer_ else idx
+  }
+
+  out <- lapply(seq_along(ids), function(i) {
+    community <- wc[i]
+    primary_col <- get_loading_column(community)
+
+    if (is.na(primary_col)) return(NULL)
+
+    primary <- as.numeric(L[i, primary_col])
+    other_cols <- setdiff(seq_len(ncol(L)), primary_col)
+
+    if (length(other_cols) > 0L) {
+      vals <- abs(L[i, other_cols])
+      if (all(is.na(vals))) {
+        cross_col <- NA_integer_
+      } else {
+        cross_col <- other_cols[which.max(replace(vals, is.na(vals), -Inf))]
+      }
+    } else {
+      cross_col <- NA_integer_
+    }
+
+    if (is.na(cross_col)) {
+      cross <- NA_real_
+      cross_community <- NA_character_
+    } else {
+      cross <- as.numeric(L[i, cross_col])
+      cross_community <- if (!is.null(colnames(L))) {
+        as.character(colnames(L)[cross_col])
+      } else {
+        as.character(cross_col)
+      }
+    }
+
+    data.frame(
+      ID = as.character(ids[i]),
+      pre_reduction_EGA_community = suppressWarnings(as.integer(community)),
+      pre_reduction_primary_network_loading = primary,
+      pre_reduction_primary_network_loading_abs = abs(primary),
+      pre_reduction_strongest_cross_community = cross_community,
+      pre_reduction_strongest_cross_loading = cross,
+      pre_reduction_strongest_cross_loading_abs = abs(cross),
+      pre_reduction_loading_gap = if (is.na(cross)) NA_real_ else abs(primary) - abs(cross),
+      stringsAsFactors = FALSE
+    )
+  })
+
+  out <- Filter(Negate(is.null), out)
+  if (length(out) == 0L) return(empty)
+
+  out <- do.call(rbind, out)
+  rownames(out) <- NULL
+  out
 }
 
 
+#' Build GENIE item-filtering audit table
+#'
+#' Combines the stage-specific evidence that caused item removal with
+#' pre-reduction network-loading diagnostics. UVA rows report wTO redundancy
+#' evidence and the retained redundant partner. bootEGA rows report empirical
+#' item stability. Network loadings are descriptive context and are not used as
+#' filtering thresholds.
+#'
+#' @param items Data frame for one item type with `ID`, `statement`, and `attribute`.
+#' @param type_name Character label for the item type.
+#' @param uva_log Item-level removal log returned by `reduce_redundancy_uva()`.
+#' @param boot_removed Data frame of removals returned by `iterative_stability_check()`.
+#' @param initial_ega Pre-reduction EGA object computed on the full dense embeddings.
+#' @param selection_dropped Character vector of items left unassigned during embedding/model selection.
+#' @param final_dropped Character vector of items left unassigned by the final EGA.
+#' @param uva.cut.off Numeric wTO cutoff used by UVA.
+#' @param stability.cut.off Numeric item-stability cutoff used by bootEGA.
+#'
+#' @return A tidy data frame with one row per filtered item and the evidence for
+#'   its removal.
+#' @keywords internal
+build_filtering_audit <- function(items,
+                                  type_name,
+                                  uva_log,
+                                  boot_removed,
+                                  initial_ega,
+                                  uva.cut.off,
+                                  stability.cut.off = 0.75,
+                                  selection_dropped = character(0),
+                                  final_dropped = character(0)) {
 
+  item_ids <- as.character(items$ID)
+
+  uva_rows <- NULL
+  if (!is.null(uva_log) && is.data.frame(uva_log) && nrow(uva_log) > 0L) {
+    uva_rows <- data.frame(
+      ID = as.character(uva_log$ID),
+      type = type_name,
+      attribute = as.character(items$attribute[match(as.character(uva_log$ID), item_ids)]),
+      statement = as.character(items$statement[match(as.character(uva_log$ID), item_ids)]),
+      removal_stage = "UVA",
+      reason = sprintf("Redundancy: wTO = %.3f >= %.2f", uva_log$wTO, uva.cut.off),
+      diagnostic_name = "wTO",
+      diagnostic_value = as.numeric(uva_log$wTO),
+      cutoff = as.numeric(uva.cut.off),
+      uva_sweep = as.integer(uva_log$uva_sweep),
+      redundant_with_ID = as.character(uva_log$redundant_with_ID),
+      redundant_with_statement = as.character(uva_log$redundant_with_statement),
+      redundant_wTO = as.numeric(uva_log$wTO),
+      all_redundant_with_IDs = as.character(uva_log$all_redundant_with_IDs),
+      all_redundant_wTO = as.character(uva_log$all_redundant_wTO),
+      boot_run = NA_integer_,
+      item_stability = NA_real_,
+      stability_deficit = NA_real_,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  boot_rows <- NULL
+  if (!is.null(boot_removed) && is.data.frame(boot_removed) && nrow(boot_removed) > 0L) {
+    stability <- if ("item_stability" %in% names(boot_removed)) {
+      as.numeric(boot_removed$item_stability)
+    } else {
+      rep(NA_real_, nrow(boot_removed))
+    }
+
+    boot_cutoff <- if ("stability_cutoff" %in% names(boot_removed)) {
+      as.numeric(boot_removed$stability_cutoff)
+    } else {
+      rep(as.numeric(stability.cut.off), nrow(boot_removed))
+    }
+
+    deficit <- if ("stability_deficit" %in% names(boot_removed)) {
+      as.numeric(boot_removed$stability_deficit)
+    } else {
+      boot_cutoff - stability
+    }
+
+    boot_kind <- if ("boot_removal_reason" %in% names(boot_removed)) {
+      as.character(boot_removed$boot_removal_reason)
+    } else {
+      rep("below_cutoff", nrow(boot_removed))
+    }
+
+    boot_reason <- ifelse(
+      boot_kind == "missing_stability",
+      "Instability: item stability could not be estimated (NA)",
+      sprintf("Instability: item stability = %.3f < %.2f", stability, boot_cutoff)
+    )
+
+    boot_rows <- data.frame(
+      ID = as.character(boot_removed$ID),
+      type = type_name,
+      attribute = as.character(boot_removed$attribute),
+      statement = as.character(boot_removed$statement),
+      removal_stage = "bootEGA",
+      reason = boot_reason,
+      diagnostic_name = "item_stability",
+      diagnostic_value = stability,
+      cutoff = boot_cutoff,
+      uva_sweep = NA_integer_,
+      redundant_with_ID = NA_character_,
+      redundant_with_statement = NA_character_,
+      redundant_wTO = NA_real_,
+      all_redundant_with_IDs = NA_character_,
+      all_redundant_wTO = NA_character_,
+      boot_run = as.integer(boot_removed$boot_run_removed),
+      item_stability = stability,
+      stability_deficit = deficit,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  make_unassigned_rows <- function(ids, stage, reason_text) {
+    ids <- unique(as.character(ids))
+    ids <- ids[nzchar(ids) & !is.na(ids)]
+    if (length(ids) == 0L) return(NULL)
+
+    data.frame(
+      ID = ids,
+      type = type_name,
+      attribute = as.character(items$attribute[match(ids, item_ids)]),
+      statement = as.character(items$statement[match(ids, item_ids)]),
+      removal_stage = stage,
+      reason = reason_text,
+      diagnostic_name = "EGA_community",
+      diagnostic_value = NA_real_,
+      cutoff = NA_real_,
+      uva_sweep = NA_integer_,
+      redundant_with_ID = NA_character_,
+      redundant_with_statement = NA_character_,
+      redundant_wTO = NA_real_,
+      all_redundant_with_IDs = NA_character_,
+      all_redundant_wTO = NA_character_,
+      boot_run = NA_integer_,
+      item_stability = NA_real_,
+      stability_deficit = NA_real_,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  selection_rows <- make_unassigned_rows(
+    selection_dropped,
+    "EGA_selection",
+    "Unassigned: no EGA community returned during embedding/model selection"
+  )
+
+  final_rows <- make_unassigned_rows(
+    final_dropped,
+    "final_EGA",
+    "Unassigned: no EGA community returned in the final structural solution"
+  )
+
+  rows <- Filter(
+    Negate(is.null),
+    list(uva_rows, selection_rows, boot_rows, final_rows)
+  )
+  if (length(rows) == 0L) {
+    return(data.frame())
+  }
+
+  audit <- do.call(rbind, rows)
+
+  # Add network-loadings from the full pre-reduction EGA. These statistics are
+  # explanatory diagnostics and should not be interpreted as removal rules.
+  net <- network_loading_diagnostics(initial_ega, items)
+
+  audit$.audit_order <- seq_len(nrow(audit))
+  audit <- merge(audit, net, by = "ID", all.x = TRUE, sort = FALSE)
+  audit <- audit[order(audit$.audit_order), , drop = FALSE]
+  audit$.audit_order <- NULL
+  rownames(audit) <- NULL
+
+  audit
+}
+
+
+#' Combine filtering audits across item types
+#'
+#' @param item_type_level Named list of item-type pipeline results.
+#'
+#' @return A single data frame containing all available item-level filtering
+#'   audit rows across item types.
+#' @keywords internal
+combine_filtering_audits <- function(item_type_level) {
+
+  audits <- lapply(item_type_level, function(x) {
+    if (is.null(x) ||
+        is.null(x$filtering_audit) ||
+        !is.data.frame(x$filtering_audit) ||
+        nrow(x$filtering_audit) == 0L) {
+      return(NULL)
+    }
+    x$filtering_audit
+  })
+
+  audits <- Filter(Negate(is.null), audits)
+  if (length(audits) == 0L) return(data.frame())
+
+  out <- do.call(rbind, audits)
+  rownames(out) <- NULL
+  out
+}
+
+
+#' Build the final GENIE/AIGENIE return object
+#'
+#' @param item_type_level Named list containing results at the item-type level.
+#' @param overall_result Named list containing results at the overall level when
+#'   `run.overall = TRUE`.
+#' @param run.overall Logical. Whether an overall post-reduction fit was run.
+#' @param keep.org Logical. Retained for compatibility with callers; original
+#'   items are already handled inside each pipeline result.
+#'
+#' @return A named list containing `item_type_level` and a combined
+#'   `filtering_audit`; when `run.overall = TRUE`, also includes `overall`.
+#' @keywords internal
+build_return <- function(item_type_level,
+                         overall_result,
+                         run.overall,
+                         keep.org) {
+
+  filtering_audit <- combine_filtering_audits(item_type_level)
+
+  # When an overall post-reduction fit was requested, prefer its pooled
+  # pre-reduction network-loading diagnostics in the top-level audit.
+  if (isTRUE(run.overall) &&
+      !is.null(overall_result) &&
+      is.data.frame(overall_result$filtering_audit) &&
+      nrow(overall_result$filtering_audit) > 0L) {
+    filtering_audit <- overall_result$filtering_audit
+  }
+
+  out <- list(
+    item_type_level = item_type_level,
+    filtering_audit = filtering_audit
+  )
+
+  if (isTRUE(run.overall)) {
+    out$overall <- overall_result
+  }
+
+  out
+}
