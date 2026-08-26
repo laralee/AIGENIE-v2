@@ -7,7 +7,7 @@ Date: 2026-08-26
 Authors@R: c(
     person("Lara", "Russell-Lasalandra",
            email = "llr7cb@virginia.edu",
-           role = c("aut", "cre", "cph"),
+           role = c("aut", "cre" "cph"),
            comment = c(ORCID = "0009-0000-3014-1937")),
     person("Alexander", "Christensen",
            email = "alexander.christensen@vanderbilt.edu",
@@ -15,10 +15,10 @@ Authors@R: c(
            comment = c(ORCID = "0000-0002-9798-7037")),
     person("Hudson", "Golino",
            email = "hfg9s@virginia.edu",
-           role = c("aut", "cph"),
+           role = c("aut", "cre" "cph"),
            comment = c(ORCID = "0000-0002-1601-1447"))
     )
-Maintainer: Lara Russell-Lasalandra <llr7cb@virginia.edu>
+Maintainer: Hudson Golino <hfg9s@virginia.edu>
 Description: Automated psychological scale development and structural
     validation using large language models (LLMs) and network psychometric
     methods. Implements the AI-GENIE framework (Automatic Item Generation
