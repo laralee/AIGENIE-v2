@@ -1,3 +1,29 @@
+# AIGENIE 2.1.2
+
+## New features
+- Added a publication-ready `filtering_audit` with item-level filtering
+  provenance for UVA and bootEGA decisions.
+- Added per-type `reduction_summary` outputs.
+- Added pre-reduction network-loading diagnostics for filtered items.
+- Added bundled GPT-5.4 items and frozen embeddings for reproducible GENIE
+  examples.
+- Added an official filtering-audit vignette and pkgdown documentation site.
+
+## Reproducibility
+- Restored correct UVA redundancy detection with current EGAnet versions.
+- Set bootEGA reduction to 500 bootstrap iterations.
+- Full embeddings now win exact full/sparse NMI ties within an EGA model.
+- `run.overall = TRUE` now performs a pooled post-reduction fit without
+  applying a second item-reduction pass.
+
+## CRAN preparation
+- Updated `Authors@R` so Lara Russell-Lasalandra and Hudson Golino are
+  explicitly represented as package authors/co-creators and copyright
+  holders; Alexander Christensen remains a full author and copyright holder.
+- Added a formal AIGENIE software citation with the CRAN package DOI.
+- Updated the methodology citation to the published 2026
+  *Behavior Research Methods* article.
+
 # AIGENIE 2.1.0
 
 ## New Features

@@ -108,8 +108,8 @@ results <- AIGENIE(
 \section{Getting API Keys}{
 
 \itemize{
-\item \strong{OpenAI}: \url{https://platform.openai.com/api-keys}
-\item \strong{Anthropic}: \url{https://console.anthropic.com/}
+\item \strong{OpenAI}: the OpenAI account dashboard
+\item \strong{Anthropic}: \url{https://platform.claude.com/docs/en/manage-claude/authentication}
 \item \strong{Groq}: \url{https://console.groq.com/} (free tier available)
 \item \strong{Jina AI}: \url{https://jina.ai/} (free tier available)
 \item \strong{HuggingFace}: \url{https://huggingface.co/settings/tokens}
@@ -128,7 +128,7 @@ and \pkg{reticulate} for Python integration.
 Russell-Lasalandra, L. L., Christensen, A. P., & Golino, H. (2026).
 Generative psychometrics via AI-GENIE: Automatic item generation and validation with network-integrated evaluation.
 \emph{Behavior Research Methods}, \emph{58}(8), 217.
-\url{https://doi.org/10.3758/s13428-026-03082-1}
+\doi{10.3758/s13428-026-03082-1}
 
 Russell-Lasalandra, L. L., & Golino, H. (2026).
 Prompt engineering for scale development in generative psychometrics.
@@ -148,13 +148,9 @@ Golino, H., & Christensen, A. P. (2024).
 \emph{EGAnet: Exploratory Graph Analysis}.
 R package. \url{https://r-ega.net}
 
-Golino, H. (2025).
-What I Learned with John: On the Depth of Language and How to Measure It with Large Language Models and Algorithm (Kolmogorov) Complexity.
-\emph{PsyArXiv}. \url{https://doi.org/10.31234/osf.io/b92n5}
-
 Golino, H., Garrido, L., & Russell-Lasalandra, L. L. (2026).
 Optimizing the Landscape of LLM Embeddings with Dynamic Exploratory Graph Analysis for Generative Psychometrics: A Monte Carlo Study.
-\emph{arXiv}. arXiv:2601.17010. \url{https://doi.org/10.48550/arXiv.2601.17010}
+\emph{arXiv}. arXiv:2601.17010. \doi{10.48550/arXiv.2601.17010}
 
 Christensen, A. P., & Golino, H. (2021a).
 Estimating the stability of the number of factors via Bootstrap Exploratory Graph Analysis: A tutorial.
@@ -187,12 +183,12 @@ Useful links:
 \code{\link[EGAnet:EGAnet-package]{EGAnet}} for the underlying EGA analysis methods.
 }
 \author{
-\strong{Maintainer}: Lara Russell-Lasalandra \email{llr7cb@virginia.edu} (\href{https://orcid.org/0009-0000-3014-1937}{ORCID})
+\strong{Maintainer}: Lara Russell-Lasalandra \email{llr7cb@virginia.edu} (\href{https://orcid.org/0009-0000-3014-1937}{ORCID}) [copyright holder]
 
 Authors:
 \itemize{
-  \item Alexander Christensen (\href{https://orcid.org/0000-0002-9798-7037}{ORCID})
-  \item Hudson Golino (\href{https://orcid.org/0000-0002-1601-1447}{ORCID})
+  \item Alexander Christensen \email{alexander.christensen@vanderbilt.edu} (\href{https://orcid.org/0000-0002-9798-7037}{ORCID}) [copyright holder]
+  \item Hudson Golino \email{hfg9s@virginia.edu} (\href{https://orcid.org/0000-0002-1601-1447}{ORCID}) [copyright holder]
 }
 
 
