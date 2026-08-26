@@ -2,16 +2,23 @@ Package: AIGENIE
 Type: Package
 Title: Automatic Item Generation and Validation via Network-Integrated
     Evaluation
-Version: 2.1.1
-Date: 2026-08-24
+Version: 2.1.2
+Date: 2026-08-26
 Authors@R: c(
-    person("Lara", "Russell-Lasalandra", email = "llr7cb@virginia.edu",
-           role = "cre", comment = c(ORCID = "0009-0000-3014-1937")),
-    person("Alexander", "Christensen", role = "aut",
+    person("Lara", "Russell-Lasalandra",
+           email = "llr7cb@virginia.edu",
+           role = c("aut", "cre", "cph"),
+           comment = c(ORCID = "0009-0000-3014-1937")),
+    person("Alexander", "Christensen",
+           email = "alexander.christensen@vanderbilt.edu",
+           role = c("aut", "cph"),
            comment = c(ORCID = "0000-0002-9798-7037")),
-    person("Hudson", "Golino", role = "aut",
+    person("Hudson", "Golino",
+           email = "hfg9s@virginia.edu",
+           role = c("aut", "cph"),
            comment = c(ORCID = "0000-0002-1601-1447"))
     )
+Maintainer: Lara Russell-Lasalandra <llr7cb@virginia.edu>
 Description: Automated psychological scale development and structural
     validation using large language models (LLMs) and network psychometric
     methods. Implements the AI-GENIE framework (Automatic Item Generation
