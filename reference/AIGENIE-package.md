@@ -142,9 +142,10 @@ For computing semantic embeddings, AIGENIE supports:
 
 ## Getting API Keys
 
-- **OpenAI**: <https://platform.openai.com/api-keys>
+- **OpenAI**: the OpenAI account dashboard
 
-- **Anthropic**: <https://console.anthropic.com/>
+- **Anthropic**:
+  <https://platform.claude.com/docs/en/manage-claude/authentication>
 
 - **Groq**: <https://console.groq.com/> (free tier available)
 
@@ -164,7 +165,8 @@ analysis and reticulate for Python integration.
 Russell-Lasalandra, L. L., Christensen, A. P., & Golino, H. (2026).
 Generative psychometrics via AI-GENIE: Automatic item generation and
 validation with network-integrated evaluation. *Behavior Research
-Methods*, *58*(8), 217. <https://doi.org/10.3758/s13428-026-03082-1>
+Methods*, *58*(8), 217.
+[doi:10.3758/s13428-026-03082-1](https://doi.org/10.3758/s13428-026-03082-1)
 
 Russell-Lasalandra, L. L., & Golino, H. (2026). Prompt engineering for
 scale development in generative psychometrics. *PsyArXiv*.
@@ -183,15 +185,11 @@ PCA and network methods using large language model item embeddings.
 Golino, H., & Christensen, A. P. (2024). *EGAnet: Exploratory Graph
 Analysis*. R package. <https://r-ega.net>
 
-Golino, H. (2025). What I Learned with John: On the Depth of Language
-and How to Measure It with Large Language Models and Algorithm
-(Kolmogorov) Complexity. *PsyArXiv*.
-<https://doi.org/10.31234/osf.io/b92n5>
-
 Golino, H., Garrido, L., & Russell-Lasalandra, L. L. (2026). Optimizing
 the Landscape of LLM Embeddings with Dynamic Exploratory Graph Analysis
 for Generative Psychometrics: A Monte Carlo Study. *arXiv*.
-arXiv:2601.17010. <https://doi.org/10.48550/arXiv.2601.17010>
+arXiv:2601.17010.
+[doi:10.48550/arXiv.2601.17010](https://doi.org/10.48550/arXiv.2601.17010)
 
 Christensen, A. P., & Golino, H. (2021a). Estimating the stability of
 the number of factors via Bootstrap Exploratory Graph Analysis: A
@@ -232,13 +230,15 @@ underlying EGA analysis methods.
 
 ## Author
 
-**Maintainer**: Lara Russell-Lasalandra <llr7cb@virginia.edu>
-([ORCID](https://orcid.org/0009-0000-3014-1937))
+**Maintainer**: Hudson Golino <hfg9s@virginia.edu>
+([ORCID](https://orcid.org/0000-0002-1601-1447)) \[copyright holder\]
 
 Authors:
 
-- Alexander Christensen ([ORCID](https://orcid.org/0000-0002-9798-7037))
+- Lara Russell-Lasalandra <llr7cb@virginia.edu>
+  ([ORCID](https://orcid.org/0009-0000-3014-1937)) \[copyright holder\]
 
-- Hudson Golino ([ORCID](https://orcid.org/0000-0002-1601-1447))
+- Alexander Christensen <alexander.christensen@vanderbilt.edu>
+  ([ORCID](https://orcid.org/0000-0002-9798-7037)) \[copyright holder\]
 
 Lara Lee Russell-Lasalandra, Hudson Golino, Alexander P. Christensen

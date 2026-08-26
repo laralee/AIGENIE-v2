@@ -13,7 +13,7 @@ locally using transformer models instead of API calls."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">AIGENIE</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -70,6 +70,8 @@ locally using transformer models instead of API calls.</p>
 <span>  EGA.algorithm <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  EGA.uni.method <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  uva.cut.off <span class="op">=</span> <span class="fl">0.2</span>,</span>
+<span>  boot.iter <span class="op">=</span> <span class="fl">500</span>,</span>
+<span>  ncores <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  embeddings.only <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  run.overall <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  all.together <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -145,6 +147,19 @@ All columns must be character type except ID (numeric or character allowed).</p>
 <dt id="arg-uva-cut-off">uva.cut.off<a class="anchor" aria-label="anchor" href="#arg-uva-cut-off"></a></dt>
 <dd><p>Numeric in <code>[0, 1)</code>. wTO threshold passed to <code><a href="https://rdrr.io/pkg/EGAnet/man/UVA.html" class="external-link">EGAnet::UVA</a></code> for the
 redundancy-reduction step (default: 0.20). Lower values remove more items.</p></dd>
+
+
+<dt id="arg-boot-iter">boot.iter<a class="anchor" aria-label="anchor" href="#arg-boot-iter"></a></dt>
+<dd><p>A positive integer (optional, default: 500). Number of
+bootstrap iterations used by <code><a href="https://rdrr.io/pkg/EGAnet/man/bootEGA.html" class="external-link">EGAnet::bootEGA</a></code> during item-stability
+analyses and iterative stability filtering.</p></dd>
+
+
+<dt id="arg-ncores">ncores<a class="anchor" aria-label="anchor" href="#arg-ncores"></a></dt>
+<dd><p>A positive integer or <code>NULL</code> (optional, default: <code>NULL</code>).
+Number of processing cores passed to <code><a href="https://rdrr.io/pkg/EGAnet/man/bootEGA.html" class="external-link">EGAnet::bootEGA</a></code>. When <code>NULL</code>,
+AIGENIE does not pass an <code>ncores</code> argument, preserving the current
+default behavior of <code><a href="https://rdrr.io/pkg/EGAnet/man/bootEGA.html" class="external-link">EGAnet::bootEGA</a></code>.</p></dd>
 
 
 <dt id="arg-embeddings-only">embeddings.only<a class="anchor" aria-label="anchor" href="#arg-embeddings-only"></a></dt>
@@ -261,25 +276,26 @@ Results are <strong>not</strong> split into <code>item_type_level</code> and <co
     <p>Golino, H. F., &amp; Epskamp, S. (2017). Exploratory graph analysis: A new approach
 for estimating the number of dimensions in psychological research.
 <em>PLOS ONE, 12</em>(6), e0174035.
-<a href="https://doi.org/10.1371/journal.pone.0174035" class="external-link">https://doi.org/10.1371/journal.pone.0174035</a></p>
+<a href="https://doi.org/10.1371/journal.pone.0174035" class="external-link">doi:10.1371/journal.pone.0174035</a></p>
 <p>Christensen, A. P., Garrido, L. E., &amp; Golino, H. (2023). Unique variable
 analysis: A network psychometrics method to detect local dependence.
 <em>Multivariate Behavioral Research, 58</em>(6), 1165–1182.
-<a href="https://doi.org/10.1080/00273171.2023.2194606" class="external-link">https://doi.org/10.1080/00273171.2023.2194606</a></p>
+<a href="https://doi.org/10.1080/00273171.2023.2194606" class="external-link">doi:10.1080/00273171.2023.2194606</a></p>
 <p>Christensen, A. P., &amp; Golino, H. (2021). Estimating the stability of
 psychological dimensions via bootstrap exploratory graph analysis:
 A Monte Carlo simulation and tutorial.
 <em>Psych, 3</em>(3), 479–500.
-<a href="https://doi.org/10.3390/psych3030032" class="external-link">https://doi.org/10.3390/psych3030032</a></p>
+<a href="https://doi.org/10.3390/psych3030032" class="external-link">doi:10.3390/psych3030032</a></p>
 <p>Danon, L., Díaz-Guilera, A., Duch, J., &amp; Arenas, A. (2005). Comparing
 community structure identification.
 <em>Journal of Statistical Mechanics: Theory and Experiment, 2005</em>(9),
 P09008.
-<a href="https://doi.org/10.1088/1742-5468/2005/09/P09008" class="external-link">https://doi.org/10.1088/1742-5468/2005/09/P09008</a></p>
-<p>Russell-Lasalandra, L. L., Christensen, A. P., &amp; Golino, H. (2024).
+<a href="https://doi.org/10.1088/1742-5468/2005/09/P09008" class="external-link">doi:10.1088/1742-5468/2005/09/P09008</a></p>
+<p>Russell-Lasalandra, L. L., Christensen, A. P., &amp; Golino, H. F. (2026).
 Generative psychometrics via AI-GENIE: Automatic item generation and
-validation via network-integrated evaluation.
-<a href="https://osf.io/preprints/psyarxiv/fgbj4_v2" class="external-link">https://osf.io/preprints/psyarxiv/fgbj4_v2</a>.</p>
+validation with network-integrated evaluation.
+<em>Behavior Research Methods</em>, <em>58</em>(8), 217.
+<a href="https://doi.org/10.3758/s13428-026-03082-1" class="external-link">doi:10.3758/s13428-026-03082-1</a></p>
     </div>
 
     <div class="section level2">

@@ -39,6 +39,8 @@ AIGENIE(
   EGA.algorithm = NULL,
   EGA.uni.method = NULL,
   uva.cut.off = 0.2,
+  boot.iter = 500,
+  ncores = NULL,
   keep.org = FALSE,
   items.only = FALSE,
   embeddings.only = FALSE,
@@ -106,7 +108,8 @@ AIGENIE(
   A character string or NULL (optional, default: NULL). The Anthropic
   API key for authentication with Anthropic's Claude models. Required
   when using Claude models (e.g., "sonnet", "opus", "haiku") for item
-  generation. Get a key at <https://console.anthropic.com/>.
+  generation. Get a key at
+  <https://platform.claude.com/docs/en/manage-claude/authentication>.
 
 - jina.API:
 
@@ -284,10 +287,10 @@ AIGENIE(
   A character string (optional, default: "louvain"). Specifies the
   method for handling unidimensional structures in EGA. Valid options
   are: "expand" (expands correlation matrix with four variables
-  correlated 0.50; if dimensions ≤ 2, data are unidimensional), "LE"
-  (applies Leading Eigenvector algorithm; if dimensions = 1, uses LE
-  solution), or "louvain" (applies Louvain algorithm; if dimensions = 1,
-  uses Louvain solution). This parameter is rarely modified by users.
+  correlated 0.50; if dimensions \\\le\\ 2, data are unidimensional),
+  "LE" (applies Leading Eigenvector algorithm; if dimensions = 1, uses
+  LE solution), or "louvain" (applies Louvain algorithm; if dimensions =
+  1, uses Louvain solution). This parameter is rarely modified by users.
 
 - uva.cut.off:
 
@@ -297,6 +300,22 @@ AIGENIE(
   redundancy-reduction step. Items with pairwise wTO at or above this
   value are flagged as redundant. Lower values are more aggressive
   (remove more items); higher values are more conservative.
+
+- boot.iter:
+
+  A positive integer (optional, default: 500). Number of bootstrap
+  iterations used by
+  [`EGAnet::bootEGA`](https://rdrr.io/pkg/EGAnet/man/bootEGA.html)
+  during item-stability analyses and iterative stability filtering.
+
+- ncores:
+
+  A positive integer or `NULL` (optional, default: `NULL`). Number of
+  processing cores passed to
+  [`EGAnet::bootEGA`](https://rdrr.io/pkg/EGAnet/man/bootEGA.html). When
+  `NULL`, AIGENIE does not pass an `ncores` argument, preserving the
+  current default behavior of
+  [`EGAnet::bootEGA`](https://rdrr.io/pkg/EGAnet/man/bootEGA.html).
 
 - keep.org:
 
@@ -520,27 +539,28 @@ function returns a single named list (applies to the full — possibly
 Golino, H. F., & Epskamp, S. (2017). Exploratory graph analysis: A new
 approach for estimating the number of dimensions in psychological
 research. *PLOS ONE, 12*(6), e0174035.
-<https://doi.org/10.1371/journal.pone.0174035>
+[doi:10.1371/journal.pone.0174035](https://doi.org/10.1371/journal.pone.0174035)
 
 Christensen, A. P., Garrido, L. E., & Golino, H. (2023). Unique variable
 analysis: A network psychometrics method to detect local dependence.
 *Multivariate Behavioral Research, 58*(6), 1165–1182.
-<https://doi.org/10.1080/00273171.2023.2194606>
+[doi:10.1080/00273171.2023.2194606](https://doi.org/10.1080/00273171.2023.2194606)
 
 Christensen, A. P., & Golino, H. (2021). Estimating the stability of
 psychological dimensions via bootstrap exploratory graph analysis: A
 Monte Carlo simulation and tutorial. *Psych, 3*(3), 479–500.
-<https://doi.org/10.3390/psych3030032>
+[doi:10.3390/psych3030032](https://doi.org/10.3390/psych3030032)
 
 Danon, L., Díaz-Guilera, A., Duch, J., & Arenas, A. (2005). Comparing
 community structure identification. *Journal of Statistical Mechanics:
 Theory and Experiment, 2005*(9), P09008.
-<https://doi.org/10.1088/1742-5468/2005/09/P09008>
+[doi:10.1088/1742-5468/2005/09/P09008](https://doi.org/10.1088/1742-5468/2005/09/P09008)
 
-Russell-Lasalandra, L. L., Christensen, A. P., & Golino, H. (2024).
+Russell-Lasalandra, L. L., Christensen, A. P., & Golino, H. F. (2026).
 Generative psychometrics via AI-GENIE: Automatic item generation and
-validation via network-integrated evaluation.
-<https://osf.io/preprints/psyarxiv/fgbj4_v2>.
+validation with network-integrated evaluation. *Behavior Research
+Methods*, *58*(8), 217.
+[doi:10.3758/s13428-026-03082-1](https://doi.org/10.3758/s13428-026-03082-1)
 
 ## Examples
 

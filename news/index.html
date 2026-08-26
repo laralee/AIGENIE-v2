@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">AIGENIE</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,6 +42,32 @@
       <small>Source: <a href="https://github.com/laralee/AIGENIE/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.1.2" id="aigenie-212">AIGENIE 2.1.2<a class="anchor" aria-label="anchor" href="#aigenie-212"></a></h2>
+<div class="section level3">
+<h3 id="new-features-2-1-2">New features<a class="anchor" aria-label="anchor" href="#new-features-2-1-2"></a></h3>
+<ul><li>Exposed <code>boot.iter</code> and <code>ncores</code> in <code><a href="../reference/AIGENIE.html">AIGENIE()</a></code>, <code><a href="../reference/GENIE.html">GENIE()</a></code>, <code><a href="../reference/local_AIGENIE.html">local_AIGENIE()</a></code>, and <code><a href="../reference/local_GENIE.html">local_GENIE()</a></code>. The <code>boot.iter</code> default remains 500, matching the current reduction pipeline; <code>ncores = NULL</code> preserves EGAnet’s existing default core behavior.</li>
+<li>Added a publication-ready <code>filtering_audit</code> with item-level filtering provenance for UVA and bootEGA decisions.</li>
+<li>Added per-type <code>reduction_summary</code> outputs.</li>
+<li>Added pre-reduction network-loading diagnostics for filtered items.</li>
+<li>Added bundled GPT-5.4 items and frozen embeddings for reproducible GENIE examples.</li>
+<li>Added an official filtering-audit vignette and pkgdown documentation site.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="reproducibility-2-1-2">Reproducibility<a class="anchor" aria-label="anchor" href="#reproducibility-2-1-2"></a></h3>
+<ul><li>Restored correct UVA redundancy detection with current EGAnet versions.</li>
+<li>Set bootEGA reduction to 500 bootstrap iterations.</li>
+<li>Full embeddings now win exact full/sparse NMI ties within an EGA model.</li>
+<li>
+<code>run.overall = TRUE</code> now performs a pooled post-reduction fit without applying a second item-reduction pass.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="cran-preparation-2-1-2">CRAN preparation<a class="anchor" aria-label="anchor" href="#cran-preparation-2-1-2"></a></h3>
+<ul><li>Updated <code>Authors@R</code> so Lara Russell-Lasalandra and Hudson Golino are explicitly represented as package authors/co-creators and copyright holders; Alexander Christensen remains a full author and copyright holder.</li>
+<li>Added a formal AIGENIE software citation with the CRAN package DOI.</li>
+<li>Updated the methodology citation to the published 2026 <em>Behavior Research Methods</em> article.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.1.0" id="aigenie-210">AIGENIE 2.1.0<a class="anchor" aria-label="anchor" href="#aigenie-210"></a></h2>
 <div class="section level3">
