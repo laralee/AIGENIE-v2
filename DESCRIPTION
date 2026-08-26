@@ -7,7 +7,7 @@ Date: 2026-08-26
 Authors@R: c(
     person("Lara", "Russell-Lasalandra",
            email = "llr7cb@virginia.edu",
-           role = c("aut", "cre" "cph"),
+           role = c("aut", "cph"),
            comment = c(ORCID = "0009-0000-3014-1937")),
     person("Alexander", "Christensen",
            email = "alexander.christensen@vanderbilt.edu",
