@@ -160,10 +160,19 @@
 #'
 #' @param EGA.uni.method A character string (optional, default: "louvain"). Specifies
 #'   the method for handling unidimensional structures in EGA. Valid options are: "expand"
-#'   (expands correlation matrix with four variables correlated 0.50; if dimensions ≤ 2,
+#'   (expands correlation matrix with four variables correlated 0.50; if dimensions \eqn{\le}{<=} 2,
 #'   data are unidimensional), "LE" (applies Leading Eigenvector algorithm; if dimensions = 1,
 #'   uses LE solution), or "louvain" (applies Louvain algorithm; if dimensions = 1, uses
 #'   Louvain solution). This parameter is rarely modified by users.
+#'
+#' @param boot.iter A positive integer (optional, default: 500). Number of
+#'   bootstrap iterations used by `EGAnet::bootEGA` during item-stability
+#'   analyses and iterative stability filtering.
+#'
+#' @param ncores A positive integer or `NULL` (optional, default: `NULL`).
+#'   Number of processing cores passed to `EGAnet::bootEGA`. When `NULL`,
+#'   AIGENIE does not pass an `ncores` argument, preserving the current
+#'   default behavior of `EGAnet::bootEGA`.
 #'
 #' @param uva.cut.off A numeric value in `[0, 1)` (optional, default: `0.20`). The weighted
 #'   topological overlap threshold passed to `EGAnet::UVA` during the redundancy-reduction
@@ -562,6 +571,8 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
                        # EGA parameters
                        EGA.model = NULL, EGA.algorithm = NULL, EGA.uni.method = NULL,
                        uva.cut.off = 0.20,
+                       boot.iter = 500,
+                       ncores = NULL,
 
                        # Flags
                        keep.org = FALSE, items.only = FALSE, embeddings.only = FALSE,
@@ -573,6 +584,30 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
   # Validate uva.cut.off (kept separate from validate_user_input_AIGENIE to
   # avoid expanding the positional signature of the validator).
   uva.cut.off_validate(uva.cut.off)
+
+  # Validate public bootEGA controls.
+  if (length(boot.iter) != 1L ||
+      !is.numeric(boot.iter) ||
+      is.na(boot.iter) ||
+      !is.finite(boot.iter) ||
+      boot.iter < 1 ||
+      boot.iter != as.integer(boot.iter)) {
+    stop("`boot.iter` must be a single positive integer.")
+  }
+  boot.iter <- as.integer(boot.iter)
+
+  if (!is.null(ncores)) {
+    if (length(ncores) != 1L ||
+        !is.numeric(ncores) ||
+        is.na(ncores) ||
+        !is.finite(ncores) ||
+        ncores < 1 ||
+        ncores != as.integer(ncores)) {
+      stop("`ncores` must be NULL or a single positive integer.")
+    }
+    ncores <- as.integer(ncores)
+  }
+
 
   # Validate all params and reassign params
   validation <- validate_user_input_AIGENIE(item.attributes, openai.API, hf.token,
@@ -681,7 +716,7 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
                                                   items=items_to_run, EGA.model = EGA.model$overall,
                                                   EGA.algorithm = EGA.algorithm$overall,
                                                   EGA.uni.method = EGA.uni.method$overall,
-                                                  uva.cut.off = uva.cut.off, keep.org = keep.org,
+                                                  boot.iter = boot.iter, ncores = ncores, uva.cut.off = uva.cut.off, keep.org = keep.org,
                                                   silently = silently, plot = plot)
 
     if(!try_item_level$success){
@@ -713,7 +748,7 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
                     items=items, EGA.model = EGA.model$type,
                     EGA.algorithm = EGA.algorithm$type,
                     EGA.uni.method = EGA.uni.method$type,
-                    uva.cut.off = uva.cut.off, keep.org = keep.org,
+                    boot.iter = boot.iter, ncores = ncores, uva.cut.off = uva.cut.off, keep.org = keep.org,
                     silently = silently, plot = plot)
 
   if(!try_item_level$success){
@@ -733,7 +768,7 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
                             embeddings = embeddings, model = EGA.model$overall,
                             algorithm = EGA.algorithm$overall,
                             uni.method = EGA.uni.method$overall,
-                            uva.cut.off = uva.cut.off,
+                            boot.iter = boot.iter, ncores = ncores, uva.cut.off = uva.cut.off,
                             keep.org = keep.org, silently = silently, plot = plot)
 
     if(!try_overall_result$success && !silently){
@@ -786,6 +821,15 @@ AIGENIE <- function(item.attributes, openai.API=NULL, hf.token=NULL, # required 
 #' @param EGA.model Network model ("glasso", "TMFG", or NULL for auto)
 #' @param EGA.algorithm Community detection algorithm (default: "walktrap" when there is one trait and "louvain" when there are multiple)
 #' @param EGA.uni.method Unidimensionality method (default: "louvain")
+#' @param boot.iter A positive integer (optional, default: 500). Number of
+#'   bootstrap iterations used by `EGAnet::bootEGA` during item-stability
+#'   analyses and iterative stability filtering.
+#'
+#' @param ncores A positive integer or `NULL` (optional, default: `NULL`).
+#'   Number of processing cores passed to `EGAnet::bootEGA`. When `NULL`,
+#'   AIGENIE does not pass an `ncores` argument, preserving the current
+#'   default behavior of `EGAnet::bootEGA`.
+#'
 #' @param uva.cut.off Numeric in `[0, 1)`. wTO threshold passed to `EGAnet::UVA` for the
 #'   redundancy-reduction step (default: 0.20). Lower values remove more items.
 #' @param n.ctx Context window size (default: 4096)
@@ -982,6 +1026,8 @@ local_AIGENIE <- function(
   EGA.algorithm = NULL,
   EGA.uni.method = NULL,
   uva.cut.off = 0.20,
+  boot.iter = 500,
+  ncores = NULL,
 
   # Local model parameters
   n.ctx = 4096,
@@ -1005,6 +1051,30 @@ local_AIGENIE <- function(
 
   # Validate uva.cut.off (kept separate from the positional validator)
   uva.cut.off_validate(uva.cut.off)
+
+  # Validate public bootEGA controls.
+  if (length(boot.iter) != 1L ||
+      !is.numeric(boot.iter) ||
+      is.na(boot.iter) ||
+      !is.finite(boot.iter) ||
+      boot.iter < 1 ||
+      boot.iter != as.integer(boot.iter)) {
+    stop("`boot.iter` must be a single positive integer.")
+  }
+  boot.iter <- as.integer(boot.iter)
+
+  if (!is.null(ncores)) {
+    if (length(ncores) != 1L ||
+        !is.numeric(ncores) ||
+        is.na(ncores) ||
+        !is.finite(ncores) ||
+        ncores < 1 ||
+        ncores != as.integer(ncores)) {
+      stop("`ncores` must be NULL or a single positive integer.")
+    }
+    ncores <- as.integer(ncores)
+  }
+
 
   # Step 1: Validate all inputs
   validation <- validate_user_input_local_AIGENIE(
@@ -1123,7 +1193,7 @@ local_AIGENIE <- function(
                                                   items=items_to_run, EGA.model = EGA.model$overall,
                                                   EGA.algorithm = EGA.algorithm$overall,
                                                   EGA.uni.method = EGA.uni.method$overall,
-                                                  uva.cut.off = uva.cut.off, keep.org = keep.org,
+                                                  boot.iter = boot.iter, ncores = ncores, uva.cut.off = uva.cut.off, keep.org = keep.org,
                                                   silently = silently, plot = plot)
 
     if(!try_item_level$success){
@@ -1154,7 +1224,7 @@ local_AIGENIE <- function(
   try_item_level <- run_item_reduction_pipeline(
     embedding_matrix = embeddings, items=items,
     EGA.model = EGA.model$type, EGA.algorithm = EGA.algorithm$type,
-    EGA.uni.method = EGA.uni.method$type, uva.cut.off = uva.cut.off,
+    EGA.uni.method = EGA.uni.method$type, boot.iter = boot.iter, ncores = ncores, uva.cut.off = uva.cut.off,
     keep.org = keep.org, silently = silently,
     plot = plot
   )
@@ -1171,7 +1241,7 @@ local_AIGENIE <- function(
       item_level = item_level, items = items,
       embeddings = embeddings, model = EGA.model$overall,
       algorithm = EGA.algorithm$overall, uni.method = EGA.uni.method$overall,
-      uva.cut.off = uva.cut.off,
+      boot.iter = boot.iter, ncores = ncores, uva.cut.off = uva.cut.off,
       keep.org = keep.org, silently = silently, plot = plot
     )
 
@@ -1234,6 +1304,15 @@ local_AIGENIE <- function(
 #' @param EGA.model EGA network estimation model ("glasso", "TMFG", or NULL for auto-selection)
 #' @param EGA.algorithm EGA community detection algorithm ("walktrap", "leiden", "louvain")
 #' @param EGA.uni.method Unidimensionality assessment method ("louvain", "expand", "LE")
+#' @param boot.iter A positive integer (optional, default: 500). Number of
+#'   bootstrap iterations used by `EGAnet::bootEGA` during item-stability
+#'   analyses and iterative stability filtering.
+#'
+#' @param ncores A positive integer or `NULL` (optional, default: `NULL`).
+#'   Number of processing cores passed to `EGAnet::bootEGA`. When `NULL`,
+#'   AIGENIE does not pass an `ncores` argument, preserving the current
+#'   default behavior of `EGAnet::bootEGA`.
+#'
 #' @param uva.cut.off Numeric in `[0, 1)`. wTO threshold passed to `EGAnet::UVA` for the
 #'   redundancy-reduction step (default: 0.20). Lower values remove more items.
 #' @param embeddings.only If `TRUE`, return embeddings and stop (skip network analysis)
@@ -1674,6 +1753,8 @@ GENIE <- function(
     EGA.algorithm = NULL,
     EGA.uni.method = NULL,
     uva.cut.off = 0.20,
+    boot.iter = 500,
+    ncores = NULL,
 
     # Control flags
     embeddings.only = FALSE,
@@ -1685,6 +1766,30 @@ GENIE <- function(
 
   # Validate uva.cut.off (kept separate from validate_user_input_GENIE)
   uva.cut.off_validate(uva.cut.off)
+
+  # Validate public bootEGA controls.
+  if (length(boot.iter) != 1L ||
+      !is.numeric(boot.iter) ||
+      is.na(boot.iter) ||
+      !is.finite(boot.iter) ||
+      boot.iter < 1 ||
+      boot.iter != as.integer(boot.iter)) {
+    stop("`boot.iter` must be a single positive integer.")
+  }
+  boot.iter <- as.integer(boot.iter)
+
+  if (!is.null(ncores)) {
+    if (length(ncores) != 1L ||
+        !is.numeric(ncores) ||
+        is.na(ncores) ||
+        !is.finite(ncores) ||
+        ncores < 1 ||
+        ncores != as.integer(ncores)) {
+      stop("`ncores` must be NULL or a single positive integer.")
+    }
+    ncores <- as.integer(ncores)
+  }
+
 
   # Step 1: Comprehensive input validation
   validation <- validate_user_input_GENIE(
@@ -1764,7 +1869,7 @@ GENIE <- function(
                                                   items=items_to_run, EGA.model = EGA.model$overall,
                                                   EGA.algorithm = EGA.algorithm$overall,
                                                   EGA.uni.method = EGA.uni.method$overall,
-                                                  uva.cut.off = uva.cut.off, keep.org = FALSE,
+                                                  boot.iter = boot.iter, ncores = ncores, uva.cut.off = uva.cut.off, keep.org = FALSE,
                                                   silently = silently, plot = plot)
 
     if(!try_item_level$success){
@@ -1793,7 +1898,7 @@ GENIE <- function(
     EGA.model = EGA.model$type,
     EGA.algorithm = EGA.algorithm$type,
     EGA.uni.method = EGA.uni.method$type,
-    uva.cut.off = uva.cut.off,
+    boot.iter = boot.iter, ncores = ncores, uva.cut.off = uva.cut.off,
     keep.org = FALSE,  # GENIE doesn't need to keep original embeddings
     silently = silently,
     plot = plot
@@ -1815,7 +1920,7 @@ GENIE <- function(
     model = EGA.model$overall,
     algorithm = EGA.algorithm$overall,
     uni.method = EGA.uni.method$overall,
-    uva.cut.off = uva.cut.off,
+    boot.iter = boot.iter, ncores = ncores, uva.cut.off = uva.cut.off,
     keep.org = FALSE,  # GENIE doesn't need to keep original data
     silently = silently,
     plot = plot
@@ -1900,6 +2005,15 @@ GENIE <- function(
 #' @param EGA.model Network estimation model ("glasso", "TMFG", or NULL for auto-selection)
 #' @param EGA.algorithm Community detection algorithm ("walktrap", "leiden", "louvain")
 #' @param EGA.uni.method Unidimensionality assessment method ("louvain", "expand", "LE")
+#' @param boot.iter A positive integer (optional, default: 500). Number of
+#'   bootstrap iterations used by `EGAnet::bootEGA` during item-stability
+#'   analyses and iterative stability filtering.
+#'
+#' @param ncores A positive integer or `NULL` (optional, default: `NULL`).
+#'   Number of processing cores passed to `EGAnet::bootEGA`. When `NULL`,
+#'   AIGENIE does not pass an `ncores` argument, preserving the current
+#'   default behavior of `EGAnet::bootEGA`.
+#'
 #' @param uva.cut.off Numeric in `[0, 1)`. wTO threshold passed to `EGAnet::UVA` for the
 #'   redundancy-reduction step (default: 0.20). Lower values remove more items.
 #'
@@ -2303,6 +2417,8 @@ local_GENIE <- function(
   EGA.algorithm = NULL,
   EGA.uni.method = NULL,
   uva.cut.off = 0.20,
+  boot.iter = 500,
+  ncores = NULL,
 
   # Control flags
   embeddings.only = FALSE,
@@ -2314,6 +2430,30 @@ local_GENIE <- function(
 
   # Validate uva.cut.off (kept separate from validate_user_input_local_GENIE)
   uva.cut.off_validate(uva.cut.off)
+
+  # Validate public bootEGA controls.
+  if (length(boot.iter) != 1L ||
+      !is.numeric(boot.iter) ||
+      is.na(boot.iter) ||
+      !is.finite(boot.iter) ||
+      boot.iter < 1 ||
+      boot.iter != as.integer(boot.iter)) {
+    stop("`boot.iter` must be a single positive integer.")
+  }
+  boot.iter <- as.integer(boot.iter)
+
+  if (!is.null(ncores)) {
+    if (length(ncores) != 1L ||
+        !is.numeric(ncores) ||
+        is.na(ncores) ||
+        !is.finite(ncores) ||
+        ncores < 1 ||
+        ncores != as.integer(ncores)) {
+      stop("`ncores` must be NULL or a single positive integer.")
+    }
+    ncores <- as.integer(ncores)
+  }
+
 
   # Step 1: Comprehensive input validation
   validation <- validate_user_input_local_GENIE(
@@ -2399,7 +2539,7 @@ local_GENIE <- function(
                                                   items=items_to_run, EGA.model = EGA.model$overall,
                                                   EGA.algorithm = EGA.algorithm$overall,
                                                   EGA.uni.method = EGA.uni.method$overall,
-                                                  uva.cut.off = uva.cut.off, keep.org = FALSE,
+                                                  boot.iter = boot.iter, ncores = ncores, uva.cut.off = uva.cut.off, keep.org = FALSE,
                                                   silently = silently, plot = plot)
 
     if(!try_item_level$success){
@@ -2428,7 +2568,7 @@ local_GENIE <- function(
     EGA.model = EGA.model$type,
     EGA.algorithm = EGA.algorithm$type,
     EGA.uni.method = EGA.uni.method$type,
-    uva.cut.off = uva.cut.off,
+    boot.iter = boot.iter, ncores = ncores, uva.cut.off = uva.cut.off,
     keep.org = FALSE,  # local_GENIE doesn't need to keep original embeddings
     silently = silently,
     plot = plot
@@ -2450,7 +2590,7 @@ local_GENIE <- function(
     model = EGA.model$overall,
     algorithm = EGA.algorithm$overall,
     uni.method = EGA.uni.method$overall,
-    uva.cut.off = uva.cut.off,
+    boot.iter = boot.iter, ncores = ncores, uva.cut.off = uva.cut.off,
     keep.org = FALSE,  # local_GENIE doesn't need to keep original data
     silently = silently,
     plot = plot

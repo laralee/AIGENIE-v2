@@ -24,6 +24,8 @@ local_AIGENIE(
   EGA.algorithm = NULL,
   EGA.uni.method = NULL,
   uva.cut.off = 0.2,
+  boot.iter = 500,
+  ncores = NULL,
   n.ctx = 4096,
   n.gpu.layers = -1,
   max.tokens = 1024,
@@ -80,6 +82,15 @@ local_AIGENIE(
 
 \item{uva.cut.off}{Numeric in \verb{[0, 1)}. wTO threshold passed to \code{EGAnet::UVA} for the
 redundancy-reduction step (default: 0.20). Lower values remove more items.}
+
+\item{boot.iter}{A positive integer (optional, default: 500). Number of
+bootstrap iterations used by \code{EGAnet::bootEGA} during item-stability
+analyses and iterative stability filtering.}
+
+\item{ncores}{A positive integer or \code{NULL} (optional, default: \code{NULL}).
+Number of processing cores passed to \code{EGAnet::bootEGA}. When \code{NULL},
+AIGENIE does not pass an \code{ncores} argument, preserving the current
+default behavior of \code{EGAnet::bootEGA}.}
 
 \item{n.ctx}{Context window size (default: 4096)}
 

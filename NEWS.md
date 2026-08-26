@@ -1,6 +1,7 @@
 # AIGENIE 2.1.2
 
 ## New features
+- Exposed `boot.iter` and `ncores` in `AIGENIE()`, `GENIE()`, `local_AIGENIE()`, and `local_GENIE()`. The `boot.iter` default remains 500, matching the current reduction pipeline; `ncores = NULL` preserves EGAnet's existing default core behavior.
 - Added a publication-ready `filtering_audit` with item-level filtering
   provenance for UVA and bootEGA decisions.
 - Added per-type `reduction_summary` outputs.
