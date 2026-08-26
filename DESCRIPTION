@@ -15,7 +15,7 @@ Authors@R: c(
            comment = c(ORCID = "0000-0002-9798-7037")),
     person("Hudson", "Golino",
            email = "hfg9s@virginia.edu",
-           role = c("aut", "cre" "cph"),
+           role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-1601-1447"))
     )
 Maintainer: Hudson Golino <hfg9s@virginia.edu>

@@ -183,12 +183,12 @@ Useful links:
 \code{\link[EGAnet:EGAnet-package]{EGAnet}} for the underlying EGA analysis methods.
 }
 \author{
-\strong{Maintainer}: Lara Russell-Lasalandra \email{llr7cb@virginia.edu} (\href{https://orcid.org/0009-0000-3014-1937}{ORCID}) [copyright holder]
+\strong{Maintainer}: Hudson Golino \email{hfg9s@virginia.edu} (\href{https://orcid.org/0000-0002-1601-1447}{ORCID}) [copyright holder]
 
 Authors:
 \itemize{
+  \item Lara Russell-Lasalandra \email{llr7cb@virginia.edu} (\href{https://orcid.org/0009-0000-3014-1937}{ORCID}) [copyright holder]
   \item Alexander Christensen \email{alexander.christensen@vanderbilt.edu} (\href{https://orcid.org/0000-0002-9798-7037}{ORCID}) [copyright holder]
-  \item Hudson Golino \email{hfg9s@virginia.edu} (\href{https://orcid.org/0000-0002-1601-1447}{ORCID}) [copyright holder]
 }
 
 
